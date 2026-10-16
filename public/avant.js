@@ -22,7 +22,7 @@
   }
   if (surAccueil) {
     var id = location.hash.slice(1);
-    h.setAttribute('data-destination', ['competences', 'realisations', 'veille', 'contact'].indexOf(id) >= 0 ? id : 'accueil');
+    h.setAttribute('data-lieu', ['competences', 'realisations', 'veille', 'contact'].indexOf(id) >= 0 ? id : 'accueil');
   }
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     h.classList.add('intro');

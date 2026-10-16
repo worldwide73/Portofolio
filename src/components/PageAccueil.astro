@@ -43,7 +43,7 @@ const ch = c.navigation.chapitres;
 <Base contenu={c} page="accueil" cheminAutreLangue={cheminAccueil(langue === 'fr' ? 'en' : 'fr')}>
   <!-- 1. ACCUEIL : une destination en quatre chapitres (intro, méthode, parcours, explorer).
        Chaque section est une destination indépendante : une seule est affichée à la fois
-       (html[data-destination], voir src/styles/destinations.css et src/scripts/voyage.ts). -->
+       (html[data-lieu], voir src/styles/destinations.css et src/scripts/voyage.ts). -->
   <section id="accueil" data-section aria-label={c.sections.accueil}>
     <!-- L'ouverture : la scène reste collée à l'écran tant que le panneau « méthode »
          glisse par-dessus, et pas plus longtemps. C'est ce bloc qui fixe cette limite. -->

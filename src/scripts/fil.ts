@@ -89,7 +89,6 @@ export function initFil(): void {
     points = [...liste.querySelectorAll<HTMLButtonElement>('.trajet__point')];
     // Beaucoup de chapitres, ou des noms longs : seul le nom du chapitre actif est écrit.
     rail.toggleAttribute('data-dense', chapitres.length > 5 || destination === 'veille');
-    rail.dataset.destination = destination;
     rail.hidden = chapitres.length < 2;
     rang = -1;
     memoire = '';

@@ -49,4 +49,25 @@ export function initApparitions(): void {
       visibles.forEach((el) => el.querySelectorAll<HTMLElement>('[data-decode]').forEach((libelle) => decoder(libelle)));
     },
   });
+
+  // Depuis le 16 octobre 2026, chaque section est une destination affichée seule, en haut de page.
+  // Ce qui est déjà à l'écran à son arrivée n'attend pas un premier défilement pour apparaître
+  // (le seuil « clamp » vaut alors 0, et un déclencheur à 0 ne part qu'au premier pixel défilé).
+  const revelerALEcran = () =>
+    requestAnimationFrame(() => {
+      const aMontrer = elements.filter((el) => {
+        if (!el.getClientRects().length || Number(gsap.getProperty(el, 'opacity')) > 0.01) return false;
+        const cadre = el.getBoundingClientRect();
+        return cadre.top < window.innerHeight * 0.92 && cadre.bottom > 0;
+      });
+      if (!aMontrer.length) return;
+      gsap.to(aMontrer, { autoAlpha: 1, y: 0, duration: 0.95, ease: 'power3.out', stagger: 0.07, overwrite: 'auto' });
+      aMontrer.forEach((el) => el.querySelectorAll<HTMLElement>('[data-decode]').forEach((libelle) => decoder(libelle)));
+    });
+  window.addEventListener('destination', revelerALEcran);
+  const auDepart = () => {
+    ScrollTrigger.removeEventListener('refresh', auDepart);
+    revelerALEcran();
+  };
+  ScrollTrigger.addEventListener('refresh', auDepart);
 }

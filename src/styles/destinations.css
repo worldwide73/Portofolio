@@ -1,6 +1,6 @@
 /* ==========================================================================
    LA NAVIGATION PAR DESTINATIONS (16 octobre 2026)
-   - une seule destination affichée à la fois (html[data-destination], posé par
+   - une seule destination affichée à la fois (html[data-lieu], posé par
      public/avant.js puis voyage.ts) ; sans JavaScript, tout reste visible ;
    - la barre du haut : trois outils (Portail, Rechercher, Visite rapide) dans
      la pastille de verre d'origine ;
@@ -11,29 +11,29 @@
    ========================================================================== */
 
 /* ---- Une seule destination à la fois ---- */
-html[data-destination='accueil'] main > :is([data-section], .pied):not(#accueil),
-html[data-destination='competences'] main > :is([data-section], .pied):not(#competences),
-html[data-destination='realisations'] main > :is([data-section], .pied):not(#realisations),
-html[data-destination='veille'] main > :is([data-section], .pied):not(#veille),
-html[data-destination='contact'] main > [data-section]:not(#contact) {
+html[data-lieu='accueil'] main > :is([data-section], .pied):not(#accueil),
+html[data-lieu='competences'] main > :is([data-section], .pied):not(#competences),
+html[data-lieu='realisations'] main > :is([data-section], .pied):not(#realisations),
+html[data-lieu='veille'] main > :is([data-section], .pied):not(#veille),
+html[data-lieu='contact'] main > [data-section]:not(#contact) {
   display: none;
 }
 
 /* Chaque destination commence en haut de la page, juste sous la barre. */
-html[data-destination] :is(#competences, #veille) {
+html[data-lieu] :is(#competences, #veille) {
   margin-top: calc(var(--barre-h) + var(--marge-cadre) + var(--s-3));
 }
 
-html[data-destination] #realisations {
+html[data-lieu] #realisations {
   margin-top: 0;
 }
 
 /* La galerie occupe l'écran : ses commandes et son aide restent au-dessus du fil des chapitres. */
-html[data-destination] .galerie__scene {
+html[data-lieu] .galerie__scene {
   padding-bottom: calc(var(--marge-cadre) + 74px);
 }
 
-html[data-destination] #contact {
+html[data-lieu] #contact {
   margin-top: calc(var(--barre-h) + var(--marge-cadre) * 2);
 }
 
@@ -211,6 +211,11 @@ html[data-destination] #contact {
 }
 
 @media (max-width: 860px) {
+  /* Dans le menu plein écran du téléphone, les outils s'écrivent en grand : la petite lame n'y a pas sa place. */
+  .nav .nav__verre {
+    display: none;
+  }
+
   .trajet[data-dense] {
     --pas: 34px;
   }

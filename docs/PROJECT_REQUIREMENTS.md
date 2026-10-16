@@ -1,3 +1,22 @@
+## Lot du 16 octobre 2026 — navigation par destinations (Claude Code Cloud)
+
+| Demande | État | Preuve |
+|---|---|---|
+| Destinations indépendantes, molette limitée à la destination | V | navigation-destinations.mjs (accueil, Réalisations, Contact) |
+| Barre : Portail, Rechercher, Visite rapide (esthétique conservée) | V | recette + captures bureau/téléphone |
+| Animation de cassure du bouton Portail → carte existante | V (rendu logiciel) | recette (classes, toile, nettoyage, carte unique) + images examinées au ralenti ; fluidité GPU à valider par Mathéo |
+| Fermeture de la carte : retour à la même destination et position | V | recette |
+| « Rejoindre le portail » (fin de l'accueil) sans second clic | V | recette |
+| Fil des chapitres (Accueil 4, Compétences 6, Réalisations 7 synchronisé avec la galerie, Veille, Contact 3) | V | recette + captures |
+| Fins de destination | V | captures |
+| Recherche sur le contenu réel, états vides, clavier, Échap | V | recette (python, supabase, electron, cv, xyzabc, tweaks, secure boot) |
+| Visite rapide (remplace l'ancien mode recruteur) | V | recette |
+| Raccourcis P, Ctrl/Cmd+K, ← → chapitres, Échap ; pas de conflit avec Portal Rush | V | recette |
+| Menu d'identité sans navigation parallèle, actions réelles | V | recette ; copie presse-papiers non testée hors navigateur de test |
+| FR/EN sans rechargement, destination conservée | V | recette |
+| Grand portail, carte, Orbital Hub, saut, dunes inchangés | V | `git diff` vide sur ces fichiers |
+| Mouvement réduit, téléphone 390 px | V (émulation) | recette ; vrai téléphone non testé |
+
 > **16 octobre — derniers réglages de vitesse demandés.** Intro −0,2 s par rapport au lot précédent : réduction cumulée 1,7 s ; 3 957 ms mesurées avec Playwright GPU. Saut Accueil ↔ Contact en Chill : multiplicateur local 1,1, soit environ 10 % plus rapide ; intro et autres ambiances indépendantes. Durée transmise au son et au fil ajustée au même multiplicateur. Fichiers : intro.ts, saut.ts, voyage.ts. Tests : duree-intro.mjs réussi ; saut-ambiances.mjs (12 trajets, origine/Focus/Chill, normal/réduit, aller/retour + animations coupées) réussi sans exception JS ; build 18 pages réussi. Ces valeurs remplacent les précédentes ci-dessous.
 
 > **16 octobre — durée intro rétablie à la demande de Mathéo : +0,5 s.** Réduction cumulée de la partition revenue à 1,5 s (remplace la valeur 2 s ci-dessous). Mesure Playwright avec GPU : 4 120 ms (`outils/recettes/duree-intro.mjs`). Première mesure sans les arguments GPU non exploitable : assertion échouée ; relance GPU réussie. Seule la vitesse de l’intro a changé, aucun effet retiré. La cinématique Accueil ↔ Contact reste inchangée : 0,6 s + 0,55 s nominales, rythme global préexistant dépendant de l’ambiance (Chill 0,85 ; Focus 1,5). Pas de modification de ce rythme dans ce lot. Seuil de recette trois-corrections adapté à la nouvelle durée.

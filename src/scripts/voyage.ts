@@ -1,7 +1,7 @@
 // LES DESTINATIONS : passer de l'une à l'autre.
 //
 // Depuis le 16 octobre 2026, les cinq sections de l'accueil sont des destinations
-// indépendantes : une seule est affichée à la fois (html[data-destination], voir
+// indépendantes : une seule est affichée à la fois (html[data-lieu], voir
 // destinations.css). La molette ne fait défiler que la destination affichée, et
 // s'arrête à sa fin : elle ne passe plus à la suivante. On voyage par le portail
 // (sa carte), et par quelques accès directs (CV, Contact, boutons de l'accueil,
@@ -85,7 +85,7 @@ const html = document.documentElement;
 const estDestination = (id: string): id is Destination => (TRAJET as readonly string[]).includes(id);
 /** La destination affichée (posée dès le <head> par public/avant.js, d'après l'adresse). */
 export const destinationActive = (): Destination => {
-  const id = html.dataset.destination ?? 'accueil';
+  const id = html.dataset.lieu ?? 'accueil';
   return estDestination(id) ? id : 'accueil';
 };
 /** Son rang dans TRAJET (0 = l'accueil). */
@@ -110,7 +110,7 @@ const lectures = new Map<Destination, number>();
 function montrer(id: Destination, y = 0): void {
   const avant = destinationActive();
   if (avant !== id) lectures.set(avant, window.scrollY);
-  html.dataset.destination = id;
+  html.dataset.lieu = id;
   lenis?.resize();
   ScrollTrigger.refresh();
   allerA(y, true);
