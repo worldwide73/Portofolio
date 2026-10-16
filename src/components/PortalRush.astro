@@ -11,6 +11,7 @@
 // Les textes qui dépendent de la progression (records, états, objectifs du
 // secteur choisi) sont écrits par rush.ts, à partir des vraies données.
 import { EMPLACEMENTS, NIVEAUX, PIECES, ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from '../scripts/rush/donnees';
+import { CATALOGUE_RUSH, minutes } from '../scripts/audio/catalogue';
 import type { Contenu } from '../contenu/types';
 import Drapeau from './Drapeau.astro';
 
@@ -171,6 +172,42 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <b data-stat="meilleur">—</b>
         <small class="etiquette" data-stat="meilleurOrigine"></small>
       </p>
+      <!-- RUSH RADIO : le lecteur compact, en bas à droite du menu principal (src/scripts/audio/rush-radio.ts). -->
+      <div class="rush-radio" data-lecture="false" role="group" aria-label={r.radio.titre}>
+        <button class="rush-radio__lecture" type="button" data-rr="lecture" aria-pressed="false" aria-label={r.radio.lire} title={r.radio.lire}>
+          <svg class="rush-radio__lire" viewBox="0 0 18 18" aria-hidden="true"><path d="M5.5 3.2v11.6L15 9z" fill="currentColor"></path></svg>
+          <svg class="rush-radio__pause" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3.5h2.6v11H5zM10.4 3.5H13v11h-2.6z" fill="currentColor"></path></svg>
+        </button>
+        <button class="rush-radio__titres" type="button" data-rr="liste" aria-expanded="false" aria-controls="rush-radio-liste" aria-label={r.radio.liste} title={r.radio.liste}>
+          <span class="rush-radio__marque">{r.radio.titre}<i class="rush-radio__ondes" aria-hidden="true"><i></i><i></i><i></i></i></span>
+          <b data-rr-champ="titre">{CATALOGUE_RUSH[0].titre}</b>
+          <small data-rr-champ="detail">{r.radio.original}</small>
+        </button>
+        <button class="rush-radio__saut" type="button" data-rr="precedente" aria-label={r.radio.precedente} title={r.radio.precedente}>
+          <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M14.5 3.8v10.4L6.4 9z" fill="currentColor"></path></svg>
+        </button>
+        <button class="rush-radio__saut" type="button" data-rr="suivante" aria-label={r.radio.suivante} title={r.radio.suivante}>
+          <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M14 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M3.5 3.8v10.4L11.6 9z" fill="currentColor"></path></svg>
+        </button>
+        <input class="rush-radio__volume" type="range" min="0" max="100" step="1" data-rr="volume" aria-label={r.radio.volume} title={r.radio.volume} />
+        <ol class="rush-radio__liste" id="rush-radio-liste" data-rr-liste hidden>
+          {
+            CATALOGUE_RUSH.map((p, i) => (
+              <li>
+                <button type="button" data-rr-piste={i}>
+                  <span class="rush-radio__numero">{deux(i + 1)}</span>
+                  <span>
+                    <b>{p.titre}</b>
+                    <small>{p.licence === 'original' ? r.radio.original : `${p.artiste} · CC BY-SA 3.0`}</small>
+                    <small class="rush-radio__genre">{p.adaptative ? r.radio.adaptative : r.radio.fixe}</small>
+                  </span>
+                  <span class="rush-radio__duree">{minutes(p.duree)}</span>
+                </button>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
     </div>
   </section>
 

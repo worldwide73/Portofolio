@@ -264,6 +264,18 @@ export const en: Contenu = {
       entree: 'Enter',
       espace: 'Space',
     },
+    radio: {
+      titre: 'RUSH RADIO',
+      lire: 'Play the game music',
+      pause: 'Pause the game music',
+      precedente: 'Previous track',
+      suivante: 'Next track',
+      volume: 'Game music volume',
+      liste: 'Choose a track',
+      original: 'Original composition',
+      adaptative: 'Adaptive: it follows the race',
+      fixe: 'Recorded: the race only filters it',
+    },
     menu: {
       commencer: 'Start',
       continuer: 'Continue',

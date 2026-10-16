@@ -24,9 +24,11 @@ import type { Contenu } from '../../contenu/types';
 import { revenirAccueil } from '../voyage';
 import { mouvementReduit } from '../outils';
 import { regler, reglages as reglagesSite } from '../reglages';
-import { reglerVolumeRush, sonRush } from '../sons';
+import { arreterMoteurRush, moteurRush, reglerVolumeRush, sonRush } from '../sons';
 import { dreamRadio } from '../audio/dream';
 import { creerRushRadio } from '../audio/rush-radio';
+import { tamponPret } from '../audio/moteur';
+import type { Adaptation } from '../audio/radio';
 import { NIVEAUX, PIECES, graineDuJour, scoreEtoile, type Condition, type Difficulte, type Mode, type Objectif, type Theme } from './donnees';
 import { ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from './equilibrage';
 import { Partie, type ObjectifAtteint } from './moteur';
@@ -136,6 +138,61 @@ export function initRush(): void {
     if (!img) return;
     if (img.getAttribute('src') !== url) img.src = url;
     img.hidden = false;
+  };
+
+  // ==========================================================================
+  // RUSH RADIO : le lecteur compact du menu principal, et la musique qui suit la course
+  // ==========================================================================
+  const radioBloc = $('.rush-radio');
+  const radioListe = $('[data-rr-liste]');
+  const radioVolume = $<HTMLInputElement>('[data-rr="volume"]');
+  const majRadio = () => {
+    const e = rushRadio.etat;
+    const p = rushRadio.piste;
+    radioBloc.dataset.lecture = String(e.lecture);
+    const lecture = $('[data-rr="lecture"]');
+    lecture.setAttribute('aria-pressed', String(e.lecture));
+    lecture.setAttribute('aria-label', e.lecture ? textes.radio.pause : textes.radio.lire);
+    lecture.title = lecture.getAttribute('aria-label') ?? '';
+    $('[data-rr-champ="titre"]').textContent = p.titre;
+    $('[data-rr-champ="detail"]').textContent = p.fabriquer ? textes.radio.adaptative : `${p.artiste} · ${p.licence}`;
+    if (document.activeElement !== radioVolume) radioVolume.value = String(Math.round(e.volume * 100));
+    radioVolume.style.setProperty('--v', `${e.muet ? 0 : Math.round(e.volume * 100)}%`);
+    $$('[data-rr-piste]').forEach((b, i) => b.setAttribute('aria-current', String(i === e.index)));
+  };
+  rushRadio.surChangement(majRadio);
+  const listeRadioOuverte = () => !radioListe.hidden;
+  const basculerListeRadio = (ouvrir = radioListe.hidden) => {
+    radioListe.hidden = !ouvrir;
+    $('[data-rr="liste"]').setAttribute('aria-expanded', String(ouvrir));
+    if (ouvrir) $$<HTMLButtonElement>('[data-rr-piste]')[rushRadio.etat.index]?.focus({ preventScroll: true });
+  };
+  /** La lecture choisie dans le lecteur devient la préférence d'entrée (jouer ou non en ouvrant le jeu). */
+  const retenirLecture = () => {
+    s.reglages.musique = rushRadio.enLecture;
+    enregistrer(s);
+  };
+  let cleAdaptation = '';
+  let dernierSuivi = 0;
+  /** Ce que la course dit à la musique et au moteur, quatre fois par seconde. */
+  const suivreSon = () => {
+    const p = partie;
+    const enCourse = !!p && ecran === '' && !enPause && !p.termine && fenetre.open && transition !== 'sortie';
+    const vitesse = p ? Math.max(0, Math.min(1, (p.vitesse - p.profil.vitesse.depart) / Math.max(1, p.profil.vitesse.max - p.profil.vitesse.depart))) : 0;
+    let a: Adaptation;
+    if (ecran === 'victoire' || (finCine && fenetre.classList.contains('est-cinematique-victoire'))) a = { mode: 'victoire', intensite: 0.6, danger: 0, overdrive: false };
+    else if (ecran === 'fin' || (finCine && p?.termine)) a = { mode: 'defaite', intensite: 0, danger: 0, overdrive: false };
+    else if (ecran === 'pause' || (p && enPause)) a = { mode: 'pause', intensite: 0, danger: 0, overdrive: false };
+    else if (p && ecran === '') {
+      const avance = Number.isFinite(p.longueur) ? p.avancement : 0;
+      a = { mode: 'course', intensite: Math.min(1, vitesse * 0.75 + avance * 0.35), danger: p.boucliers <= 1 ? 0.8 : p.boss ? 0.5 : 0, overdrive: p.overdrive > 0 };
+    } else a = { mode: 'menu', intensite: 0, danger: 0, overdrive: false };
+    const cle = `${a.mode}|${Math.round(a.intensite * 20)}|${Math.round(a.danger * 4)}|${a.overdrive}`;
+    if (cle !== cleAdaptation) {
+      cleAdaptation = cle;
+      rushRadio.adapter(a);
+    }
+    moteurRush({ actif: enCourse && compte <= 0, vitesse, overdrive: !!p && p.overdrive > 0 });
   };
 
   // ==========================================================================
@@ -1020,6 +1077,10 @@ export function initRush(): void {
     const vue = { l, h, reduit: effetsReduits(), secousses: s.reglages.secousses, equipement: s.equipement, theme: theme(), brume: partie?.niveauBase.brume ?? 0, avance: actif && compte <= 0 ? reste : 0 };
     rendu.dessiner(partie, vue, temps, actif ? dt : partie ? 0 : dt * 0.35);
     if (++images % 3 === 0) majHud();
+    if (maintenant - dernierSuivi > 250) {
+      dernierSuivi = maintenant;
+      suivreSon();
+    }
     // L'aperçu du garage, sans la 3D : le vaisseau dessiné à plat.
     if (ecran === 'garage') {
       const b = dimensionnerApercu();
@@ -1138,6 +1199,8 @@ export function initRush(): void {
     dreamRadio.suspendre();
     s = charger();
     rushRadio.relirePreferences();
+    tamponPret('/audio/effets/moteur.mp3');
+    majRadio();
     if (s.reglages.musique) window.setTimeout(() => fenetre.open && rushRadio.jouer(), animationsCoupees() ? 100 : 700);
     const icone = document.querySelector<HTMLElement>('.jeu-bouton');
     icone?.classList.add('est-lance');
@@ -1218,6 +1281,11 @@ export function initRush(): void {
   const echap = () => {
     if (finCine) return passerCinematique();
     if (transition) return;
+    if (listeRadioOuverte()) {
+      basculerListeRadio(false);
+      $('[data-rr="liste"]').focus({ preventScroll: true });
+      return;
+    }
     if (languesOuvertes()) fermerLangues(true);
     else if (panneau) fermerPanneau();
     else if (partie && ecran === '') pause();
@@ -1347,6 +1415,10 @@ export function initRush(): void {
   fenetre.addEventListener('close', () => {
     // Le son du jeu s'arrête ; DREAM RADIO reprend seulement si elle jouait avant l'entrée.
     rushRadio.arreter();
+    rushRadio.adapter(null);
+    cleAdaptation = '';
+    arreterMoteurRush();
+    basculerListeRadio(false);
     dreamRadio.reprendreSiSuspendue();
     cancelAnimationFrame(boucle);
     boucle = 0;
@@ -1393,6 +1465,23 @@ export function initRush(): void {
       return;
     }
     if (languesOuvertes() && !el.closest('.langue-jeu')) fermerLangues();
+    // RUSH RADIO.
+    const rr = el.closest<HTMLElement>('[data-rr], [data-rr-piste]');
+    if (!rr && listeRadioOuverte() && !el.closest('.rush-radio')) basculerListeRadio(false);
+    if (rr) {
+      if (rr.dataset.rrPiste) {
+        rushRadio.choisir(Number(rr.dataset.rrPiste), true);
+        retenirLecture();
+        basculerListeRadio(false);
+        $('[data-rr="liste"]').focus({ preventScroll: true });
+      } else if (rr.dataset.rr === 'lecture') {
+        rushRadio.basculer();
+        retenirLecture();
+      } else if (rr.dataset.rr === 'liste') basculerListeRadio();
+      else if (rr.dataset.rr === 'precedente') rushRadio.precedente();
+      else if (rr.dataset.rr === 'suivante') rushRadio.suivante();
+      return;
+    }
     const onglet = el.closest<HTMLElement>('[data-onglet-records], [data-onglet-reglages]');
     if (onglet) {
       if (onglet.dataset.ongletRecords) choisirOnglet('records', onglet.dataset.ongletRecords);
@@ -1537,6 +1626,10 @@ export function initRush(): void {
   });
   fenetre.addEventListener('input', (e) => {
     const champ = e.target as HTMLInputElement;
+    if (champ.dataset.rr === 'volume') {
+      rushRadio.reglerVolume(Number(champ.value) / 100);
+      return;
+    }
     if (champ.dataset.reglage === 'volume') {
       s.reglages.volume = Number(champ.value) / 100;
       reglerVolumeRush(s.reglages.volume);
@@ -1578,6 +1671,7 @@ export function initRush(): void {
       PROFILS,
       REGLES_VERSION,
       partie: () => partie,
+      radio: rushRadio,
       demarrer,
       terminer,
       etat: () => ({ ecran, panneau, transition, enPause, compte, sauvegarde: s, choix, secteur, confirmer, troisD: rendu.troisD, distanceAffichee: partie ? partie.distance + (partie && !enPause && ecran === '' && compte <= 0 ? reste * partie.vitesse : 0) : 0 }),

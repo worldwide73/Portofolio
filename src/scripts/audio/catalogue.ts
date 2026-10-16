@@ -26,6 +26,8 @@ export interface EntreeCatalogue {
   niveau: number;
   /** Où vérifier l'origine. */
   lien?: string;
+  /** Composition à couches séparées : la musique suit vraiment la course. */
+  adaptative?: boolean;
 }
 
 const PIONEER = 'https://github.com/pioneerspacesim/pioneer';
@@ -47,6 +49,8 @@ export const minutes = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor
     suivent la course) ; les morceaux enregistrés n'ont pas de couches séparées : la course ne fait que
     les filtrer et doser leur volume. */
 export const CATALOGUE_RUSH: EntreeCatalogue[] = [
+  { id: 'neon-rush', titre: 'Néon Rush', artiste: 'Portfolio', licence: 'original', duree: 96 * 4 * (60 / 124), niveau: 1, adaptative: true },
+  { id: 'hyperlane', titre: 'Hyperlane', artiste: 'Portfolio', licence: 'original', duree: 112 * 4 * (60 / 136), niveau: 1, adaptative: true },
   { id: 'techno-fugue', titre: 'Techno Fugue', artiste: 'WKFO · Pioneer Space Sim', licence: 'cc-by-sa', duree: 110.8, src: '/audio/rush/techno-fugue.mp3', niveau: 1, lien: PIONEER },
   { id: 'plazma-steel', titre: 'Plazma Steel', artiste: 'WKFO · Pioneer Space Sim', licence: 'cc-by-sa', duree: 118.2, src: '/audio/rush/plazma-steel.mp3', niveau: 1, lien: PIONEER },
 ];

@@ -74,6 +74,40 @@ export const stockageLocal = (cle: string): Stockage => ({
   },
 });
 
+/** Ce que la course dit à la musique (RUSH RADIO) : où l'on en est, et à quelle intensité. */
+export interface Adaptation {
+  mode: 'menu' | 'course' | 'pause' | 'defaite' | 'victoire';
+  /** 0 (départ, lent) à 1 (vitesse maximale, fin de secteur). */
+  intensite: number;
+  /** 0 à 1 : dernier bouclier, boss, phase de pression. */
+  danger: number;
+  overdrive: boolean;
+}
+type NomCouche = 'nappe' | 'basse' | 'batterie' | 'arpege' | 'melodie' | 'tension';
+
+/** Le dosage des couches d'une composition adaptative, et l'ouverture du filtre, pour une situation. */
+export function dosage(a: Adaptation): { couches: Record<NomCouche, number>; filtre: number; gain: number } {
+  const i = Math.max(0, Math.min(1, a.intensite));
+  const d = Math.max(0, Math.min(1, a.danger));
+  switch (a.mode) {
+    case 'menu':
+      return { couches: { nappe: 1, basse: 0.55, batterie: 0, arpege: 0.45, melodie: 0, tension: 0 }, filtre: 7000, gain: 0.85 };
+    case 'pause':
+      return { couches: { nappe: 1, basse: 0.5, batterie: 0, arpege: 0.3, melodie: 0, tension: 0 }, filtre: 750, gain: 0.6 };
+    case 'defaite':
+      return { couches: { nappe: 0.9, basse: 0, batterie: 0, arpege: 0, melodie: 0, tension: 0 }, filtre: 480, gain: 0.7 };
+    case 'victoire':
+      return { couches: { nappe: 1, basse: 0.5, batterie: 0, arpege: 0.7, melodie: 0.8, tension: 0 }, filtre: 12000, gain: 0.9 };
+    case 'course':
+      if (a.overdrive) return { couches: { nappe: 0.8, basse: 1, batterie: 1, arpege: 1, melodie: 1, tension: 0.35 }, filtre: 20000, gain: 1 };
+      return {
+        couches: { nappe: 0.75, basse: 1, batterie: 1, arpege: 0.35 + 0.65 * i, melodie: i > 0.55 ? Math.min(1, (i - 0.55) * 4) : 0, tension: d },
+        filtre: 2600 + 15000 * i,
+        gain: 1,
+      };
+  }
+}
+
 const radios: Radio[] = [];
 const FONDU = 0.6;
 
@@ -100,6 +134,10 @@ export class Radio {
   private fin = false;
   private ecouteurs: ((e: EtatRadio) => void)[] = [];
   private analyse: AnalyserNode | null = null;
+  /** Le filtre de la radio : la course l'ouvre et le ferme (pause, défaite), pour tous les morceaux. */
+  private filtre: BiquadFilterNode | null = null;
+  private dosageGain: GainNode | null = null;
+  private adaptation: Adaptation | null = null;
   private masquee = false;
 
   constructor(nom: string, pistes: PisteRadio[], stockage: Stockage, volumeParDefaut = 0.55) {
@@ -219,7 +257,12 @@ export class Radio {
     if (!this.sortie) {
       this.sortie = c.createGain();
       this.sortie.gain.value = this.gainVoulu();
-      this.sortie.connect(canal);
+      this.filtre = c.createBiquadFilter();
+      this.filtre.type = 'lowpass';
+      this.filtre.frequency.value = 20000;
+      this.filtre.Q.value = 0.5;
+      this.dosageGain = c.createGain();
+      this.sortie.connect(this.filtre).connect(this.dosageGain).connect(canal);
     }
     return this.sortie;
   }
@@ -271,6 +314,7 @@ export class Radio {
     } else if (piste.fabriquer) {
       this.composition = piste.fabriquer(c, g, this.reprise, bruitBlanc());
     }
+    if (this.adaptation) this.appliquerAdaptation(0.02);
     window.clearInterval(this.suivi);
     this.suivi = window.setInterval(() => this.surveiller(), 250);
   }
@@ -372,6 +416,26 @@ export class Radio {
       this.prevenir();
     } else if (this.joue) this.demarrerSon();
     else this.prevenir();
+  }
+
+  /**
+   * La musique adaptative : la course dit où elle en est. Une composition à couches dose chacune de ses
+   * couches ; un morceau enregistré (sans couches séparées) n'est que filtré et dosé. Les changements sont
+   * lissés (constante de 0,5 s) : jamais de coupure brutale, jamais de changement de tempo.
+   */
+  adapter(a: Adaptation | null): void {
+    this.adaptation = a;
+    this.appliquerAdaptation(0.5);
+  }
+  private appliquerAdaptation(lissage: number): void {
+    const c = contexte();
+    if (!c || !this.filtre || !this.dosageGain) return;
+    const t = c.currentTime;
+    const d = this.adaptation ? dosage(this.adaptation) : { couches: null, filtre: 20000, gain: 1 };
+    this.filtre.frequency.setTargetAtTime(d.filtre, t, lissage);
+    this.dosageGain.gain.setTargetAtTime(d.gain, t, lissage);
+    const couches = this.composition?.couches;
+    if (couches && d.couches) for (const [nom, g] of Object.entries(couches)) g.gain.setTargetAtTime(d.couches[nom as NomCouche] ?? 0, t, lissage);
   }
 
   /** L'entrée dans un autre univers sonore (Portal Rush) : fondu, pause, position gardée. */

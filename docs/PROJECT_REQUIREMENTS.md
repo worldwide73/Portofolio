@@ -11,7 +11,9 @@
 | Morceaux légaux, crédités, licences vérifiées | V | `public/audio/CREDITS.txt`, `docs/AUDIO.md` (AUTHORS.txt de Pioneer, historique git, README Kenney) |
 | Une seule bande-son (DREAM suspendue dans Rush, reprise seulement si elle jouait) | V | recette (deux cas) |
 | Sauvegarde versionnée, migration sans perte, corruption, secours, fusion, sans stockage | V | recette (5 contrôles) |
-| RUSH RADIO : lecteur du menu, musique adaptative | À faire | — |
+| RUSH RADIO : lecteur compact en bas à droite du menu, caché en course | V | recette (position, liste, Échap, course) + capture |
+| Musique adaptative par couches réelles (vitesse, danger, Overdrive, pause, défaite, victoire), sans changement de tempo | V (couches mesurées, pas écoutées) | recette (menu → course → pause) ; morceaux enregistrés : filtre seulement, dit dans la liste |
+| Son moteur synchronisé à la vitesse | V (code), non écouté | `sons.ts` `moteurRush` |
 | Entrée cinématique, tunnel 3D, tutoriel | À faire | — |
 | Gameplay V4, interface AAA | À faire | — |
 

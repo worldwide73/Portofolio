@@ -174,6 +174,40 @@ try {
     assert.deepEqual(await p.evaluate(() => window.__audio.radiosEnLecture()), []);
   });
 
+  await controle('RUSH RADIO : lecteur compact en bas à droite du menu, caché pendant la course', async () => {
+    await ouvrirRush(p);
+    const lecteur = await rect(p, '.rush-radio');
+    assert.ok(lecteur.x + lecteur.w > 1440 * 0.7 && lecteur.y + lecteur.h > 900 * 0.8, JSON.stringify(lecteur));
+    assert.ok(lecteur.x + lecteur.w <= 1440 && lecteur.y + lecteur.h <= 900);
+    assert.equal(await p.evaluate(() => window.__portalRush.radio.piste.adaptative), true, 'piste adaptative');
+    await p.screenshot({ path: `${DOSSIER}/rush-radio.png` });
+    await p.click('[data-rr="liste"]');
+    assert.equal(await p.locator('[data-rr-liste]').isVisible(), true, 'liste ouverte');
+    await p.keyboard.press('Escape');
+    assert.equal(await p.locator('[data-rr-liste]').isVisible(), false, 'liste refermée');
+    assert.ok(await p.evaluate(() => document.querySelector('.rush').open), 'Échap ferme la liste, pas le jeu');
+  });
+
+  /** Le dosage des couches de la composition en cours (arrondi). */
+  const couches = () => p.evaluate(() => Object.fromEntries(Object.entries(window.__portalRush.radio.couches ?? {}).map(([k, g]) => [k, Math.round(g.gain.value * 100) / 100])));
+  await controle('Musique adaptative : batterie et basse entrent en course, la pause les retire (couches réelles)', async () => {
+    const menu = await couches();
+    assert.equal(menu.batterie, 0);
+    await p.evaluate(() => window.__portalRush.demarrer('campagne', 'as', 1));
+    await p.waitForTimeout(4000);
+    assert.equal(await p.locator('.rush-radio').isVisible(), false, 'lecteur caché en course');
+    const course = await couches();
+    assert.ok(course.batterie > 0.9 && course.basse > 0.9, JSON.stringify(course));
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(2500);
+    const pause = await couches();
+    assert.ok(pause.batterie < 0.05, JSON.stringify(pause));
+    await p.click('section[data-ecran="pause"] [data-rush="menu"]');
+    await p.click('section[data-ecran="pause"] [data-rush="menu"]');
+    await p.waitForTimeout(300);
+    await quitterRush(p);
+  });
+
   await controle('Réglages : page « Son » (effets, son de l’introduction, renvoi vers DREAM RADIO), plus aucune ambiance', async () => {
     await p.click('.barre__outils [popovertarget="reglages"]');
     await p.click('input[name="onglet"][value="son"]', { force: true });

@@ -412,3 +412,195 @@ export const traitFin: Fabrique = (c, vers, depuis) => {
     },
   };
 };
+
+// ==========================================================================
+// RUSH RADIO : les compositions adaptatives de Portal Rush
+// ==========================================================================
+// Une composition synthwave en six COUCHES séparées (nappe, basse, batterie, arpège, mélodie, tension),
+// chacune sur son propre gain : la radio les dose selon la course (radio.ts, « adapter ») sans jamais
+// toucher au tempo. Toutes les notes sont écrites pour ce site.
+
+interface DefinitionSynth {
+  tempo: number;
+  mesures: number;
+  /** Un accord (4 notes MIDI) par mesure, en boucle. */
+  grille: number[][];
+  /** La note grave de chaque mesure. */
+  basses: number[];
+  /** Le motif de l'arpège : 16 doubles-croches, indices dans l'accord (+4 = une octave au-dessus). */
+  arpege: number[];
+  /** La mélodie : par mesure (en boucle), des [double-croche, note, durée en doubles-croches]. */
+  melodie: [number, number, number][][];
+  /** La couleur de la nappe (fréquence du filtre). */
+  couleur: number;
+}
+
+function synthwave(def: DefinitionSynth): Fabrique {
+  return (c, vers, depuis, bruit) => {
+    const DC = 60 / def.tempo / 4; // une double-croche
+    const MESURE = DC * 16;
+    const sortie = c.createGain();
+    sortie.connect(vers);
+    const salle = reverb(c, 1.8, 3);
+    const retour = c.createGain();
+    retour.gain.value = 0.22;
+    salle.connect(retour).connect(sortie);
+    const couche = (nom: string, valeur: number, envoi = 0) => {
+      const g = c.createGain();
+      g.gain.value = valeur;
+      g.connect(sortie);
+      if (envoi) {
+        const e = c.createGain();
+        e.gain.value = envoi;
+        g.connect(e).connect(salle);
+      }
+      return [nom, g] as const;
+    };
+    const couches = Object.fromEntries([
+      couche('nappe', 1, 0.6),
+      couche('basse', 0.6),
+      couche('batterie', 0),
+      couche('arpege', 0.5, 0.35),
+      couche('melodie', 0, 0.5),
+      couche('tension', 0, 0.3),
+    ]) as Record<'nappe' | 'basse' | 'batterie' | 'arpege' | 'melodie' | 'tension', GainNode>;
+
+    // Les filtres propres à chaque voix (la nappe ronde, l'arpège brillant, la basse sourde).
+    const filtreNappe = c.createBiquadFilter();
+    filtreNappe.type = 'lowpass';
+    filtreNappe.frequency.value = def.couleur;
+    filtreNappe.Q.value = 0.7;
+    filtreNappe.connect(couches.nappe);
+    const filtreArp = c.createBiquadFilter();
+    filtreArp.type = 'lowpass';
+    filtreArp.frequency.value = 3200;
+    filtreArp.Q.value = 5;
+    filtreArp.connect(couches.arpege);
+    // (L'arpège « respire » : son filtre s'ouvre et se ferme lentement.)
+    const lfo = c.createOscillator();
+    const lfoGain = c.createGain();
+    lfo.frequency.value = 60 / def.tempo / 8;
+    lfoGain.gain.value = 1600;
+    lfo.connect(lfoGain).connect(filtreArp.frequency);
+    lfo.start();
+    const filtreBasse = c.createBiquadFilter();
+    filtreBasse.type = 'lowpass';
+    filtreBasse.frequency.value = 420;
+    filtreBasse.Q.value = 3;
+    filtreBasse.connect(couches.basse);
+    const vibrato = c.createOscillator();
+    const vibratoGain = c.createGain();
+    vibrato.frequency.value = 5.2;
+    vibratoGain.gain.value = 9;
+    vibrato.connect(vibratoGain);
+    vibrato.start();
+
+    /** Une voix de synthé : deux dents de scie désaccordées, enveloppe ADSR simple. */
+    const voix = (vers2: AudioNode, numero: number, quand: number, duree: number, volume: number, attaque: number, type: OscillatorType = 'sawtooth', ecart = 7, vib = false) => {
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.0001, quand);
+      g.gain.linearRampToValueAtTime(volume, quand + attaque);
+      g.gain.setValueAtTime(volume, quand + Math.max(attaque, duree - 0.08));
+      g.gain.exponentialRampToValueAtTime(0.0001, quand + duree + 0.12);
+      g.connect(vers2);
+      for (const d of [-ecart, ecart]) {
+        const o = oscillateur(c, type, g, quand, quand + duree + 0.16);
+        o.frequency.setValueAtTime(hauteur(numero), quand);
+        o.detune.value = d;
+        if (vib) vibratoGain.connect(o.detune);
+      }
+    };
+
+    const seq = sequencer(c, MESURE, def.mesures, depuis, (quand, m) => {
+      const accord = def.grille[m % def.grille.length];
+      const fond = def.basses[m % def.basses.length];
+      // La nappe : l'accord tenu toute la mesure, attaque lente.
+      accord.forEach((n) => voix(filtreNappe, n, quand, MESURE * 0.98, 0.045, 0.35, 'sawtooth', 9));
+      // La basse : des croches qui roulent (fondamentale, octave).
+      for (let i = 0; i < 8; i++) {
+        const n = fond + (i % 2 ? 12 : 0);
+        voix(filtreBasse, n - 12, quand + i * DC * 2, DC * 1.7, 0.16, 0.006, 'sawtooth', 4);
+      }
+      // La batterie : grosse caisse sur les temps, caisse claire au 2 et au 4, charleston en doubles-croches.
+      const batterie = couches.batterie;
+      for (let t = 0; t < 4; t++) grosseCaisse(c, batterie, quand + t * DC * 4, 0.55, 120, 40, 0.28);
+      for (const t of [1, 3]) {
+        coupDeBruit(c, bruit, batterie, quand + t * DC * 4, 0.3, 0.18, 'bandpass', 1800, 0.9);
+        note(c, batterie, 190, quand + t * DC * 4, 0.12, 0.18, 'triangle', 0.002);
+      }
+      for (let i = 0; i < 16; i++) coupDeBruit(c, bruit, batterie, quand + i * DC, i % 4 === 2 ? 0.06 : 0.03, i % 4 === 2 ? 0.12 : 0.04, 'highpass', 8000);
+      // L'arpège : les notes de l'accord, une à deux octaves plus haut.
+      def.arpege.forEach((k, i) => {
+        const n = accord[k % 4] + 12 * (1 + Math.floor(k / 4));
+        voix(filtreArp, n, quand + i * DC, DC * 0.8, 0.05, 0.004, 'square', 3);
+      });
+      // La mélodie : une phrase par mesure, avec un léger vibrato.
+      for (const [dc, n, longueur] of def.melodie[m % def.melodie.length]) voix(couches.melodie, n, quand + dc * DC, longueur * DC, 0.07, 0.02, 'sawtooth', 5, true);
+      // La tension : un souffle qui monte sur deux mesures, et une pulsation aiguë.
+      if (m % 2 === 0) {
+        const g = c.createGain();
+        g.connect(couches.tension);
+        g.gain.setValueAtTime(0.0001, quand);
+        g.gain.exponentialRampToValueAtTime(0.12, quand + MESURE * 1.9);
+        g.gain.exponentialRampToValueAtTime(0.0001, quand + MESURE * 2);
+        const { filtre } = souffle(c, bruit, g, quand, quand + MESURE * 2 + 0.05);
+        filtre.Q.value = 6;
+        filtre.frequency.setValueAtTime(400, quand);
+        filtre.frequency.exponentialRampToValueAtTime(6000, quand + MESURE * 2);
+      }
+      for (let i = 0; i < 16; i += 2) note(c, couches.tension, hauteur(accord[3] + 24), quand + i * DC, DC * 0.6, 0.03, 'square', 0.002);
+    });
+    return {
+      duree: def.mesures * MESURE,
+      position: seq.position,
+      couches,
+      arret: () => {
+        seq.arret();
+        lfo.stop(c.currentTime + 2);
+        vibrato.stop(c.currentTime + 2);
+      },
+    };
+  };
+}
+
+/** « Néon Rush » : 124 battements par minute, la mineur (Am7 – Fmaj7 – Cadd9 – G). */
+export const neonRush: Fabrique = synthwave({
+  tempo: 124,
+  mesures: 96,
+  grille: [
+    [57, 60, 64, 67],
+    [53, 57, 60, 64],
+    [48, 55, 60, 62],
+    [55, 59, 62, 67],
+  ],
+  basses: [45, 41, 48, 43],
+  arpege: [0, 1, 2, 4, 2, 1, 3, 5, 0, 2, 4, 6, 4, 2, 3, 1],
+  melodie: [
+    [[0, 76, 3], [3, 74, 3], [6, 72, 2], [8, 71, 4], [12, 72, 4]],
+    [[0, 72, 6], [6, 69, 2], [8, 67, 4], [12, 69, 4]],
+    [[0, 67, 3], [3, 72, 3], [6, 74, 2], [8, 76, 6], [14, 74, 2]],
+    [[0, 74, 4], [4, 71, 4], [8, 67, 6], [14, 71, 2]],
+  ],
+  couleur: 1300,
+});
+
+/** « Hyperlane » : 136 battements par minute, ré mineur (Dm – B♭ – F – C), plus sombre et plus serré. */
+export const hyperlane: Fabrique = synthwave({
+  tempo: 136,
+  mesures: 112,
+  grille: [
+    [50, 53, 57, 62],
+    [46, 50, 53, 58],
+    [53, 57, 60, 65],
+    [48, 52, 55, 60],
+  ],
+  basses: [38, 46, 41, 48],
+  arpege: [0, 2, 1, 3, 4, 2, 5, 3, 0, 4, 2, 6, 5, 3, 4, 7],
+  melodie: [
+    [[0, 74, 2], [2, 77, 2], [4, 81, 4], [8, 79, 2], [10, 77, 2], [12, 74, 4]],
+    [[0, 70, 4], [4, 74, 2], [6, 77, 2], [8, 74, 8]],
+    [[0, 77, 2], [2, 81, 2], [4, 84, 4], [8, 81, 2], [10, 79, 2], [12, 77, 4]],
+    [[0, 76, 6], [6, 72, 2], [8, 74, 8]],
+  ],
+  couleur: 1000,
+});

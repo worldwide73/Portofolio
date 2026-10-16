@@ -168,6 +168,8 @@ export interface Contenu {
     accroche: string;
     /** La barre du haut : la touche Échap (son effet selon l'écran), l'état du système, les icônes, les langues. */
     barre: { echap: { quitter: string; retour: string; fermer: string; pause: string; reprendre: string; menu: string; passer: string }; systeme: string; principal: string; course: string; langue: string; langues: { fr: string; en: string }; entree: string; espace: string };
+    /** RUSH RADIO : le lecteur compact du menu principal. */
+    radio: { titre: string; lire: string; pause: string; precedente: string; suivante: string; volume: string; liste: string; original: string; adaptative: string; fixe: string };
     menu: { commencer: string; continuer: string; campagne: string; infini: string; defi: string; records: string; garage: string; reglages: string; quitter: string; retour: string; lancer: string; commandes: string };
     /** Sous chaque entrée du menu. « {n} » : le secteur, « {d} » : la difficulté. */
     descriptions: { commencer: string; continuer: string; campagne: string; infini: string; defi: string; records: string; garage: string; reglages: string; quitter: string };

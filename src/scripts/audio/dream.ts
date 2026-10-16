@@ -32,6 +32,7 @@ export const versPiste = (e: EntreeCatalogue, compositions: Record<string, Fabri
   fabriquer: e.src ? undefined : compositions[e.id],
   niveau: e.niveau,
   duree: e.duree,
+  adaptative: !!e.adaptative,
 });
 
 /** La radio du portfolio (une seule par page). */

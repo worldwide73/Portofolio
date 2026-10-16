@@ -14,7 +14,7 @@
 //     DREAM RADIO (audio/dream.ts) et RUSH RADIO. Les grands effets (le portail qui se brise, la carte
 //     qui s'ouvre, une traversée) baissent la musique un instant, s'ils jouent vraiment.
 
-import { attenuerMusique, bruitBlanc, canalEffets, canalIntro, contexte, contexteExistant } from './audio/moteur';
+import { attenuerMusique, bruitBlanc, canalEffets, canalIntro, contexte, contexteExistant, tamponPret } from './audio/moteur';
 import { reglages, surReglage } from './reglages';
 import { surEtape, type Mode } from './voyage';
 
@@ -460,6 +460,104 @@ export function sonRush(evenement: EvenementRush): void {
     }
   }
 }
+
+/**
+ * LE MOTEUR DU VAISSEAU (Portal Rush V4) : un son continu qui suit la course. Un vrai moteur enregistré
+ * (Kenney, CC0 : public/audio/effets/moteur.mp3), transposé selon la vitesse et débarrassé de ses graves de
+ * voiture, mêlé à une turbine fabriquée ici (deux dents de scie dans un filtre qui monte avec la vitesse) et à
+ * un souffle. L'Overdrive ouvre tout. Il passe par le canal des effets : coupé avec eux, réglé par le volume du jeu.
+ */
+let moteurEnCours: { c: AudioContext; g: GainNode; source: AudioBufferSourceNode | null; turbine: OscillatorNode[]; filtre: BiquadFilterNode; vent: BiquadFilterNode; ventGain: GainNode; arret: () => void } | null = null;
+export function moteurRush(etat: { actif: boolean; vitesse: number; overdrive: boolean }): void {
+  const sortie = canalEffets();
+  if (!etat.actif || !reglages.sons || volumeRush <= 0) {
+    if (moteurEnCours) {
+      moteurEnCours.arret();
+      moteurEnCours = null;
+    }
+    return;
+  }
+  const c = contexte();
+  if (!c || !sortie || c.state !== 'running') return;
+  const v = Math.max(0, Math.min(1, etat.vitesse));
+  if (!moteurEnCours) {
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, c.currentTime);
+    g.gain.linearRampToValueAtTime(0.5 * volumeRush, c.currentTime + 0.6);
+    g.connect(sortie);
+    // Le moteur enregistré (s'il est déjà chargé ; sinon la turbine seule, et il arrivera au prochain départ).
+    const tampon = tamponPret('/audio/effets/moteur.mp3');
+    let source: AudioBufferSourceNode | null = null;
+    if (tampon) {
+      source = c.createBufferSource();
+      source.buffer = tampon;
+      source.loop = true;
+      // (On boucle à l'intérieur du fichier : le silence de début et de fin d'un MP3 ne s'entend pas.)
+      source.loopStart = 0.2;
+      source.loopEnd = Math.max(0.5, tampon.duration - 0.2);
+      const coupeBas = c.createBiquadFilter();
+      coupeBas.type = 'highpass';
+      coupeBas.frequency.value = 140;
+      const vol = c.createGain();
+      vol.gain.value = 0.55;
+      source.connect(coupeBas).connect(vol).connect(g);
+      source.start(c.currentTime, 0.2);
+    }
+    const filtre = c.createBiquadFilter();
+    filtre.type = 'bandpass';
+    filtre.Q.value = 4;
+    filtre.frequency.value = 600;
+    const volTurbine = c.createGain();
+    volTurbine.gain.value = 0.05;
+    filtre.connect(volTurbine).connect(g);
+    const turbine = [1, 1.5].map((r) => {
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = 110 * r;
+      o.connect(filtre);
+      o.start();
+      return o;
+    });
+    const ventGain = c.createGain();
+    ventGain.gain.value = 0.04;
+    ventGain.connect(g);
+    const { filtre: vent, source: souffleSource } = souffle(c, ventGain, c.currentTime, c.currentTime + 3600);
+    vent.type = 'bandpass';
+    vent.Q.value = 0.8;
+    const enCours = {
+      c,
+      g,
+      source,
+      turbine,
+      filtre,
+      vent,
+      ventGain,
+      arret: () => {
+        const t = c.currentTime;
+        g.gain.cancelScheduledValues(t);
+        g.gain.setValueAtTime(g.gain.value, t);
+        g.gain.linearRampToValueAtTime(0, t + 0.35);
+        const fin = t + 0.4;
+        source?.stop(fin);
+        turbine.forEach((o) => o.stop(fin));
+        souffleSource.stop(fin);
+        window.setTimeout(() => g.disconnect(), 600);
+      },
+    };
+    moteurEnCours = enCours;
+  }
+  const m = moteurEnCours;
+  const t = c.currentTime;
+  const od = etat.overdrive ? 1 : 0;
+  m.source?.playbackRate.setTargetAtTime(0.9 + v * 0.8 + od * 0.25, t, 0.15);
+  m.turbine.forEach((o, i) => o.frequency.setTargetAtTime((90 + v * 160 + od * 80) * (i ? 1.5 : 1), t, 0.2));
+  m.filtre.frequency.setTargetAtTime(500 + v * 1800 + od * 1600, t, 0.2);
+  m.vent.frequency.setTargetAtTime(700 + v * 2600 + od * 2000, t, 0.25);
+  m.ventGain.gain.setTargetAtTime(0.03 + v * 0.05 + od * 0.06, t, 0.25);
+  m.g.gain.setTargetAtTime((0.42 + v * 0.18) * volumeRush, t, 0.3);
+}
+/** Coupe le moteur tout de suite (sortie du jeu, pause). */
+export const arreterMoteurRush = () => moteurRush({ actif: false, vitesse: 0, overdrive: false });
 
 /** L'éveil du portail, pendant l'introduction : une nappe grave qui s'ouvre lentement. */
 export function sonEveil(): void {

@@ -21,6 +21,10 @@
 - Effets sonores **activés par défaut** (8 %), indépendants de la musique. La case « Son de l'introduction » (page Son) coupe désormais vraiment le son de l'introduction.
 - Les anciennes ambiances (Chill, Deep Space, Focus, Silence) et le lecteur des réglages sont retirés ; une valeur mémorisée par une ancienne version est ignorée sans rien réinitialiser d'autre.
 
+## Musique adaptative (RUSH RADIO)
+
+`radio.ts` `dosage()` donne, pour chaque situation de la course, le gain de chaque couche et l'ouverture du filtre de la radio : menu (nappe 1, basse 0,55, arpège 0,45), course (batterie et basse 1, arpège 0,35 → 1 avec l'intensité, mélodie au-delà de 0,55, tension = danger, filtre 2,6 → 17,6 kHz), Overdrive (tout ouvert), pause (filtre 750 Hz, −4,4 dB), défaite (nappe seule, 480 Hz), victoire (nappe, arpège, mélodie). `rush.ts` `suivreSon()` calcule l'intensité (vitesse relative au profil et avancée du secteur) et le danger (dernier bouclier, boss) quatre fois par seconde ; changements lissés en 0,5 s ; le tempo d'un morceau ne change jamais.
+
 ## Pistes et licences
 
 Détail public : `public/audio/CREDITS.txt`.
@@ -31,7 +35,8 @@ Détail public : `public/audio/CREDITS.txt`.
 | Heure bleue, Dérive, Trait fin | Compositions originales (déjà présentes, reprises dans DREAM RADIO avec une vraie durée) | Code du site | — |
 | Distant Home, Floating | diduuz, via Pioneer Space Sim | CC BY-SA 3.0 | `public/audio/dream/` |
 | Spaced Piano | Contributeurs de Pioneer Space Sim (2011) | CC BY-SA 3.0 | `public/audio/dream/` |
-| Techno Fugue, Plazma Steel | WKFO (Arda Güler), via Pioneer Space Sim | CC BY-SA 3.0 | `public/audio/rush/` |
+| Néon Rush, Hyperlane | Compositions originales synthwave **à couches** (RUSH RADIO, adaptatives) | Code du site | — |
+| Techno Fugue, Plazma Steel | WKFO (Arda Güler), via Pioneer Space Sim (sans couches : filtrées seulement) | CC BY-SA 3.0 | `public/audio/rush/` |
 | moteur, impact, bris, energie, destruction | Kenney (Starter Kits Racing, 3D Platformer, FPS) | CC0 | `public/audio/effets/` |
 
 Vérification de licence : `AUTHORS.txt` de Pioneer (« art, music and other assets … CC BY-SA 3.0 »), historique git du dépôt pour les auteurs (commits 7982df749, bdfe6ef87, d52690adf) ; README des kits Kenney (« sound effects are CC0 licensed »). Les fichiers Pioneer ont été réencodés en MP3 et mis à −18 LUFS (gain constant + limiteur), sans autre modification.

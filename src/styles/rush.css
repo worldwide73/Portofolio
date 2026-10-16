@@ -3728,3 +3728,312 @@ i.est-gagnee svg,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==========================================================================
+   RUSH RADIO (16 octobre 2026) : le lecteur compact, en bas à droite du menu
+   principal. Une plaque de verre sombre à coins coupés, comme le reste du jeu ;
+   il disparaît avec le menu (course, pause, fins).
+   ========================================================================== */
+.accueil__pied {
+  align-items: flex-end;
+}
+
+.accueil__pied .meilleur-score {
+  margin-left: auto;
+}
+
+.rush-radio {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 4px 8px;
+  width: min(330px, 100%);
+  margin: 0 clamp(4px, 1vw, 16px) clamp(4px, 1.4vh, 16px) 0;
+  padding: 9px 12px 9px 9px;
+}
+
+/* (Le fond à coins coupés est un calque à part : la liste des pistes, au-dessus, n'est pas rognée.) */
+.rush-radio::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--r-verre);
+  clip-path: var(--forme);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.rush-radio::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: var(--r-bord);
+  clip-path: var(--forme);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.rush-radio button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.rush-radio__lecture {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: var(--r-blanc);
+  color: var(--r-nuit) !important;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  transition: transform 0.15s, box-shadow 0.3s, background 0.2s;
+}
+
+.rush-radio__lecture svg {
+  width: 16px;
+  height: 16px;
+}
+
+.rush-radio__pause,
+.rush-radio[data-lecture='true'] .rush-radio__lire {
+  display: none;
+}
+
+.rush-radio[data-lecture='true'] .rush-radio__pause {
+  display: block;
+}
+
+.rush-radio[data-lecture='true'] .rush-radio__lecture {
+  background: var(--r-cyan);
+}
+
+.rush-radio__lecture:active {
+  transform: scale(0.94);
+}
+
+.rush-radio__titres {
+  display: grid;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.rush-radio__marque {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 0.62rem/1 var(--police);
+  letter-spacing: 0.2em;
+  color: var(--r-glacier);
+}
+
+.rush-radio__titres b {
+  overflow: hidden;
+  font: italic 700 0.9rem/1.25 var(--police);
+  letter-spacing: 0.01em;
+  color: var(--r-blanc);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rush-radio__titres small {
+  overflow: hidden;
+  font-size: 0.66rem;
+  color: var(--r-pale);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rush-radio__titres:hover b {
+  color: var(--r-cyan);
+}
+
+.rush-radio__ondes {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 8px;
+  opacity: 0;
+}
+
+.rush-radio__ondes i {
+  width: 2px;
+  height: 100%;
+  background: var(--r-cyan);
+  transform-origin: bottom;
+  animation: dream-onde 0.8s ease-in-out infinite;
+}
+
+.rush-radio__ondes i:nth-child(2) {
+  animation-delay: -0.25s;
+}
+
+.rush-radio__ondes i:nth-child(3) {
+  animation-delay: -0.5s;
+}
+
+.rush-radio[data-lecture='true'] .rush-radio__ondes {
+  opacity: 1;
+}
+
+.rush-radio__saut {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--r-doux) !important;
+  transition: color 0.2s;
+}
+
+.rush-radio__saut:hover {
+  color: var(--r-blanc) !important;
+}
+
+.rush-radio__saut svg {
+  width: 13px;
+  height: 13px;
+}
+
+.rush-radio__volume {
+  --v: 60%;
+  grid-column: 2 / -1;
+  width: 100%;
+  height: 14px;
+  margin: 0;
+  background: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.rush-radio__volume::-webkit-slider-runnable-track {
+  height: 3px;
+  background: linear-gradient(90deg, var(--r-cyan) var(--v), rgba(205, 224, 246, 0.16) var(--v));
+}
+
+.rush-radio__volume::-moz-range-track {
+  height: 3px;
+  background: linear-gradient(90deg, var(--r-cyan) var(--v), rgba(205, 224, 246, 0.16) var(--v));
+}
+
+.rush-radio__volume::-webkit-slider-thumb {
+  width: 10px;
+  height: 10px;
+  margin-top: -3.5px;
+  border: 0;
+  background: var(--r-blanc);
+  transform: rotate(45deg);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rush-radio__volume::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 0;
+  background: var(--r-blanc);
+  transform: rotate(45deg);
+}
+
+.rush-radio :is(button, input):focus-visible {
+  outline: 1.5px solid var(--r-cyan);
+  outline-offset: 2px;
+}
+
+/* La liste des pistes : elle s'ouvre au-dessus du lecteur. */
+.rush-radio__liste {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 3;
+  display: grid;
+  gap: 2px;
+  width: min(340px, 86vw);
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  background: var(--r-verre-fort);
+  clip-path: var(--forme);
+  box-shadow: inset 0 0 0 1px var(--r-trait-fort);
+}
+
+.rush-radio__liste[hidden] {
+  display: none;
+}
+
+.rush-radio__liste button {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.rush-radio__liste button:hover,
+.rush-radio__liste button[aria-current='true'] {
+  background: rgba(98, 217, 255, 0.08);
+}
+
+.rush-radio__liste button[aria-current='true'] .rush-radio__numero {
+  color: var(--r-cyan);
+}
+
+.rush-radio__liste span {
+  display: grid;
+}
+
+.rush-radio__liste b {
+  font: italic 700 0.86rem/1.2 var(--police);
+  color: var(--r-blanc);
+}
+
+.rush-radio__liste small,
+.rush-radio__numero,
+.rush-radio__duree {
+  font-size: 0.66rem;
+  color: var(--r-pale);
+}
+
+.rush-radio__liste .rush-radio__genre {
+  color: var(--r-glacier);
+  opacity: 0.8;
+}
+
+@media (max-width: 860px) {
+  .rush-radio {
+    width: 100%;
+    margin: 0;
+  }
+
+  .accueil__pied .meilleur-score {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rush-radio__ondes i {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+}
