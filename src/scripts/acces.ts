@@ -49,7 +49,8 @@ export function initAcces(): void {
 
   menu.addEventListener('toggle', (e) => {
     const ouvert = (e as ToggleEvent).newState === 'open';
-    commande.setAttribute('aria-expanded', String(ouvert));
+    // (Le nom et le chevron ouvrent tous deux le menu : ils disent tous deux s'il est ouvert.)
+    document.querySelectorAll('.identite [popovertarget="acces"]').forEach((b) => b.setAttribute('aria-expanded', String(ouvert)));
     if (!ouvert) {
       // À la prochaine ouverture, tout est comme neuf.
       window.clearTimeout(fermeture);

@@ -132,19 +132,21 @@ try {
     assert.equal((await etat(p)).chapitre, 'Tweaks');
   });
   let yLecture = 0;
-  await controle('Passage en bas de Réalisations : l’accueil, puis le grand portail se brise et forme la même carte', async () => {
+  await controle('Passage en bas de Réalisations : le bouton se fissure sur place et forme la carte, sans repasser par l’accueil', async () => {
     await p.locator('.galerie__pause').click(); // la rotation reprend
     yLecture = await traverser(p);
     await p.waitForFunction(() => document.documentElement.classList.contains('carte-en-transition'), null, { timeout: 10000 });
+    assert.ok(await p.evaluate(() => !!document.querySelector('main > .suite .suite__action.est-charge .fissures')), 'le bouton ne se fissure pas');
     const pendant = await etat(p);
-    assert.equal(pendant.destination, 'accueil'); // le grand portail est sur l'accueil
-    assert.equal(pendant.ancre, '#realisations'); // l'adresse ne change pas tant que rien n'est choisi
+    assert.equal(pendant.destination, 'realisations'); // on reste dans la destination
+    assert.equal(pendant.ancre, '#realisations');
     await carteFormee(p);
     await p.waitForTimeout(800);
     assert.equal(await p.locator('.explorateur').count(), 1);
     assert.equal(await p.evaluate(() => document.querySelector('.explorateur [aria-current]')?.dataset.destination), 'realisations');
-    assert.ok(await p.evaluate(() => !document.querySelector('.explorateur').classList.contains('sans-scene')), 'carte sur fond noir');
-    assert.equal(await p.locator('.fracture').count(), 0);
+    // Derrière la carte : le désert du fond de page, sous un voile léger ; le contenu de la page est effacé.
+    assert.ok(await p.evaluate(() => document.documentElement.classList.contains('carte-sur-page')));
+    assert.equal(await p.evaluate(() => getComputedStyle(document.getElementById('realisations')).visibility), 'hidden');
   });
   await controle('Carte ouverte : la page ne bouge plus (molette, touches)', async () => {
     const avant = (await etat(p)).y;
@@ -226,7 +228,7 @@ try {
     await p.waitForSelector('.rapide[open]');
     assert.equal(await p.locator('.rapide__projets li').count(), 7);
     assert.equal(await p.locator('[data-outil="rapide"]').getAttribute('aria-pressed'), 'true');
-    assert.ok(await p.locator('.rapide a[href="/cv-matheo-maleyran.pdf"]').count());
+    assert.ok(await p.locator('.rapide a[href="/CV_Matheo_Maleyran.pdf"]').count());
     await p.keyboard.press('Escape');
     await p.waitForTimeout(300);
     assert.equal(await p.locator('.rapide[open]').count(), 0);
@@ -237,7 +239,7 @@ try {
     await p.waitForTimeout(400);
     assert.equal(await p.locator('#acces a[href^="#"]').count(), 0);
     assert.deepEqual(await p.locator('#acces .acces__texte').allTextContents(), ['Mon CV', 'Mon LinkedIn', 'Mon GitHub', 'Copier mon e-mail', 'Partager le portfolio', 'Commandes clavier']);
-    assert.equal(await p.locator('#acces a[download]').getAttribute('href'), '/cv-matheo-maleyran.pdf');
+    assert.equal(await p.locator('#acces a[download]').getAttribute('href'), '/CV_Matheo_Maleyran.pdf');
     await p.locator('[data-action="raccourcis"]').click();
     await p.waitForSelector('.raccourcis[open]');
     assert.ok((await p.locator('.raccourcis').textContent()).includes('Ouvrir ou fermer la recherche'));
@@ -282,13 +284,18 @@ try {
   const direct = await page();
   await direct.goto(SITE + '/#contact');
   await pret(direct);
-  await controle('Arrivée sur #contact, puis le portail : le paysage et le cube sont là (pas d’écran noir)', async () => {
+  await controle('Arrivée sur #contact, puis le portail : la carte sur le désert du fond de page (pas d’écran noir)', async () => {
     await direct.waitForTimeout(800);
     await traverser(direct);
     await carteFormee(direct);
-    const taille = await direct.evaluate(() => [document.getElementById('champ').width, document.getElementById('champ').clientWidth]);
-    assert.ok(taille[0] >= taille[1] && taille[1] > 300, taille.join(' / '));
+    assert.equal(await direct.evaluate(() => document.documentElement.dataset.lieu), 'contact');
     assert.equal(await direct.evaluate(() => document.querySelector('.explorateur [aria-current]')?.dataset.destination), 'contact');
+    assert.notEqual(await direct.evaluate(() => getComputedStyle(document.body, '::before').backgroundImage), 'none');
+    // Le voile reste transparent au centre : le désert se voit.
+    assert.match(await direct.evaluate(() => getComputedStyle(document.querySelector('.explorateur')).backgroundImage), /rgba\(7, 11, 22, 0\.2\)/);
+    // Et le grand portail, revenu sur l'accueil, n'est pas noir (sa scène est à la taille de son cadre).
+    await direct.keyboard.press('Escape');
+    await carteFermee(direct);
   });
   await direct.screenshot({ path: `${DOSSIER}/carte-depuis-contact.png` });
   await direct.context().close();

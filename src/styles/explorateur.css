@@ -23,9 +23,19 @@
   color: var(--texte);
 }
 
-/* Ouverte ailleurs que sur l'accueil : il n'y a pas de paysage derrière, mais du texte. Le voile le couvre. */
-.explorateur.sans-scene {
-  background: radial-gradient(ellipse 78% 72% at 50% 52%, rgba(7, 11, 22, 0.9), rgba(3, 5, 11, 0.97) 80%);
+/* Ouverte loin du grand portail (le bouton d'une destination, le Hub) : le contenu de la page s'efface
+   derrière la carte ; il ne reste que le désert flouté du fond de page, sous le même voile de nuit. */
+/* (Le désert du fond de page est déjà assombri : le voile s'y fait plus léger.) */
+html.carte-sur-page .explorateur {
+  background: radial-gradient(ellipse 78% 72% at 50% 52%, rgba(7, 11, 22, 0.2), rgba(3, 5, 11, 0.6) 80%);
+}
+
+html.carte-sur-page main > :is([data-section], .suite, .pied) {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s var(--c-douce),
+    visibility 0s linear 0.3s;
 }
 
 .explorateur::backdrop {

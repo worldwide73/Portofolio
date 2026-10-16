@@ -33,18 +33,48 @@ html[data-lieu='contact'] main > .suite[data-suite-de='contact'] {
   display: grid;
 }
 
-/* Chaque destination commence en haut de la page, juste sous la barre. */
+/* Chaque destination commence en haut de la page, juste sous la barre. (Le retrait d'ancre vaut cette
+   marge : arrivé par une adresse #realisations…, le navigateur laisse la page tout en haut.) */
 html[data-lieu] :is(#competences, #veille) {
   margin-top: calc(var(--barre-h) + var(--marge-cadre) + var(--s-3));
+  scroll-margin-top: calc(var(--barre-h) + var(--marge-cadre) + var(--s-3));
 }
 
+html[data-lieu] :is(#realisations, #contact) {
+  scroll-margin-top: calc(var(--barre-h) + var(--marge-cadre) * 2);
+}
+
+/* Les réalisations dans leur lame de verre, comme les autres destinations (16 octobre 2026) : même
+   contour, même fond (l'opacité et le flou des réglages s'y appliquent), mêmes coins. La galerie 3D
+   tourne dedans, inchangée ; ses cartes de côté s'effacent au bord de la lame. */
 html[data-lieu] #realisations {
-  margin-top: 0;
+  margin: calc(var(--barre-h) + var(--marge-cadre) * 2) var(--marge-cadre) 0;
+  overflow: hidden;
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon-cadre);
+  background: var(--panneau);
+  -webkit-backdrop-filter: blur(calc(var(--flou, 0.7) * 32px)) saturate(1.2);
+  backdrop-filter: blur(calc(var(--flou, 0.7) * 32px)) saturate(1.2);
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 80px) rgba(130, 175, 255, calc(var(--lueur, 0.7) * 0.1)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
-/* La galerie occupe l'écran : ses commandes et son aide restent au-dessus du fil des chapitres. */
+/* Dans la lame, la scène commence sous son bord (plus sous la barre) ; ses commandes et son aide restent
+   au-dessus du fil des chapitres. */
 html[data-lieu] .galerie__scene {
+  padding-top: calc(var(--s-3) * 0.9);
   padding-bottom: calc(var(--marge-cadre) + 74px);
+}
+
+/* L'anneau (ordinateur) remplit la lame, qui occupe l'écran sous la barre. */
+html[data-lieu] .galerie--anneau .galerie__scene {
+  height: calc(100svh - var(--barre-h) - var(--marge-cadre) * 3 - 2px);
+}
+
+/* Le ruban (téléphone, mouvement réduit) : la lame suit son contenu. */
+html[data-lieu] .galerie:not(.galerie--anneau) .galerie__scene {
+  min-height: 0;
 }
 
 html[data-lieu] #contact {
@@ -169,6 +199,55 @@ html[data-lieu='contact'] .nav__lieu [data-lieu-nom='contact'] {
   }
 }
 
+/* ---- Le passage qui se brise (explorateur.ts) ----
+   Il s'allume et tremble pendant que ses fissures se dessinent, disparaît quand il vole en éclats
+   (la carte prend le relais), puis se reforme quand la carte se referme. */
+.suite__action .fissures {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.suite__action.est-charge {
+  border-color: rgba(214, 240, 255, 0.95);
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 34px) rgba(159, 230, 255, 0.55),
+    inset 0 0 14px rgba(159, 230, 255, 0.25);
+  animation: portail-tremble 0.07s linear infinite;
+}
+
+.suite__action.est-brise {
+  opacity: 0;
+  transition: opacity 0.06s linear;
+}
+
+.suite__action.est-reforme {
+  animation: portail-reforme 0.5s var(--c-douce) both;
+}
+
+@keyframes portail-tremble {
+  0% { translate: 0 0; }
+  25% { translate: -0.7px 0.4px; }
+  50% { translate: 0.6px -0.5px; }
+  75% { translate: -0.4px -0.3px; }
+  100% { translate: 0.7px 0.5px; }
+}
+
+@keyframes portail-reforme {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .suite__action.est-charge {
+    animation: none;
+  }
+}
+
 /* ---- La fin d'une destination : l'invitation à rejoindre le portail ---- */
 .suite {
   grid-column: 1 / -1;
@@ -278,6 +357,27 @@ html[data-lieu='contact'] .nav__lieu [data-lieu-nom='contact'] {
 .suite--grande .suite__texte {
   max-width: 32ch;
   font-size: var(--t-sous-titre);
+}
+
+/* Les fins des autres destinations n'ont qu'une phrase : elle s'écrit en grand, comme le titre de la
+   fin de l'accueil (un peu plus petit), avec un repère orbital plus présent. Elle suit la densité. */
+.suite:not(.suite--grande) {
+  gap: 1rem;
+  padding-top: calc(var(--s-5) + 0.5rem);
+}
+
+.suite:not(.suite--grande) .suite__orbite {
+  width: 80px;
+  height: 80px;
+}
+
+.suite:not(.suite--grande) .suite__texte {
+  max-width: 20ch;
+  font-size: calc(var(--t-titre) * 0.8);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  color: var(--texte);
 }
 
 /* L'action : une pastille de verre au contour cyan, qu'un reflet traverse de temps en temps. */

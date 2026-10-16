@@ -273,7 +273,7 @@ try {
   const detour = await visiteur({}, () => localStorage.setItem('guidage-vu', '1'));
   await detour.goto(SITE + '/#contact');
   await pret(detour);
-  await controle('Mémoire : le court passage par l’accueil, le temps que le portail se brise, n’est pas une visite', async () => {
+  await controle('Mémoire : ouvrir la carte depuis Contact ne compte pas l’accueil comme visité', async () => {
     await detour.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await detour.waitForTimeout(1000);
     await detour.locator('main > .suite[data-suite-de="contact"] .suite__action').click();

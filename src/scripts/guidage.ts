@@ -81,8 +81,8 @@ export function initGuidage(): void {
   window.addEventListener('destination', (e) => {
     cacher();
     // Arrivé ailleurs qu'à l'accueil, le visiteur n'a pas encore vu le guidage : il l'aura en y arrivant.
-    const { id, detour } = (e as CustomEvent<{ id: string; detour?: boolean }>).detail;
-    if (id === 'accueil' && !detour && !dejaVu()) window.setTimeout(() => !dejaVu() && window.scrollY < 40 && montrer?.(), 900);
+    const { id } = (e as CustomEvent<{ id: string }>).detail;
+    if (id === 'accueil' && !dejaVu()) window.setTimeout(() => !dejaVu() && window.scrollY < 40 && montrer?.(), 900);
   });
   window.addEventListener('portail', (e) => (e as CustomEvent<string>).detail === 'carte-activation' && cacher());
 

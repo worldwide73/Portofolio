@@ -67,6 +67,7 @@ export const en: Contenu = {
       { nom: 'Anywhere', lignes: [
         [['Ctrl', '+', 'K'], 'Open or close the search (⌘ + K on Mac)'],
         [['Esc'], 'Close the active window or map'],
+        [['↑', '↓'], 'Scroll the destination (hold the key to keep going)'],
         [['←', '→'], 'Previous or next chapter of the destination'],
         [['?'], 'Show this help'],
         [['²'], 'Open the hidden terminal (or type “trace”)'],
@@ -1009,7 +1010,7 @@ export const en: Contenu = {
     liens: [
       { nom: 'LinkedIn', texte: 'mathéo-maleyran', href: 'https://www.linkedin.com/in/mathéo-maleyran' },
       { nom: 'GitHub', texte: 'worldwide73', href: 'https://github.com/worldwide73' },
-      { nom: 'CV', texte: 'Download the PDF (French)', href: '/cv-matheo-maleyran.pdf' },
+      { nom: 'CV', texte: 'Download the PDF (French)', href: '/CV_Matheo_Maleyran.pdf' },
     ],
     repere: 'Contact',
     emailNom: 'Email',

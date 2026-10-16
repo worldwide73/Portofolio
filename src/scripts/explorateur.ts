@@ -35,7 +35,7 @@ import { clicPortail, emprisePortail, etat, impacter, onde } from './gl/champ';
 import { apresPause, mouvementReduit } from './outils';
 import { reglages } from './reglages';
 import { lenis } from './defilement';
-import { TRAJET, focaliser, rangDuVisiteur, voyager } from './voyage';
+import { TRAJET, focaliser, rangCourant, voyager } from './voyage';
 
 interface Point {
   x: number;
@@ -89,11 +89,92 @@ const entree = (t: number) => t * t * t; //                                     
 const entreSortie = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
 const hasard = (min: number, max: number) => min + Math.random() * (max - min);
 
-let ouvrirLaCarte: (() => void) | null = null;
-/** Ouvre la carte du portail (sans effet sur les pages qui n'en ont pas). Renvoie false dans ce cas. */
-export function ouvrirCarte(): boolean {
-  ouvrirLaCarte?.();
+/**
+ * Ce qui se brise pour ouvrir la carte, quand ce n'est pas le grand portail : un bouton (le passage
+ * « Traverser le portail » en bas d'une destination), et l'endroit où on l'a touché.
+ */
+export interface SourceCarte {
+  bouton: HTMLElement;
+  point?: Point | null;
+}
+
+let ouvrirLaCarte: ((source?: SourceCarte) => void) | null = null;
+/**
+ * Ouvre la carte du portail (sans effet sur les pages qui n'en ont pas ; renvoie false dans ce cas).
+ * Sans « source », c'est le grand portail qui se brise (s'il est à l'écran) ; avec, c'est le bouton.
+ */
+export function ouvrirCarte(source?: SourceCarte): boolean {
+  ouvrirLaCarte?.(source);
   return ouvrirLaCarte !== null;
+}
+
+/**
+ * Le bouton se fissure (16 octobre 2026), comme le grand portail : des fissures lumineuses partent du
+ * point touché et gagnent tout le verre, pendant « duree » secondes, et le bouton tremble. Elles sont
+ * dessinées sur une petite toile posée dans le bouton ; la fonction renvoyée l'efface.
+ */
+function fissurer(bouton: HTMLElement, impact: Point, duree: number): () => void {
+  const r = bouton.getBoundingClientRect();
+  const toile = document.createElement('canvas');
+  toile.className = 'fissures';
+  toile.setAttribute('aria-hidden', 'true');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  toile.width = Math.round(r.width * dpr);
+  toile.height = Math.round(r.height * dpr);
+  bouton.append(toile);
+  const ctx = toile.getContext('2d');
+  if (!ctx) return () => toile.remove();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const depart = { x: impact.x - r.left, y: impact.y - r.top };
+  const portee = Math.hypot(r.width, r.height);
+  // Des cassures qui rayonnent, en lignes brisées, chacune avec un petit retard.
+  const cassures = Array.from({ length: 9 }, (_, k) => {
+    let angle = (k / 9) * Math.PI * 2 + hasard(-0.25, 0.25);
+    const points: Point[] = [depart];
+    for (let i = 1; i <= 5; i++) {
+      angle += hasard(-0.35, 0.35);
+      const d = (i / 5) * portee * hasard(0.5, 0.8);
+      points.push({ x: depart.x + Math.cos(angle) * d, y: depart.y + Math.sin(angle) * d });
+    }
+    return { points, retard: hasard(0, 0.35) };
+  });
+  const etat = { t: 0 };
+  const dessiner = () => {
+    const t = etat.t;
+    ctx.clearRect(0, 0, r.width, r.height);
+    ctx.lineWidth = 1.3;
+    ctx.strokeStyle = 'rgba(244, 251, 255, 0.98)';
+    ctx.shadowColor = 'rgba(159, 230, 255, 0.95)';
+    ctx.shadowBlur = 6;
+    for (const c of cassures) {
+      const part = borne((t - c.retard * 0.5) / (1 - c.retard * 0.5));
+      if (part <= 0) continue;
+      const jusque = part * (c.points.length - 1);
+      ctx.beginPath();
+      ctx.moveTo(c.points[0].x, c.points[0].y);
+      for (let i = 1; i <= Math.ceil(jusque); i++) {
+        const a = c.points[i - 1];
+        const b = c.points[i];
+        const u = Math.min(1, jusque - (i - 1));
+        ctx.lineTo(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u);
+      }
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    // Le point d'impact s'allume.
+    const eclat = ctx.createRadialGradient(depart.x, depart.y, 0, depart.x, depart.y, 10 + 18 * t);
+    eclat.addColorStop(0, `rgba(255, 255, 255, ${(0.85 * t).toFixed(3)})`);
+    eclat.addColorStop(1, 'rgba(159, 230, 255, 0)');
+    ctx.fillStyle = eclat;
+    ctx.fillRect(0, 0, r.width, r.height);
+  };
+  bouton.classList.add('est-charge');
+  const tween = gsap.to(etat, { t: 1, duration: duree, ease: 'power1.in', onUpdate: dessiner });
+  return () => {
+    tween.kill();
+    toile.remove();
+    bouton.classList.remove('est-charge');
+  };
 }
 
 /** Ne garde d'un polygone que ce qui tient dans un cadre (on coupe le long de chaque bord). */
@@ -162,6 +243,8 @@ export function initExplorateur(): void {
   let elu = -1; //     la destination choisie
   let depuis = 0; //   l'instant de l'ouverture (secondes)
   let avecCube = false; // le cube était-il à l'écran à l'ouverture ?
+  let brise: HTMLElement | null = null; // le bouton qui s'est brisé à l'ouverture (sinon le grand portail)
+  let effacerFissures: (() => void) | null = null;
   const souris = { x: 0, y: 0, vx: 0, vy: 0, cx: -1, cy: -1 }; // le curseur, de -1 à 1 depuis le centre, sa version lissée, et sa place en pixels
 
   /** Pose les cinq destinations sur leur orbite, à l'angle du moment, et les liens dessus. */
@@ -475,6 +558,17 @@ export function initExplorateur(): void {
       ctx.stroke();
     }
 
+    // ---- L'éclair de la rupture d'un bouton (celle du grand portail est dans la scène WebGL) ----
+    if (brise && phase !== 'referme' && a.explose < 0.35) {
+      const force = 1 - a.explose / 0.35;
+      const eclair = ctx.createRadialGradient(impact.x, impact.y, 0, impact.x, impact.y, 60 + 260 * a.explose);
+      eclair.addColorStop(0, `rgba(240, 248, 255, ${(0.75 * force).toFixed(3)})`);
+      eclair.addColorStop(0.4, `rgba(159, 210, 255, ${(0.25 * force).toFixed(3)})`);
+      eclair.addColorStop(1, 'rgba(120, 165, 255, 0)');
+      ctx.fillStyle = eclair;
+      ctx.fillRect(0, 0, l, h);
+    }
+
     // ---- Les étincelles de l'explosion ----
     if (a.explose > 0 && a.forme < 1 && phase !== 'referme') {
       const elan = sortie(a.explose);
@@ -576,7 +670,20 @@ export function initExplorateur(): void {
     gsap.set(fenetre, { clearProps: 'opacity' });
     html.classList.remove('carte-ouverte');
     html.classList.remove('carte-en-transition');
+    html.classList.remove('carte-sur-page');
     lenis?.start(); // la page défile de nouveau
+    // Le bouton brisé se reforme, là où ses éclats sont revenus.
+    effacerFissures?.();
+    effacerFissures = null;
+    if (brise) {
+      const bouton = brise;
+      bouton.classList.remove('est-brise');
+      if (!calme()) {
+        bouton.classList.add('est-reforme');
+        window.setTimeout(() => bouton.classList.remove('est-reforme'), 600);
+      }
+    }
+    brise = null;
     survole = -1;
     elu = -1;
     // Le cube reparaît, dans un dernier reflet.
@@ -589,7 +696,7 @@ export function initExplorateur(): void {
     apres?.();
   };
 
-  const ouvrir = () => {
+  const ouvrir = (source?: SourceCarte) => {
     if (phase !== 'fermee') return;
     if (html.classList.contains('intro')) return;
     html.classList.add('carte-en-transition');
@@ -598,12 +705,17 @@ export function initExplorateur(): void {
     // « bloquer », plus bas) : sinon la molette faisait glisser le texte de la page derrière la carte.
     lenis?.stop();
     annoncer('carte-activation'); // Même nettoyage pour la souris, le clavier et le Hub.
-    const portail = emprisePortail();
-    const clic = clicPortail();
+    // Qui se brise : le bouton touché, s'il est à l'écran ; sinon le grand portail ; sinon (Hub, terminal,
+    // loin de l'accueil) la carte naît au centre de l'écran.
+    const bouton = source?.bouton && source.bouton.getClientRects().length ? source.bouton : null;
+    const r = bouton?.getBoundingClientRect();
+    const portail = bouton ? null : emprisePortail();
+    const clic = bouton ? source?.point ?? null : clicPortail();
     avecCube = !!portail;
-    cadre = portail ?? { x: window.innerWidth / 2 - 110, y: window.innerHeight / 2 - 180, l: 220, h: 360 };
-    // Le point d'impact : là où l'on a cliqué, ramené à l'intérieur du cube ; sinon son centre.
-    impact = clic && portail ? { x: cadre.x + cadre.l * borne((clic.x - cadre.x) / cadre.l) * 0.8 + cadre.l * 0.1, y: cadre.y + cadre.h * borne((clic.y - cadre.y) / cadre.h) * 0.8 + cadre.h * 0.1 } : { x: cadre.x + cadre.l / 2, y: cadre.y + cadre.h / 2 };
+    brise = bouton;
+    cadre = portail ?? (r ? { x: r.left, y: r.top, l: r.width, h: r.height } : { x: window.innerWidth / 2 - 110, y: window.innerHeight / 2 - 180, l: 220, h: 360 });
+    // Le point d'impact : là où l'on a cliqué, ramené à l'intérieur de ce qui se brise ; sinon son centre.
+    impact = clic && (portail || bouton) ? { x: cadre.x + cadre.l * borne((clic.x - cadre.x) / cadre.l) * 0.8 + cadre.l * 0.1, y: cadre.y + cadre.h * borne((clic.y - cadre.y) / cadre.h) * 0.8 + cadre.h * 0.1 } : { x: cadre.x + cadre.l / 2, y: cadre.y + cadre.h / 2 };
     tourne = 0;
     allureOrbite = 0;
     auDessus.fill(1);
@@ -611,19 +723,20 @@ export function initExplorateur(): void {
     fracturer();
     Object.assign(a, { explose: 0, forme: 0, ferme: 0, choix: 0, orbites: 0 });
     Object.assign(souris, { x: 0, y: 0, vx: 0, vy: 0, cx: -1, cy: -1 });
-    // (Pendant un détour par l'accueil, « ici » reste la destination d'où l'on a demandé le portail : voir voyage.ts.)
-    ici = rangDuVisiteur();
+    ici = rangCourant();
     astres.forEach((astre, i) => {
       if (i === ici) astre.setAttribute('aria-current', 'location');
       else astre.removeAttribute('aria-current');
     });
     depuis = gsap.ticker.time;
     dernier = depuis;
-    fenetre.classList.toggle('sans-scene', !portail);
 
     const montrer = () => {
       fenetre.showModal();
       html.classList.add('carte-ouverte');
+      // Loin du grand portail, le contenu de la page s'efface derrière la carte : il ne reste que le désert
+      // (le paysage flouté du fond de page), jamais un écran noir ni du texte sous les éclats.
+      html.classList.toggle('carte-sur-page', !portail);
       gsap.ticker.add(image);
     };
 
@@ -642,6 +755,12 @@ export function initExplorateur(): void {
     phase = 'fissure';
     sequence = gsap.timeline();
     let rupture = 0.04;
+    if (bouton) {
+      // 1 à 4, pour un bouton : l'impulsion, les fissures, le tremblement, avec le même son que le grand portail.
+      rupture = FISSURE;
+      annoncer('charge');
+      effacerFissures = fissurer(bouton, impact, FISSURE);
+    }
     if (portail) {
       // 1 à 5 : l'impulsion, les contours, les fissures, le tremblement, l'onde.
       rupture = FISSURE;
@@ -658,6 +777,12 @@ export function initExplorateur(): void {
         phase = 'ouvre';
         annoncer('rupture');
         if (portail) etat.brise = 1;
+        // Le bouton vole en éclats : il disparaît, ses éclats (la toile de la carte) prennent le relais.
+        if (bouton) {
+          effacerFissures?.();
+          effacerFissures = null;
+          bouton.classList.add('est-brise');
+        }
         montrer();
       },
       [],
@@ -692,7 +817,11 @@ export function initExplorateur(): void {
     if (calme()) return terminer();
     phase = 'referme';
     figer();
-    cadre = emprisePortail() ?? cadre; // (le cube a pu bouger un peu depuis l'ouverture)
+    // (Le cube a pu bouger un peu depuis l'ouverture ; un bouton brisé, lui, garde sa place, même effacé.)
+    if (brise) {
+      const r = brise.getBoundingClientRect();
+      if (r.width) cadre = { x: r.left, y: r.top, l: r.width, h: r.height };
+    } else cadre = emprisePortail() ?? cadre;
     fenetre.classList.remove('est-formee');
     fenetre.classList.add('se-ferme');
     sequence = gsap
@@ -735,7 +864,7 @@ export function initExplorateur(): void {
   window.addEventListener('portail', (e) => {
     if ((e as CustomEvent<string>).detail === 'ouvre') ouvrir();
   });
-  document.querySelector<HTMLButtonElement>('[data-portail]')?.addEventListener('click', ouvrir);
+  document.querySelector<HTMLButtonElement>('[data-portail]')?.addEventListener('click', () => ouvrir());
   // Fermer un dialog restitue automatiquement le focus au bouton d'ouverture.
   // Cet ancien focus ne doit pas rallumer l'aperçu : attendre un nouveau geste.
   document.addEventListener('pointermove', (e) => {

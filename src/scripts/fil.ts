@@ -160,6 +160,32 @@ export function initFil(): void {
   };
 
   // ---- Où en est-on ? ----
+  /**
+   * Les repères des chapitres sur le défilement (16 octobre 2026) : « arrivees », où la page se place pour
+   * rejoindre chacun ; « seuils », d'où chacun devient le chapitre actif. Dans une destination longue, ce
+   * sont ceux d'avant : un chapitre devient actif quand son haut passe la ligne de lecture (38 % de
+   * l'écran). Quand des chapitres se suivent de près (les cinq domaines des Compétences) ou ne peuvent plus
+   * monter jusqu'en haut (en bas de page), ils sont répartis sur le défilement possible : chacun a sa part,
+   * le fil avance d'un chapitre à la fois (avant, il sautait de 01 à 04).
+   */
+  const reperes = () => {
+    const n = chapitres.length;
+    const y = window.scrollY;
+    const fin = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const retrait = retraitChapitre();
+    const ligne = Math.max(retrait + 24, window.innerHeight * 0.38);
+    const hauts = chapitres.map((c) => c.getBoundingClientRect().top + y);
+    // Chaque arrivée au moins un pas après la précédente, puis le tout ramené dans le défilement possible.
+    const ecart = n > 1 ? Math.min(90, fin / (n - 1)) : 0;
+    const arrivees = [0];
+    for (let i = 1; i < n; i++) arrivees.push(Math.max(borner(hauts[i] - retrait, 0, fin), arrivees[i - 1] + ecart));
+    const depasse = arrivees[n - 1] ?? 0;
+    if (depasse > fin && depasse > 0) for (let i = 1; i < n; i++) arrivees[i] = (arrivees[i] * fin) / depasse;
+    // Un seuil suit la ligne de lecture, mais jamais avant le milieu de deux arrivées, ni après la sienne.
+    const seuils = arrivees.map((t, i) => (i === 0 ? 0 : Math.min(t, Math.max(hauts[i] - ligne, (arrivees[i - 1] + t) / 2))));
+    return { arrivees, seuils, fin };
+  };
+
   const situer = (): { rang: number; position: number } => {
     const n = chapitres.length;
     if (!n) return { rang: 0, position: 0 };
@@ -167,18 +193,17 @@ export function initFil(): void {
       const i = Math.max(0, galerie);
       return { rang: i, position: i };
     }
-    const ligne = Math.max(retraitChapitre() + 24, window.innerHeight * 0.38);
-    const hauts = chapitres.map((c) => c.getBoundingClientRect().top);
-    let r = 0;
-    hauts.forEach((haut, i) => {
-      if (haut <= ligne) r = i;
-    });
+    const y = window.scrollY;
+    const { seuils, fin } = reperes();
     // Tout en haut de la destination : son premier chapitre, même si le suivant est déjà visible.
-    if (window.scrollY < 4) return { rang: 0, position: 0 };
+    if (y < 4) return { rang: 0, position: 0 };
     // Tout en bas de la destination : le dernier chapitre, même s'il ne peut pas monter plus haut.
-    const fin = document.documentElement.scrollHeight - window.innerHeight;
-    if (fin > 0 && window.scrollY >= fin - 2) return { rang: n - 1, position: n - 1 };
-    const p = r < n - 1 ? r + borner((ligne - hauts[r]) / Math.max(1, hauts[r + 1] - hauts[r]), 0, 1) : r;
+    if (fin > 0 && y >= fin - 2) return { rang: n - 1, position: n - 1 };
+    let r = 0;
+    seuils.forEach((seuil, i) => {
+      if (i > 0 && seuil <= y) r = i;
+    });
+    const p = r < n - 1 ? r + borner((y - seuils[r]) / Math.max(1, seuils[r + 1] - seuils[r]), 0, 1) : r;
     return { rang: r, position: p };
   };
 
@@ -224,8 +249,7 @@ export function initFil(): void {
       const details = chapitre instanceof HTMLDetailsElement ? chapitre : chapitre.querySelector('details');
       if (details && !details.open) details.open = true;
     }
-    const fin = document.documentElement.scrollHeight - window.innerHeight;
-    const y = k === 0 ? 0 : Math.round(borner(chapitre.getBoundingClientRect().top + window.scrollY - retraitChapitre(), 0, fin));
+    const y = Math.round(reperes().arrivees[k] ?? 0);
     const duree = mouvementReduit ? 0 : borner(Math.abs(y - window.scrollY) / 2600, 0.6, 1.2);
     if (!mouvementReduit) lancerFaisceau(k, duree);
     if (lenis) lenis.scrollTo(y, { duration: duree, easing: (t) => 1 - Math.pow(1 - t, 3) });
@@ -276,6 +300,22 @@ export function initFil(): void {
     if (document.querySelector('dialog[open]') || document.documentElement.classList.contains('menu-ouvert') || document.documentElement.classList.contains('intro')) return;
     e.preventDefault();
     pas(e.key === 'ArrowRight' ? 1 : -1);
+  });
+
+  // Les flèches haut et bas (16 octobre 2026) : la destination défile, en douceur, d'un cinquième d'écran
+  // environ ; une touche maintenue continue. Mêmes exceptions que ← →. (Le défilement amorti ne les
+  // prenait pas toujours en compte : rien ne bougeait dans les Compétences.)
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable], [popover], dialog, .terminal, [role="listbox"], [role="tablist"]')) return;
+    if (document.querySelector('dialog[open]') || document.documentElement.classList.contains('menu-ouvert') || document.documentElement.classList.contains('intro')) return;
+    e.preventDefault();
+    const sens = e.key === 'ArrowDown' ? 1 : -1;
+    const pasClavier = Math.max(140, window.innerHeight * 0.2);
+    const fin = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    if (lenis) lenis.scrollTo(borner(lenis.targetScroll + sens * pasClavier, 0, fin), { duration: 0.5, easing: (t) => 1 - Math.pow(1 - t, 3) });
+    else window.scrollTo({ top: borner(window.scrollY + sens * pasClavier, 0, fin), behavior: 'auto' });
   });
 
   // ---- Ce qui change le fil ----

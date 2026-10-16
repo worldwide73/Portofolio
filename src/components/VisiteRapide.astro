@@ -38,8 +38,8 @@ const metier = c.hero.titre[1].replace(/\.$/, '');
       <p class="rapide__dispo etiquette"><span class="rapide__pouls" aria-hidden="true"></span>{t(c.contact.dispo)}</p>
       {!estACompleter(c.apropos.cap.titre) && <p class="rapide__texte rapide__cap">{t(c.apropos.cap.titre)}</p>}
       <div class="rapide__actions etiquette">
-        <a class="pastille pastille--pleine" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener">{v.cv}</a>
-        <a class="pastille" href="/cv-matheo-maleyran.pdf" download="cv-matheo-maleyran.pdf">{v.telecharger}</a>
+        <a class="pastille pastille--pleine" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">{v.cv}</a>
+        <a class="pastille" href="/CV_Matheo_Maleyran.pdf" download="CV_Matheo_Maleyran.pdf">{v.telecharger}</a>
         <a class="pastille" href={`mailto:${c.contact.email}`}>{v.ecrire}</a>
         {linkedin && <a class="pastille" href={linkedin.href} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a>}
       </div>
@@ -117,7 +117,7 @@ const metier = c.hero.titre[1].replace(/\.$/, '');
               </li>
             ))
           }
-          <li><span class="etiquette">CV</span><a class="lien" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener">{v.cv} ↗</a></li>
+          <li><span class="etiquette">CV</span><a class="lien" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">{v.cv} ↗</a></li>
         </ul>
       </section>
     </div>

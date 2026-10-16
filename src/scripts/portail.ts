@@ -1,26 +1,25 @@
 // LE PORTAIL, D'OÙ QUE L'ON SOIT : rejoindre la carte du portail.
 //
-// La carte du portail (explorateur.ts) naît toujours du grand portail de l'accueil, qui se brise :
-// ses fissures, sa rupture, ses éclats qui forment la carte, avec leurs sons. Ce module ne la
-// redessine pas et n'invente aucune autre animation : il amène seulement le grand portail à l'écran.
-//
-//   - sur l'accueil, le grand portail à l'écran : il se brise aussitôt ;
-//   - en bas de l'accueil (« Rejoindre le portail ») : la page remonte jusqu'à lui, puis il se brise,
-//     sans second clic ;
-//   - depuis une autre destination (le bouton de sa fin, le Hub, le terminal) : un court fondu ramène
-//     en haut de l'accueil (le « détour » de voyage.ts), et le portail s'y brise de la même façon.
-//     Refermer la carte sans choisir ramène à la destination de départ, là où on la lisait ;
+// La carte du portail (explorateur.ts) naît de ce qui se brise, avec la même séquence et les mêmes
+// sons que sur l'accueil (fissures, rupture, éclats qui forment la constellation) :
+//   - sur l'accueil : le grand portail. À l'écran, il se brise aussitôt ; plus bas (« Rejoindre le
+//     portail », la fin de l'accueil), la page remonte jusqu'à lui, puis il se brise, sans second clic ;
+//   - ailleurs (16 octobre 2026) : le bouton « Traverser le portail » de la fin de la destination se
+//     fissure lui-même et vole en éclats ; la carte s'ouvre sur place, sans repasser par l'accueil.
+//     Le contenu de la page s'efface derrière elle : le désert du fond de page reste visible. Refermer
+//     la carte sans choisir ramène exactement où l'on était ;
+//   - le Hub et le terminal, loin de l'accueil : la carte naît au centre de l'écran ;
 //   - sur une fiche (ou la page 404) : l'accueil s'ouvre avec « ?portail », et la carte à l'arrivée.
 //
-// Depuis le 16 octobre 2026, la barre du haut ne porte plus de bouton Portail (elle dit seulement où
-// l'on est) et la touche P n'ouvre plus rien : on prend le portail en bas de chaque destination.
+// La barre du haut ne porte plus de bouton Portail (elle dit seulement où l'on est) et la touche P
+// n'ouvre plus rien : on prend le portail en bas de chaque destination.
 
 import { allerA, lenis } from './defilement';
 import { ouvrirCarte } from './explorateur';
 import { emprisePortail } from './gl/champ';
 import { borner, mouvementReduit } from './outils';
 import { reglages } from './reglages';
-import { destinationActive, rejoindrePortail } from './voyage';
+import { destinationActive } from './voyage';
 
 const html = document.documentElement;
 /** Jusqu'à quand (performance.now) une demande est en route : les clics répétés ne relancent rien. Ce n'est
@@ -38,12 +37,15 @@ function quandPortailVisible(fait: () => void, limite = 1600): void {
   requestAnimationFrame(guetter);
 }
 
-/** Rejoint la carte du portail : le grand portail de l'accueil se brise, comme toujours. */
-export function ouvrirPortail(): void {
+/**
+ * Rejoint la carte du portail. « source » : le bouton qui la demande (il se brise, loin de l'accueil) ;
+ * « point » : l'endroit touché (le centre du bouton, au clavier).
+ */
+export function ouvrirPortail(options: { source?: HTMLElement | null; point?: { x: number; y: number } | null } = {}): void {
   const carte = document.querySelector<HTMLDialogElement>('.explorateur');
   // Sur une fiche (ou la page 404), la carte est sur l'accueil : on y va, et elle s'ouvrira à l'arrivée.
   if (!carte) {
-    const accueil = document.querySelector<HTMLAnchorElement>('.identite__lien')?.getAttribute('href') || '/';
+    const accueil = document.querySelector<HTMLElement>('.identite__lien')?.dataset.accueil || '/';
     window.location.href = `${accueil.split('#')[0]}?portail`;
     return;
   }
@@ -53,23 +55,21 @@ export function ouvrirPortail(): void {
   document.querySelectorAll<HTMLElement>('#acces:popover-open, #reglages:popover-open, #hub:popover-open').forEach((p) => p.hidePopover());
   document.querySelectorAll<HTMLDialogElement>('.recherche[open], .rapide[open], .raccourcis[open]').forEach((d) => d.close());
 
-  const ouvrir = () => {
-    occupeJusque = 0;
-    ouvrirCarte();
-  };
-
-  // Une autre destination : un court fondu jusqu'en haut de l'accueil, puis le portail s'y brise.
+  // Loin de l'accueil : le bouton se fissure et se brise, la carte s'ouvre sur place.
   if (destinationActive() !== 'accueil') {
-    occupeJusque = performance.now() + 2500;
-    rejoindrePortail(() => quandPortailVisible(ouvrir, 1200));
+    ouvrirCarte(options.source ? { bouton: options.source, point: options.point } : undefined);
     return;
   }
-  // Le grand portail est à l'écran : c'est lui qui se brise.
+  // Sur l'accueil, le grand portail à l'écran : c'est lui qui se brise.
   if (emprisePortail()) {
     ouvrirCarte();
     return;
   }
   // Plus bas sur l'accueil : on remonte jusqu'à lui, puis il se brise, sans second clic.
+  const ouvrir = () => {
+    occupeJusque = 0;
+    ouvrirCarte();
+  };
   occupeJusque = performance.now() + 3000;
   if (mouvementReduit || reglages.animations === 0 || !lenis) {
     allerA(0, true);
@@ -89,7 +89,9 @@ export function initPortail(): void {
     const bouton = (e.target as Element).closest<HTMLElement>('[data-portail-ouvrir]');
     if (!bouton) return;
     e.preventDefault();
-    ouvrirPortail();
+    // (Au clavier, detail vaut 0 : le bouton se brise depuis son centre.)
+    const point = e.detail > 0 ? { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null;
+    ouvrirPortail({ source: bouton, point });
   });
 
   // Arrivée depuis une fiche (« ?portail ») : la carte s'ouvre après l'entrée de page.

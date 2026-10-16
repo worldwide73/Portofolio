@@ -65,13 +65,13 @@ const ICONES = {
 }
 
 <header class="barre">
-  <!-- Le bloc d'identité : le symbole et le nom ramènent à l'accueil (sans recharger
-       la page quand on y est déjà) ; le chevron ouvre l'accès rapide. -->
+  <!-- Le bloc d'identité : un menu déroulant (l'accès rapide). Le nom comme le chevron l'ouvrent ;
+       le nom ne ramène plus à l'accueil (16 octobre 2026 : on voyage par le portail). -->
   <div class="identite" data-intro="barre">
-    <a class="identite__lien" href={page === 'accueil' ? '#accueil' : accueil}>
+    <button class="identite__lien" type="button" popovertarget="acces" aria-expanded="false" aria-haspopup="menu" data-accueil={accueil} title={contenu.acces.titre}>
       <Symbole taille={20} />
       <b class="identite__nom">Mathéo Maleyran</b>
-    </a>
+    </button>
     <button class="identite__commande" type="button" popovertarget="acces" aria-expanded="false" aria-label={contenu.acces.titre} title={contenu.acces.titre}>
       <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
     </button>
@@ -104,7 +104,7 @@ const ICONES = {
       <a class="pastille pastille--ronde" href={cheminAutreLangue} hreflang={autre} data-langue data-bloc aria-label={contenu.interface.changerLangue}>
         <Drapeau langue={langue} />
       </a>
-      <a class="pastille pastille--pleine" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener">{contenu.interface.cv}</a>
+      <a class="pastille pastille--pleine" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">{contenu.interface.cv}</a>
     </div>
   </nav>
 
@@ -121,7 +121,7 @@ const ICONES = {
     >
       <Drapeau langue={langue} />
     </a>
-    <a class="pastille pastille--pleine barre__secondaire" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener" data-intro="barre">
+    <a class="pastille pastille--pleine barre__secondaire" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener" data-intro="barre">
       <span data-decode>{contenu.interface.cv}</span>
     </a>
     <button
@@ -158,12 +158,12 @@ const ICONES = {
 <div class="acces etiquette" id="acces" popover aria-label={a.titre} data-adresse={adresseSite}>
   <p class="acces__titre">{a.titre}</p>
   <div class="acces__contact">
-    <a class="acces__lien" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener">
+    <a class="acces__lien" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">
       <span class="acces__icone" set:html={ICONES.cv} />
       <span class="acces__texte">{a.cv}</span>
     </a>
     <span class="acces__boutons">
-      <a class="acces__mini" href="/cv-matheo-maleyran.pdf" download="cv-matheo-maleyran.pdf">{a.telecharger}</a>
+      <a class="acces__mini" href="/CV_Matheo_Maleyran.pdf" download="CV_Matheo_Maleyran.pdf">{a.telecharger}</a>
     </span>
   </div>
   {
@@ -410,7 +410,7 @@ const ICONES = {
   data-textes={JSON.stringify(contenu.terminal)}
   data-projets={JSON.stringify(projetsDuTerminal)}
   data-accueil={accueil}
-  data-cv="/cv-matheo-maleyran.pdf"
+  data-cv="/CV_Matheo_Maleyran.pdf"
   data-langue={cheminAutreLangue}
 >
   <div class="terminal__tete">

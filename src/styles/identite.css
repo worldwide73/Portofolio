@@ -1,7 +1,7 @@
 /* ==========================================================================
    LE BLOC D'IDENTITÉ (en haut à gauche) ET L'ACCÈS RAPIDE
-   Une pastille en verre, comme le menu. Le symbole et le nom ramènent à
-   l'accueil ; le chevron, à droite, ouvre un petit menu d'accès rapide.
+   Une pastille en verre, comme le menu. Le nom (avec le symbole) et le
+   chevron, à droite, ouvrent tous deux le petit menu d'accès rapide.
    ========================================================================== */
 
 .identite {
@@ -24,8 +24,20 @@
   align-items: center;
   gap: 0.6em;
   padding: 0 11px 0 12px;
+  border: 0;
   border-radius: 999px 0 0 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
   text-decoration: none;
+  cursor: pointer;
+  transition: background var(--d-micro) var(--c-douce);
+}
+
+.identite__lien:hover,
+.identite__lien:focus-visible,
+.identite__lien[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--texte) 7%, transparent);
 }
 
 .identite__lien svg {

@@ -72,6 +72,7 @@ export const fr: Contenu = {
       { nom: 'Partout', lignes: [
         [['Ctrl', '+', 'K'], 'Ouvrir ou fermer la recherche (⌘ + K sur Mac)'],
         [['Échap'], 'Fermer la fenêtre ou la carte active'],
+        [['↑', '↓'], 'Faire défiler la destination (touche maintenue : en continu)'],
         [['←', '→'], 'Chapitre précédent ou suivant de la destination'],
         [['?'], 'Afficher cette aide'],
         [['²'], 'Ouvrir le terminal caché (ou taper « trace »)'],
@@ -1036,7 +1037,7 @@ export const fr: Contenu = {
     liens: [
       { nom: 'LinkedIn', texte: 'mathéo-maleyran', href: 'https://www.linkedin.com/in/mathéo-maleyran' },
       { nom: 'GitHub', texte: 'worldwide73', href: 'https://github.com/worldwide73' },
-      { nom: 'CV', texte: 'Télécharger le PDF', href: '/cv-matheo-maleyran.pdf' },
+      { nom: 'CV', texte: 'Télécharger le PDF', href: '/CV_Matheo_Maleyran.pdf' },
     ],
     repere: 'Contact',
     emailNom: 'E-mail',

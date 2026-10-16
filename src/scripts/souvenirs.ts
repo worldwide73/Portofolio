@@ -1,6 +1,5 @@
 // LA MÉMOIRE DES DESTINATIONS (16 octobre 2026).
-// Une destination réellement rejointe (affichée pour elle-même : pas le court passage par l'accueil
-// pendant que le grand portail se brise) est notée dans le navigateur. Sur la carte du portail, chaque
+// Une destination réellement rejointe est notée dans le navigateur. Sur la carte du portail, chaque
 // destination déjà explorée porte un petit point cyan, posé sur le halo de sa planète (explorateur.css,
 // .astre[data-visitee]) ; un lecteur d'écran entend « déjà explorée ». Rien n'est verrouillé ni compté :
 // ce n'est qu'un souvenir. La carte, ses positions, ses mouvements et ses animations ne changent pas.
@@ -48,8 +47,7 @@ export function initSouvenirs(): void {
   if (document.querySelector('[data-section]')) noterVisite(destinationActive());
   else if (document.querySelector('.fiche')) noterVisite('realisations');
   window.addEventListener('destination', (e) => {
-    const { id, detour } = (e as CustomEvent<{ id: string; detour?: boolean }>).detail;
-    if (!detour) noterVisite(id);
+    noterVisite((e as CustomEvent<{ id: string }>).detail.id);
   });
   refleter();
 }

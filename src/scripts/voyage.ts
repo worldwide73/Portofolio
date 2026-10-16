@@ -92,14 +92,6 @@ export const destinationActive = (): Destination => {
 export const rangCourant = () => TRAJET.indexOf(destinationActive());
 
 /**
- * Le détour par le grand portail (voir rejoindrePortail) : la destination d'où l'on est parti, et
- * l'endroit où on la lisait. Tant qu'il dure, l'accueil est affiché, mais le visiteur est « là-bas ».
- */
-let detour: { id: Destination; y: number } | null = null;
-/** Le rang de la destination du visiteur : celle d'où il a demandé le portail, pendant un détour. */
-export const rangDuVisiteur = () => TRAJET.indexOf(detour?.id ?? destinationActive());
-
-/**
  * Où s'arrête une section quand on y navigue (scroll-margin-top, voir base.css).
  * Gardé pour le changement de langue, qui s'en sert comme point d'appui.
  */
@@ -115,7 +107,7 @@ const lectures = new Map<Destination, number>();
  * remesurée, et l'on se place en haut (ou à « y »). Prévient les autres modules
  * par l'évènement « destination ».
  */
-function montrer(id: Destination, y = 0, detour = false): void {
+function montrer(id: Destination, y = 0): void {
   const avant = destinationActive();
   if (avant !== id) lectures.set(avant, window.scrollY);
   html.dataset.lieu = id;
@@ -123,8 +115,7 @@ function montrer(id: Destination, y = 0, detour = false): void {
   ScrollTrigger.refresh();
   allerA(y, true);
   ScrollTrigger.update();
-  // (« detour » : l'accueil n'est affiché que le temps que le grand portail s'y brise ; ce n'est pas une visite.)
-  window.dispatchEvent(new CustomEvent('destination', { detail: { id, avant, detour } }));
+  window.dispatchEvent(new CustomEvent('destination', { detail: { id, avant } }));
 }
 
 /**
@@ -133,7 +124,6 @@ function montrer(id: Destination, y = 0, detour = false): void {
  */
 export function revenirAccueil(): void {
   if (!document.getElementById('accueil')) return;
-  detour = null;
   if (window.location.hash) history.replaceState(history.state, '', window.location.pathname + window.location.search);
   montrer('accueil');
 }
@@ -214,16 +204,6 @@ export function voyager(id: string, memoriser = true, direct = false): void {
   const contenu = document.querySelector<HTMLElement>('main');
   if (!cible || !contenu) return;
   const arrivee = TRAJET.indexOf(id);
-
-  // Pendant un détour par le grand portail, on est déjà sur l'accueil : la carte y emmène.
-  if (detour) {
-    const origine = detour;
-    detour = null;
-    // Retour à la destination de départ : on y retrouve sa lecture (l'adresse n'a pas changé).
-    if (id === origine.id) return revenirDuDetour(origine);
-    // L'accueil : on y est, l'adresse le dit maintenant.
-    if (id === 'accueil') return inscrire('accueil', memoriser);
-  }
 
   // Un saut dans le temps est déjà en route.
   if (annulerSaut) {
@@ -317,67 +297,6 @@ export function voyager(id: string, memoriser = true, direct = false): void {
   enCours.to(contenu, { opacity: 1, duration: ENTREE, ease: 'power2.out' });
 }
 
-// ---- Le détour par le grand portail ----
-// La carte du portail naît du grand portail de l'accueil, qui se brise (explorateur.ts). Demandée
-// depuis une autre destination (sa fin, le Hub, le terminal), la page passe donc un instant sur
-// l'accueil, tout en haut, le temps d'un fondu ; le portail s'y brise exactement comme d'habitude.
-// L'adresse ne change pas tant que rien n'est choisi : refermer la carte ramène là où l'on lisait.
-
-/** Affiche l'accueil, tout en haut, pour que le grand portail s'y brise ; « pret » est appelé une fois la page en place. */
-export function rejoindrePortail(pret: () => void): void {
-  const contenu = document.querySelector<HTMLElement>('main');
-  const id = destinationActive();
-  if (!contenu || id === 'accueil' || !document.getElementById('accueil')) return pret();
-  annulerSaut?.();
-  annulerSaut = null;
-  enCours?.kill();
-  enCours = null;
-  visee = null;
-  detour = { id, y: window.scrollY };
-  if (estCalme()) {
-    montrer('accueil', 0, true);
-    pret();
-    return;
-  }
-  // (Sans le son d'un changement de destination : ce sont ceux du portail qui suivent. Le portail
-  // ne se brise qu'une fois l'accueil tout à fait revenu : on le voit entier, puis il cède.)
-  enCours = gsap.timeline({
-    onComplete: () => {
-      gsap.set(contenu, { clearProps: 'opacity' });
-      enCours = null;
-      pret();
-    },
-  });
-  enCours.to(contenu, { opacity: 0, duration: 0.16, ease: 'power1.in' });
-  enCours.call(() => montrer('accueil', 0, true));
-  enCours.to(contenu, { opacity: 1, duration: ENTREE, ease: 'power2.out' });
-}
-
-/** La carte s'est refermée sans choix : retour à la destination de départ, là où on la lisait. */
-function revenirDuDetour(origine: { id: Destination; y: number }): void {
-  const contenu = document.querySelector<HTMLElement>('main');
-  const section = document.getElementById(origine.id);
-  if (!contenu || !section) return;
-  if (estCalme()) {
-    montrer(origine.id, origine.y);
-    return;
-  }
-  // (Sans son non plus : celui de la carte qui se referme l'accompagne.)
-  enCours?.kill();
-  enCours = gsap.timeline({
-    onComplete: () => {
-      gsap.set(contenu, { clearProps: 'opacity' });
-      enCours = null;
-    },
-  });
-  enCours.to(contenu, { opacity: 0, duration: SORTIE, ease: 'power1.in' });
-  enCours.call(() => {
-    montrer(origine.id, origine.y);
-    glisser(section, 1);
-  });
-  enCours.to(contenu, { opacity: 1, duration: ENTREE, ease: 'power2.out' });
-}
-
 /** Branche les destinations : les liens vers une section, l'historique, l'arrivée par une adresse. */
 export function initVoyage(): void {
   const sections = TRAJET.map((id) => document.getElementById(id));
@@ -397,19 +316,10 @@ export function initVoyage(): void {
     voyager(id);
   });
 
-  // ---- La carte du portail refermée sans choix, pendant un détour : on rentre ----
-  window.addEventListener('portail', (e) => {
-    if ((e as CustomEvent<string>).detail !== 'carte-fermee' || !detour) return;
-    const origine = detour;
-    detour = null;
-    revenirDuDetour(origine);
-  });
-
   // ---- Le bouton « précédent » du navigateur : la destination d'avant, là où on la lisait ----
   window.addEventListener('popstate', () => {
     const id = window.location.hash.slice(1) || 'accueil';
     if (!estDestination(id) || !contenu) return;
-    detour = null;
     annulerSaut?.();
     annulerSaut = null;
     enCours?.kill();

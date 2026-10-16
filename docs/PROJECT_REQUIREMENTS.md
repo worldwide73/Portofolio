@@ -1,3 +1,17 @@
+## Retours du 16 octobre 2026 (4ᵉ lot) — remplacent la ligne « Animation du portail = celle de l'accueil » du 2ᵉ lot
+
+| Demande | État | Preuve |
+|---|---|---|
+| Le passage du bas se fissure et ouvre la carte sur place (sauf l'accueil, grand portail) | V (rendu logiciel) | recette `retours-lot4.mjs` (classes, toile de fissures, moments charge/rupture, destination inchangée) + captures ralenties ; son non écouté |
+| Pas d'écran noir derrière la carte | V | recette (contenu effacé, voile léger, fond du désert) + capture |
+| Réalisations dans une lame de verre, fond réglable | V | recette (bordure, coins, fond suit l'opacité) + captures bureau/téléphone/compact |
+| Texte des fins de page plus grand | V | recette (≥ 40 px à 1440) + capture |
+| Le nom ouvre le menu déroulant, comme le chevron | V | recette bureau et téléphone |
+| Fil des Compétences sans saut (01 → 06) | V | recette (molette et clics) |
+| Flèches ↑ ↓ font défiler chaque destination | V | recette (5 destinations, réduit) |
+| Aide clavier à jour | V | recette |
+| CV renommé `CV_Matheo_Maleyran.pdf` | V | recette (réponse 200, liens) |
+
 ## Huit améliorations du 16 octobre 2026 (3ᵉ lot)
 
 | Demande | État | Preuve |
