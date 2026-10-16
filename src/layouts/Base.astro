@@ -1,0 +1,135 @@
+---
+// Le squelette commun à toutes les pages : <head>, interface fixe, scripts.
+import '@fontsource-variable/geist/wght.css';
+import 'lenis/dist/lenis.css';
+import '../styles/global.css';
+import { getImage } from 'astro:assets';
+import dunesPaysage from '../assets/scene/dunes-paysage.png';
+import Chrome from '../components/Chrome.astro';
+import type { Contenu } from '../contenu/types';
+
+interface Props {
+  contenu: Contenu;
+  page: 'accueil' | 'fiche';
+  /** Adresse de la même page dans l'autre langue. */
+  cheminAutreLangue: string;
+  titre?: string;
+  description?: string;
+  /** Faux pour les pages que les moteurs de recherche ne doivent pas lister (la page 404). */
+  indexable?: boolean;
+}
+
+const { contenu, page, cheminAutreLangue, titre, description, indexable = true } = Astro.props;
+const langue = contenu.langue;
+const autre = langue === 'fr' ? 'en' : 'fr';
+const leTitre = titre ?? contenu.meta.titre;
+const laDescription = description ?? contenu.meta.description;
+
+// Le paysage du hero, en petit : le thème « verre » le garde en fond de page, flouté.
+const decor = await getImage({ src: dunesPaysage, format: 'webp', width: 960, quality: 70 });
+
+// Adresses complètes (https://…), exigées par les moteurs de recherche et les réseaux sociaux.
+const absolue = (chemin: string) => new URL(chemin, Astro.site).href;
+const adresse = absolue(Astro.url.pathname);
+const adresseAutre = absolue(cheminAutreLangue);
+const imagePartage = absolue('/partage.jpg');
+
+// Données structurées : une carte d'identité lisible par les moteurs de recherche.
+const personne = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Mathéo Maleyran',
+  url: absolue('/'),
+  image: imagePartage,
+  jobTitle: contenu.meta.metier,
+  description: contenu.meta.description,
+  email: `mailto:${contenu.contact.email}`,
+  knowsLanguage: ['fr', 'en'],
+  sameAs: contenu.contact.liens.filter((lien) => lien.href.startsWith('http')).map((lien) => lien.href),
+};
+---
+
+<!doctype html>
+<html lang={langue} data-page={page} data-onglet-absent={contenu.interface.ongletAbsent} style={`--decor: url(${decor.src})`}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{leTitre}</title>
+    <meta name="description" content={laDescription} />
+    <meta name="author" content="Mathéo Maleyran" />
+    <meta name="theme-color" content="#0c0d10" />
+    <meta name="color-scheme" content="dark light" />
+    {!indexable && <meta name="robots" content="noindex" />}
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icone-180.png" />
+
+    <!-- Référencement : l'adresse officielle de la page, et sa version dans l'autre langue. -->
+    {
+      indexable && (
+        <>
+          <link rel="canonical" href={adresse} />
+          <link rel="alternate" hreflang={langue} href={adresse} />
+          <link rel="alternate" hreflang={autre} href={adresseAutre} />
+          <link rel="alternate" hreflang="x-default" href={langue === 'fr' ? adresse : adresseAutre} />
+        </>
+      )
+    }
+
+    <!-- Aperçu affiché quand le lien est partagé (LinkedIn, messageries, réseaux sociaux). -->
+    <meta property="og:type" content={page === 'accueil' ? 'website' : 'article'} />
+    <meta property="og:site_name" content="Mathéo Maleyran" />
+    <meta property="og:title" content={leTitre} />
+    <meta property="og:description" content={laDescription} />
+    <meta property="og:url" content={adresse} />
+    <meta property="og:locale" content={langue === 'fr' ? 'fr_FR' : 'en_GB'} />
+    <meta property="og:locale:alternate" content={langue === 'fr' ? 'en_GB' : 'fr_FR'} />
+    <meta property="og:image" content={imagePartage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={contenu.meta.partageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={leTitre} />
+    <meta name="twitter:description" content={laDescription} />
+    <meta name="twitter:image" content={imagePartage} />
+    <meta name="twitter:image:alt" content={contenu.meta.partageAlt} />
+
+    {page === 'accueil' && indexable && <script type="application/ld+json" set:html={JSON.stringify(personne).replace(/</g, '\\u003c')} />}
+
+    <!-- Exécuté avant le premier affichage : applique le thème mémorisé et prépare
+         l'entrée de page (voir public/avant.js). C'est un fichier à part, et non du
+         code écrit ici, pour que la politique de sécurité du site puisse interdire
+         tout script écrit directement dans une page. -->
+    <script is:inline src="/avant.js"></script>
+  </head>
+
+  <body>
+    <a class="evitement etiquette" href="#contenu">{contenu.interface.evitement}</a>
+
+    <Chrome contenu={contenu} page={page} cheminAutreLangue={cheminAutreLangue} />
+
+    <main id="contenu">
+      <slot />
+    </main>
+
+    <!-- Filtre « spectre » : sépare l'image en rouge, vert et bleu et décale
+         le rouge et le bleu. Le JavaScript anime le décalage au survol d'une carte. -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="spectre" x="-4%" y="-4%" width="108%" height="108%" color-interpolation-filters="sRGB">
+          <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="rouge"></feColorMatrix>
+          <feOffset in="rouge" dx="0" dy="0" result="rougeDecale" data-canal="rouge"></feOffset>
+          <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="vert"></feColorMatrix>
+          <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="bleu"></feColorMatrix>
+          <feOffset in="bleu" dx="0" dy="0" result="bleuDecale" data-canal="bleu"></feOffset>
+          <feBlend in="rougeDecale" in2="vert" mode="screen" result="rv"></feBlend>
+          <feBlend in="rv" in2="bleuDecale" mode="screen"></feBlend>
+        </filter>
+      </defs>
+    </svg>
+
+    <script>
+      import '../scripts/principal.ts';
+    </script>
+  </body>
+</html>

@@ -1,0 +1,497 @@
+/* ==========================================================================
+   SECTION 5 : CONTACT — la dernière lame de verre du site
+   Le même verre fumé que les autres sections (opacité et flou réglables), les
+   mêmes filets bleu glacier et la même lueur. Les deux moyens directs passent
+   d'abord : l'e-mail (écrire ou copier) et LinkedIn ; puis le téléphone,
+   GitHub et le CV. Ensuite, le pied de page : signature et crédits.
+   ========================================================================== */
+
+.contact {
+  position: relative;
+  margin: var(--s-6) var(--marge-cadre) 0;
+  min-height: calc(100svh - 2 * var(--marge-cadre));
+  padding: clamp(26px, 4vw, 60px);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--colonne);
+  row-gap: var(--s-5);
+  align-content: space-between;
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon-cadre);
+  background: var(--panneau);
+  -webkit-backdrop-filter: blur(calc(var(--flou, 0.05) * 32px)) saturate(1.2);
+  backdrop-filter: blur(calc(var(--flou, 0.05) * 32px)) saturate(1.2);
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 80px) rgba(130, 175, 255, calc(var(--lueur, 0.7) * 0.1)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  color: var(--texte);
+}
+
+/* ---- L'en-tête : un repère, un grand titre, l'invitation ---- */
+.contact__tete {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--colonne);
+  row-gap: var(--s-3);
+  align-items: end;
+}
+
+.contact__repere {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  color: var(--discret);
+}
+
+.contact__point {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lampe);
+  box-shadow: 0 0 calc(4px + var(--lueur, 0.7) * 10px) var(--lampe);
+}
+
+.contact__index {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.titre.contact__titre {
+  grid-column: 1 / span 8;
+  font-size: clamp(2.6rem, 6vw, 6.2rem);
+  line-height: 0.98;
+  letter-spacing: -0.048em;
+}
+
+.contact__texte {
+  grid-column: 9 / -1;
+  max-width: 38ch;
+  padding-bottom: 0.6rem;
+  font-size: var(--t-chapo);
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  color: color-mix(in srgb, var(--texte) 84%, transparent);
+}
+
+/* ---- Les deux moyens directs ---- */
+.contact__canaux {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  gap: var(--colonne);
+  align-items: stretch;
+}
+
+.contact__canal {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: clamp(18px, 2vw, 28px) 0 0;
+  border-top: 1px solid var(--filet-fort);
+}
+
+/* Le filet du haut s'allume, de gauche à droite, au survol du bloc. */
+.contact__canal::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--lampe), rgba(207, 225, 255, 0));
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 12px) var(--lampe);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.7s var(--c-masque);
+}
+
+.contact__canal:hover::before,
+.contact__canal:focus-within::before {
+  transform: scaleX(1);
+}
+
+.contact__nom {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  color: var(--discret);
+}
+
+.contact__nom svg {
+  width: 16px;
+  height: 16px;
+  color: var(--lampe);
+}
+
+/* L'adresse : le texte le plus grand de la section après le titre, un vrai lien mailto. */
+.contact__adresse {
+  justify-self: start;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.45rem, 3.5vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: -0.042em;
+  text-decoration: none;
+  background: linear-gradient(var(--lampe), var(--lampe)) left bottom / 0 1px no-repeat;
+  padding-bottom: 0.08em;
+  transition:
+    background-size 0.6s var(--c-masque),
+    text-shadow 0.4s var(--c-douce);
+}
+
+.contact__adresse:hover,
+.contact__adresse:focus-visible {
+  background-size: 100% 1px;
+  text-shadow: 0 0 calc(var(--lueur, 0.7) * 26px) rgba(170, 205, 255, 0.45);
+}
+
+.contact__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.contact__actions .bouton {
+  min-height: 44px;
+}
+
+/* LinkedIn : une petite lame de verre dans la lame, qui s'éclaire au survol. */
+.contact__linkedin {
+  padding: clamp(18px, 2vw, 28px);
+  border: 1px solid var(--filet);
+  border-radius: 20px;
+  background: rgba(150, 190, 255, 0.05);
+  color: var(--texte);
+  text-decoration: none;
+  transition:
+    border-color var(--d-interface) var(--c-douce),
+    background var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce);
+}
+
+.contact__linkedin::before {
+  left: 20px;
+  width: calc(100% - 40px);
+}
+
+.contact__linkedin:hover,
+.contact__linkedin:focus-visible {
+  border-color: var(--filet-fort);
+  background: rgba(150, 190, 255, 0.1);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 40px) rgba(130, 175, 255, calc(var(--lueur, 0.7) * 0.18));
+}
+
+.contact__profil {
+  font-size: clamp(1.2rem, 2vw, 1.9rem);
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+.contact__voir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  color: var(--discret);
+  transition: color var(--d-interface) var(--c-douce);
+}
+
+.contact__voir span {
+  transition: transform 0.45s var(--c-masque);
+}
+
+.contact__linkedin:hover .contact__voir,
+.contact__linkedin:focus-visible .contact__voir {
+  color: var(--texte);
+}
+
+.contact__linkedin:hover .contact__voir span,
+.contact__linkedin:focus-visible .contact__voir span {
+  transform: translate(3px, -3px);
+}
+
+/* ---- Les autres moyens : téléphone, GitHub, CV ---- */
+.contact__liste {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: var(--colonne);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contact__liste a {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--filet);
+  color: var(--texte);
+  text-decoration: none;
+  transition: border-color var(--d-interface) var(--c-douce);
+}
+
+.contact__liste a:hover,
+.contact__liste a:focus-visible {
+  border-color: var(--lampe);
+}
+
+.contact__liste .nom {
+  color: var(--discret);
+}
+
+.contact__liste .valeur {
+  font-size: var(--t-chapo);
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- La disponibilité, et l'heure de Lyon ---- */
+.contact__dispo {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75em 1.2em;
+  color: color-mix(in srgb, var(--texte) 86%, transparent);
+}
+
+.contact__pouls {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8fe3ff;
+  box-shadow: 0 0 10px rgba(143, 227, 255, 0.8);
+}
+
+.contact__pouls::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid #8fe3ff;
+  animation: contact-pouls 2.4s var(--c-douce) infinite;
+}
+
+@keyframes contact-pouls {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+.contact__horloge {
+  display: flex;
+  gap: 0.5em;
+  margin-left: auto;
+  color: var(--discret);
+  font-variant-numeric: tabular-nums;
+}
+
+.contact__horloge time {
+  color: var(--texte);
+}
+
+/* ==========================================================================
+   LE PIED DE PAGE : la signature du portfolio, ses crédits, ses liens
+   Posé sur le décor (sans panneau) : il clôt la page sans rivaliser avec Contact.
+   ========================================================================== */
+.pied {
+  position: relative;
+  margin: 0 var(--marge-cadre);
+  padding: clamp(48px, 6vw, 88px) clamp(26px, 4vw, 60px) calc(var(--marge-cadre) + 92px);
+  color: var(--texte);
+}
+
+/* La transition : une ligne de lumière qui s'éteint vers les bords. */
+.pied__trait {
+  position: absolute;
+  top: clamp(20px, 3vw, 40px);
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lampe) 50%, transparent);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 18px) rgba(207, 225, 255, 0.55);
+  opacity: 0.8;
+}
+
+.pied__grille {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--colonne);
+  row-gap: var(--s-4);
+  align-items: start;
+}
+
+.pied__signature {
+  grid-column: 1 / span 4;
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+  color: var(--lampe);
+}
+
+.pied__nom {
+  margin: 0.3rem 0 0;
+  font-size: clamp(1.5rem, 2.4vw, 2.3rem);
+  letter-spacing: -0.04em;
+  color: var(--texte);
+}
+
+.pied__edition,
+.pied__titre {
+  margin: 0;
+  color: var(--discret);
+}
+
+.pied__credits {
+  grid-column: 5 / span 5;
+  display: grid;
+  gap: var(--s-2);
+}
+
+.pied__credits dl {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.pied__credits dt {
+  margin-bottom: 0.25rem;
+  color: var(--discret);
+}
+
+.pied__credits dd {
+  margin: 0;
+  font-size: var(--t-petit);
+  line-height: 1.45;
+}
+
+.pied__liens {
+  grid-column: 10 / -1;
+  display: grid;
+  gap: 0.15rem;
+  justify-items: start;
+}
+
+.pied__lien {
+  display: inline-flex;
+  gap: 0.4em;
+  padding: 0.35rem 0;
+  color: color-mix(in srgb, var(--texte) 86%, transparent);
+  font-size: var(--t-petit);
+  text-decoration: none;
+  transition: color var(--d-interface) var(--c-douce);
+}
+
+.pied__lien:hover,
+.pied__lien:focus-visible {
+  color: var(--texte);
+  text-shadow: 0 0 calc(var(--lueur, 0.7) * 16px) rgba(170, 205, 255, 0.5);
+}
+
+.pied__bas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-5);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--filet);
+  color: var(--discret);
+}
+
+.pied__bas p {
+  margin: 0;
+}
+
+.pied__haut {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  background: var(--verre);
+  color: var(--texte);
+  text-decoration: none;
+  transition:
+    border-color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce);
+}
+
+.pied__haut span {
+  transition: transform 0.45s var(--c-masque);
+}
+
+.pied__haut:hover,
+.pied__haut:focus-visible {
+  border-color: var(--filet-fort);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 24px) rgba(130, 175, 255, 0.25);
+}
+
+.pied__haut:hover span,
+.pied__haut:focus-visible span {
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact__pouls::after {
+    animation: none;
+  }
+
+  .contact__canal::before {
+    transition: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .contact__titre,
+  .contact__texte {
+    grid-column: 1 / -1;
+  }
+
+  .titre.contact__titre {
+    font-size: clamp(2.2rem, 10vw, 3.4rem);
+  }
+
+  .contact__canaux {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contact__adresse {
+    font-size: min(6.6vw, 2.2rem);
+  }
+
+  .contact__liste {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contact__horloge {
+    margin-left: 0;
+  }
+
+  .pied__signature,
+  .pied__credits,
+  .pied__liens {
+    grid-column: 1 / -1;
+  }
+
+  .pied__liens {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pied__liens .pied__titre {
+    grid-column: 1 / -1;
+  }
+}

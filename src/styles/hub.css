@@ -1,0 +1,502 @@
+/* ==========================================================================
+   L'ORBITAL HUB (OrbitalHub.astro, hub.ts)
+   Un panneau de verre au-dessus de l'icône flottante, en bas à droite :
+   l'assistant d'abord, puis le jeu, la visite guidée et les coulisses.
+   ========================================================================== */
+.hub {
+  position: fixed;
+  inset: auto calc(var(--marge-cadre) + 8px) calc(var(--marge-cadre) + 58px) auto;
+  box-sizing: border-box;
+  display: none;
+  width: min(390px, calc(100vw - 24px));
+  height: min(560px, calc(100dvh - 116px));
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  color: var(--texte);
+  background: rgba(10, 13, 20, calc(0.62 + var(--opacite, 0.25) * 0.38));
+  -webkit-backdrop-filter: blur(calc(10px + var(--flou, 0.3) * 30px)) saturate(1.2);
+  backdrop-filter: blur(calc(10px + var(--flou, 0.3) * 30px)) saturate(1.2);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 60px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.16));
+  overflow: hidden;
+}
+
+.hub:popover-open {
+  display: grid;
+  /* (minmax(0, 1fr) : aucun contenu ne peut élargir le panneau au-delà de son cadre.) */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  animation: hub-entree 0.28s var(--c-douce) both;
+}
+
+/* Ouvert par-dessus le jeu : au centre. */
+.rush .hub {
+  inset: 50% auto auto 50%;
+  translate: -50% -50%;
+}
+
+@keyframes hub-entree {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+.hub__tete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hub__tete h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+/* Une seule échelle dans tout le panneau : commandes de 32 à 36 px, textes de 0,72 à 0,8 rem. */
+.hub .pastille {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.75rem;
+}
+
+.hub__onglets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--filet);
+  border-radius: 14px;
+}
+
+/* Le repère « Jouable » sur l'onglet Portal Rush : il s'allume au survol. */
+.hub__jouable {
+  margin-left: 0.45em;
+  padding: 0.12em 0.5em;
+  border: 1px solid rgba(143, 227, 255, 0.45);
+  border-radius: 999px;
+  font-size: 0.8em;
+  color: #9fe6ff;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.hub__onglets button:hover .hub__jouable,
+.hub__onglets button:focus-visible .hub__jouable {
+  border-color: #9fe6ff;
+  box-shadow: 0 0 10px rgba(143, 227, 255, 0.45);
+}
+
+.hub__onglets button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--discret);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hub__onglets button[aria-pressed='true'] {
+  background: var(--texte);
+  color: var(--fond);
+}
+
+.hub__onglets button:hover {
+  color: var(--texte);
+}
+
+.hub__onglets button[aria-pressed='true']:hover {
+  color: var(--fond);
+}
+
+.hub__vue {
+  display: none;
+  min-height: 0;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hub[data-vue='assistant'] [data-vue='assistant'],
+.hub[data-vue='explorer'] [data-vue='explorer'],
+.hub[data-vue='coulisses'] [data-vue='coulisses'] {
+  display: grid;
+}
+
+.hub__vue:not(.hub__vue--assistant) {
+  align-content: start;
+  gap: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.hub__note,
+.hub__texte {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--discret);
+}
+
+.hub__texte {
+  font-size: 0.8rem;
+}
+
+/* ---- L'assistant ---- */
+.hub__vue--assistant {
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  gap: 10px;
+}
+
+.hub__fil {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-color: var(--filet-fort) transparent;
+}
+
+.hub__messages {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hub__message {
+  max-width: 88%;
+  padding: 9px 12px;
+  border: 1px solid var(--filet);
+  border-radius: 14px 14px 14px 4px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.hub__message p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 860px), (max-height: 650px) {
+  .hub { bottom: max(12px, env(safe-area-inset-bottom)); max-height: calc(100dvh - 24px); height: calc(100dvh - 24px); }
+  .hub__vue--assistant { overflow-y: auto; grid-template-rows: auto minmax(100px,1fr) auto auto auto; }
+  .hub__onglets button { white-space: normal; min-height: 42px; }
+  .hub__saisie input { font-size: 16px; }
+  .hub .pastille, .hub__micro { min-height: 40px; }
+}
+
+.hub__message--visiteur {
+  justify-self: end;
+  border-radius: 14px 14px 4px 14px;
+  background: rgba(150, 192, 255, 0.14);
+}
+
+.hub__message.est-en-attente p {
+  animation: hub-attente 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes hub-attente {
+  from {
+    opacity: 0.3;
+  }
+}
+
+.hub__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hub__actions .pastille,
+.hub__sujets .pastille {
+  min-height: 30px;
+  padding: 0 11px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.hub__sujets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.hub__saisie {
+  display: flex;
+  gap: 6px;
+}
+
+.hub__saisie input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--texte);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.hub__saisie .pastille {
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.hub__saisie input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.hub__micro {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--filet-fort);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--texte);
+  cursor: pointer;
+}
+
+.hub__micro[hidden] {
+  display: none;
+}
+
+.hub__micro svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hub__micro[aria-pressed='true'] {
+  border-color: #ffb487;
+  color: #ffd0b5;
+  box-shadow: 0 0 0 0 rgba(255, 160, 120, 0.6);
+  animation: hub-ecoute 1.2s ease-out infinite;
+}
+
+@keyframes hub-ecoute {
+  to {
+    box-shadow: 0 0 0 12px rgba(255, 160, 120, 0);
+  }
+}
+
+.hub__voix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--discret);
+  cursor: pointer;
+}
+
+.hub__voix[hidden] {
+  display: none;
+}
+
+/* ---- Explore My Universe ---- */
+.hub__parcours {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub__parcours button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--filet);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.8rem;
+  color: var(--texte);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hub__parcours button:hover,
+.hub__parcours button:focus-visible {
+  border-color: var(--filet-fort);
+  background: rgba(150, 192, 255, 0.08);
+}
+
+.hub__parcours small {
+  font-size: 0.72rem;
+  color: var(--discret);
+}
+
+/* ---- Behind the Build ---- */
+.hub__groupe h3 {
+  margin: 0 0 6px;
+  color: var(--discret);
+}
+
+.hub__groupe ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 16px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.hub__fiche {
+  justify-self: start;
+  font-size: 0.78rem;
+}
+
+/* ---- La carte de la visite guidée ---- */
+.visite {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--marge-cadre) + 64px);
+  z-index: 40;
+  box-sizing: border-box;
+  display: grid;
+  gap: 6px;
+  width: min(460px, calc(100vw - 24px));
+  padding: 16px 18px;
+  translate: -50% 0;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  background: rgba(10, 13, 20, 0.86);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 50px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.18));
+  animation: hub-entree 0.3s var(--c-douce) both;
+}
+
+.visite[hidden] {
+  display: none;
+}
+
+.visite__etape {
+  margin: 0;
+  color: var(--discret);
+}
+
+.visite__titre {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.visite__texte {
+  margin: 0;
+  font-size: var(--t-petit);
+  line-height: 1.45;
+  color: var(--discret);
+}
+
+.visite__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.visite__actions button[disabled] {
+  opacity: 0.4;
+}
+
+/* Le titre de la section visitée s'éclaire un instant. */
+.visite-cible {
+  animation: visite-cible 2.4s var(--c-douce);
+}
+
+@keyframes visite-cible {
+  20%,
+  60% {
+    text-shadow: 0 0 34px rgba(160, 200, 255, 0.95);
+  }
+}
+
+html.carte-ouverte .visite,
+html.intro .visite {
+  display: none;
+}
+
+/* ---- La souris ----
+   Le site cache la souris du système pour dessiner la sienne (.curseur), mais ce
+   curseur reste dans la page, sous les panneaux affichés au premier plan. Sur eux,
+   on rend donc la souris du système, et on efface le curseur dessiné. */
+html.curseur-actif :is(.hub, .rush, .reglages, .visite) {
+  cursor: auto;
+}
+
+html.curseur-actif :is(.hub, .rush, .reglages, .visite) :is(a, button, label, summary, input[type='checkbox'], input[type='radio'], input[type='range']) {
+  cursor: pointer;
+}
+
+html.curseur-actif :is(.hub, .reglages) input[type='text'] {
+  cursor: text;
+}
+
+html.curseur-actif:has(:is(.hub, .rush, .reglages, .visite):hover) .curseur {
+  opacity: 0 !important;
+}
+
+@media (max-width: 860px) {
+  .hub {
+    inset: auto 12px calc(var(--marge-cadre) + 56px) 12px;
+    width: auto;
+  }
+
+  .hub__onglets button {
+    font-size: 0.72rem;
+    padding: 6px 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub:popover-open,
+  .visite,
+  .visite-cible,
+  .hub__micro[aria-pressed='true'] {
+    animation: none;
+  }
+}
+
+/* Le bouton extérieur reste celui de Claude ; ces finitions concernent le panneau. */
+.hub { padding: 16px; border-color: rgba(169,214,255,.32); background: linear-gradient(145deg,rgba(40,67,94,.24),rgba(6,13,24,.2)), rgba(10,13,20,calc(.62 + var(--opacite,.25)*.38)); }
+.hub__tete { padding-bottom: 10px; border-bottom: 1px solid var(--filet); }
+.hub__onglets { padding: 4px; gap: 4px; }
+.hub__onglets button { min-height: 40px; white-space: normal; line-height: 1.25; }
+.hub__onglets button[aria-pressed='true'] { background: rgba(157,205,255,.15); color: #ecf8ff; box-shadow: inset 0 0 0 1px rgba(178,222,255,.35); }
+.hub__onglets button[aria-pressed='true']:hover { color: #fff; }
+.hub__message { max-width: 100%; font-size: .84rem; line-height: 1.6; padding: 13px; }
+.hub__message--assistant { border-left-color: rgba(176,221,255,.6); }
+.hub__message--visiteur { max-width: 88%; padding: 9px 12px; }
+.hub__sujets { flex-wrap: nowrap; overflow-x: auto; padding: 2px 0 5px; }
+.hub__sujets button { flex: 0 0 auto; }
+.hub__note { font-size: .74rem; line-height: 1.5; }
+.visite__ressource:empty { display: none; }
+.visite__ressource .pastille { margin: 8px 0; font-size: .8rem; }
+@media (max-width: 860px), (max-height: 650px) {
+  .hub { inset: 12px 12px auto auto; height: min(560px,calc(100dvh - 24px)); max-height: calc(100dvh - 24px); width: min(390px,calc(100vw - 24px)); padding: 12px; }
+  .hub__vue--assistant { overflow-y: auto; grid-template-rows: auto minmax(100px,1fr) auto auto auto; }
+}

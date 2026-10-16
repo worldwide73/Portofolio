@@ -1,0 +1,112 @@
+/* ==========================================================================
+   JETONS DE DESIGN
+   Toutes les valeurs réutilisées du site sont ici : couleurs, typographie,
+   espacements, rayons, courbes et durées d'animation. Changer une valeur ici
+   la change partout.
+   ========================================================================== */
+
+:root {
+  /* ---- Couleurs ---- */
+  --noir: #0c0d10;       /* le fond de page : sombre, mais pas un noir pur */
+  --graphite: #16181d;   /* surfaces posées sur le fond */
+  --acier: #8e939c;      /* texte secondaire sur fond sombre */
+  --givre: #f3f4f6;      /* texte principal sur fond sombre */
+  --blanc: #eef0f2;      /* le fond du panneau clair (contact) */
+  --encre: #0b0c0e;      /* texte sur fond clair */
+  --lampe: #cfe1ff;      /* l'accent : la lumière froide de la lame de verre */
+
+  /* ---- Typographie : une seule famille, Geist ----
+     Une grotesque nette et neutre. Les titres sont en graisse normale, serrés,
+     de taille mesurée : c'est la scène qui fait le spectacle, pas la lettre. */
+  --f-texte: 'Geist Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  --t-hero: clamp(2.1rem, 4.3vw, 4.5rem);
+  --t-titre: clamp(1.9rem, 3.5vw, 3.6rem);
+  --t-sous-titre: clamp(1.1rem, 1.35vw, 1.3rem);
+  --t-chapo: clamp(1.02rem, 1.2vw, 1.2rem);
+  --t-texte: 1rem;
+  --t-petit: 0.9375rem;
+  --t-etiquette: 0.8125rem;
+
+  /* ---- Grille, espacements, rayons ---- */
+  --gouttiere: clamp(18px, 2.8vw, 48px);    /* marge gauche et droite du contenu */
+  --colonne: clamp(12px, 1.6vw, 28px);      /* espace entre deux colonnes */
+  --marge-cadre: clamp(8px, 0.85vw, 12px);  /* espace entre le bord de l'écran et les grands panneaux */
+  --rayon-cadre: clamp(20px, 2.2vw, 32px);  /* coins des grands panneaux */
+  --rayon-carte: clamp(12px, 1.2vw, 18px);  /* coins des cartes et des images */
+  --s-1: 0.5rem;
+  --s-2: 1rem;
+  --s-3: 1.5rem;
+  --s-4: clamp(2rem, 3vw, 2.75rem);
+  --s-5: clamp(2.75rem, 4.5vw, 4rem);
+  --s-6: clamp(4rem, 7vw, 6.5rem);
+  --barre-h: 64px;   /* hauteur de la barre du haut */
+
+  /* ---- Courbes d'animation : quatre gestes, réutilisés partout ---- */
+  --c-masque: cubic-bezier(0.16, 1, 0.3, 1);       /* sortie longue : un titre qui monte */
+  --c-trait: cubic-bezier(0.65, 0, 0.35, 1);       /* un trait qui se dessine */
+  --c-douce: cubic-bezier(0.22, 0.61, 0.36, 1);    /* petits déplacements */
+  --c-ressort: cubic-bezier(0.34, 1.56, 0.64, 1);  /* léger rebond */
+
+  /* ---- Durées ---- */
+  --d-micro: 0.2s;       /* survol, clic */
+  --d-interface: 0.4s;   /* changement d'état */
+  --d-scene: 0.9s;       /* entrée d'un grand élément */
+}
+
+/* ==========================================================================
+   LES COULEURS PAR RÔLE
+   Le reste du CSS n'utilise jamais une couleur directement : il utilise des
+   « rôles » (--fond, --texte…). Le site n'a qu'un thème : la nuit, en lames de verre
+   (surfaces translucides, filets bleu glacier, le paysage du hero flouté derrière toute
+   la page ; l'opacité et le flou se règlent dans les réglages). C'est l'ancien thème
+   « verre », remis par défaut le 15 octobre 2026 à la demande de Mathéo.
+
+   Deux cas particuliers :
+   - .zone-claire  : une zone claire au milieu du thème sombre
+                     (le panneau de contact, et la barre quand elle le survole) ;
+   - .toujours-sombre : une zone qui reste sombre même dans une zone claire (le hero,
+                     dont la scène est une image de nuit).
+   ========================================================================== */
+
+/* Le thème du site : des lames de verre sur la nuit */
+:root {
+  /* Les réglages d'origine (reglages.ts les remplace par ceux du visiteur) : panneaux à 25 %, flou à 5 %. */
+  --opacite: 0.25;
+  --flou: 0.05;
+  --fond: #0a0d13;
+  --texte: var(--givre);
+  --discret: #a6afbd;
+  --filet: rgba(200, 222, 255, 0.2);
+  --filet-fort: rgba(200, 222, 255, 0.46);
+  --verre: rgba(150, 182, 235, calc(var(--opacite, 0.7) * 0.28)); /* fond des pastilles en verre (densité réglable) */
+  --panneau: rgba(20, 28, 43, var(--opacite, 0.7));               /* fond des grands panneaux en verre (densité réglable) */
+  --surface: rgba(190, 215, 255, 0.08);
+  --focus: var(--lampe);                /* contour de l'élément atteint au clavier */
+}
+
+/* Le hero : sa scène est une image de nuit, ses pastilles restent en verre fumé sombre. */
+.toujours-sombre {
+  --fond: var(--noir);
+  --texte: var(--givre);
+  --discret: var(--acier);
+  --filet: rgba(243, 244, 246, 0.12);
+  --filet-fort: rgba(243, 244, 246, 0.3);
+  --verre: rgba(18, 20, 26, 0.52);
+  --panneau: rgba(14, 16, 21, var(--opacite, 0.7));
+  --surface: var(--graphite);
+  --focus: var(--lampe);
+}
+
+/* La zone claire (le panneau de contact) */
+.zone-claire {
+  --fond: var(--blanc);
+  --texte: var(--encre);
+  --discret: #5d626b;
+  --filet: rgba(11, 12, 14, 0.14);
+  --filet-fort: rgba(11, 12, 14, 0.4);
+  --verre: rgba(255, 255, 255, 0.62);
+  --panneau: rgba(244, 246, 248, var(--opacite, 0.76));
+  --surface: #e2e5e9;
+  --focus: var(--encre);
+}

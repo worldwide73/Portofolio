@@ -1,0 +1,2 @@
+- [Consignes de Mathéo pour le portfolio](consignes-matheo-portfolio.md) — finir toute la demande d'origine avant ses retours ; README = mémoire ; rien en ligne sans accord ; tout gratuit (pas de budget)
+- [Vérification visuelle du portfolio](verification-visuelle-portfolio.md) — animations Windows coupées sur le PC kyuu0 : aperçu figé, utiliser outils/captures.mjs

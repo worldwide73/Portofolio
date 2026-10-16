@@ -1,0 +1,121 @@
+/* ==========================================================================
+   L'INTRODUCTION : « initialisation du portail »
+   Un calque transparent posé sur l'accueil pendant un peu plus de trois
+   secondes. Il ne contient que le symbole et trois lignes de texte : le
+   paysage, les étoiles et le portail sont ceux du site, animés par la scène
+   WebGL. La séquence est écrite dans src/scripts/intro.ts.
+   ========================================================================== */
+
+.initialisation {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  pointer-events: none;
+  color: var(--givre);
+}
+
+/* Le JavaScript pose cette classe quand il lance la séquence complète. */
+.initialisation.est-active {
+  display: block;
+}
+
+/* Les textes : centrés, sous le portail. */
+.initialisation__textes {
+  position: absolute;
+  left: 50%;
+  top: 72%;
+  width: min(92vw, 44rem);
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+  translate: -50% 0;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 1px 18px rgba(4, 8, 18, 0.8);
+}
+
+/* Le symbole : au centre du portail, le temps de sa construction. */
+.initialisation__symbole {
+  position: absolute;
+  left: 50%;
+  top: 43%;
+  translate: -50% -50%;
+  color: var(--lampe);
+  filter: drop-shadow(0 0 12px rgba(150, 190, 255, 0.6));
+}
+
+/* Le symbole se dessine : ses traits sont des pointillés d'un seul tiret, que
+   le JavaScript fait glisser jusqu'à les rendre entièrement visibles. */
+.initialisation__symbole path {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+}
+
+.initialisation__symbole circle {
+  opacity: 0;
+}
+
+.initialisation__nom,
+.initialisation__metier,
+.initialisation__etat {
+  visibility: hidden;
+}
+
+.initialisation__nom {
+  font-size: clamp(1.05rem, 1.9vw, 1.55rem);
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  /* L'interlettrage ajoute un blanc après la dernière lettre : on le compense pour centrer le mot. */
+  margin-right: -0.34em;
+}
+
+.initialisation__metier {
+  font-size: var(--t-etiquette);
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  margin-right: -0.24em;
+  color: color-mix(in srgb, var(--givre) 78%, transparent);
+}
+
+.initialisation__etat {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  margin-top: 0.5rem;
+  font-size: var(--t-etiquette);
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  color: var(--lampe);
+}
+
+.initialisation__etat::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* Sortir de l'introduction à tout moment. */
+.initialisation__passer {
+  position: absolute;
+  right: calc(var(--marge-cadre) + clamp(12px, 1.9vw, 30px));
+  bottom: calc(var(--marge-cadre) + 16px);
+  pointer-events: auto;
+  /* Le calque est toujours posé sur la scène de nuit : pastille sombre, texte clair. */
+  border-color: rgba(243, 244, 246, 0.3);
+  background: rgba(18, 20, 26, 0.52);
+  color: var(--givre);
+}
+
+@media (max-width: 860px) {
+  .initialisation__textes {
+    top: 60%;
+  }
+
+  .initialisation__symbole {
+    top: 33%;
+  }
+}

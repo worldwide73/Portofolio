@@ -1,0 +1,96 @@
+> **16 octobre — derniers réglages de vitesse demandés.** Intro −0,2 s par rapport au lot précédent : réduction cumulée 1,7 s ; 3 957 ms mesurées avec Playwright GPU. Saut Accueil ↔ Contact en Chill : multiplicateur local 1,1, soit environ 10 % plus rapide ; intro et autres ambiances indépendantes. Durée transmise au son et au fil ajustée au même multiplicateur. Fichiers : intro.ts, saut.ts, voyage.ts. Tests : duree-intro.mjs réussi ; saut-ambiances.mjs (12 trajets, origine/Focus/Chill, normal/réduit, aller/retour + animations coupées) réussi sans exception JS ; build 18 pages réussi. Ces valeurs remplacent les précédentes ci-dessous.
+
+> **16 octobre — durée intro rétablie à la demande de Mathéo : +0,5 s.** Réduction cumulée de la partition revenue à 1,5 s (remplace la valeur 2 s ci-dessous). Mesure Playwright avec GPU : 4 120 ms (`outils/recettes/duree-intro.mjs`). Première mesure sans les arguments GPU non exploitable : assertion échouée ; relance GPU réussie. Seule la vitesse de l’intro a changé, aucun effet retiré. La cinématique Accueil ↔ Contact reste inchangée : 0,6 s + 0,55 s nominales, rythme global préexistant dépendant de l’ambiance (Chill 0,85 ; Focus 1,5). Pas de modification de ce rythme dans ce lot. Seuil de recette trois-corrections adapté à la nouvelle durée.
+
+> **16 octobre — transition Accueil ↔ Contact en Focus : corrigée et testée.** La cinématique existait toujours mais voyage.ts exigeait ambiance.eclats >= 0.3 ; Focus donne 0. Absence reproduite dans les deux sens avant correction. Ce filtre d’ambiance est retiré : animations complètes = saut dans les deux sens, quelle que soit l’ambiance. Les animations allégées/coupées et prefers-reduced-motion restent respectées. Recette `outils/recettes/saut-ambiances.mjs` : 8 trajets origine/Focus × normal/réduit × aller/retour, déclenchement de la toile, destination et nettoyage vérifiés ; animations coupées aussi testées ; aucune exception JS. Build 18 pages réussi. Diagnostic avant : `outils/recettes/diagnostic-saut.mjs`. Aucun réglage utilisateur changé dans son navigateur.
+
+> **Correctif du 16 octobre — icône Orbit invisible en Focus.** La règle `html[data-atmosphere="focus"] .jeu-bouton { display:none }` masquait le Hub, même après rechargement puisque le réglage persiste. Règle retirée de `src/styles/reglages.css`, sans changer l’icône. Recette `outils/recettes/icone-orbit.mjs` : visibilité et ouverture/fermeture dans les quatre ambiances, Focus après reload, animations normales/réduites (10 contrôles OK, zéro exception JS). Build Astro 18 pages réussi. La dissimulation temporaire pendant intro/menu/carte reste normale.
+
+## Mise à jour prioritaire — 16 octobre 2026
+
+| Demande actuelle | État | Preuve nouvelle |
+|---|---|---|
+| Intro −0,5 s supplémentaires | V | Réduction cumulée 2 s ; mesure navigateur 3 574 ms |
+| Lame droite après retour Home | V pour les scénarios testés | Bug reproduit avant correction (visée Y=3,894), coordonnées bornées et recentrage ; sections, Contact, flèche et visite en normal/réduit |
+| Panneau Orbit plus petit, icône intacte | V | 390 × 560 px, icône 40 × 40 ; réponse utilisable et cadre contenu à 390 px |
+
+Recette : outils/recettes/trois-corrections.mjs ; rapport et captures : captures/ciblees/. Captures examinées. Build Astro réussi (18 pages), zéro exception JS dans cette recette. Les mesures de durée et dimensions ci-dessous sont historiques, remplacées par ce lot. Aucun test sur téléphone physique.
+
+# Exigences et preuves
+
+> Priorité actuelle : correction ciblée du 15 octobre. Mission globale et configuration environnement différées. Image demandée : capture complète de l’accueil (précision ultérieure), pas dunes seules. Bouton Orbit extérieur original. Intro −1,5 s cumulées. Refresh au début.
+
+Statuts : **V** terminé et vérifié durant cette reprise ; **P** partiel ; **N** présent mais non vérifié durant cette reprise ; **A** non commencé ; **B** bloqué (raison explicite). Les succès historiques du README ne suffisent pas à passer en V.
+
+## Corrections ciblées (demande la plus récente)
+
+| Point | État réel | Preuve |
+|---|---|---|
+| Bouton Orbit Claude | V | Archive comparée + cercle 40 px testé |
+| Capture réelle du portfolio + description | V | Galerie, fiche, Constellation FR/EN ; captures examinées |
+| Intro −0,5 s supplémentaires | V | Partition conservée, environ 4,2 s observées ; Skip |
+| Refresh au début | V | Depuis section, position résiduelle de langue, mode réduit |
+| Aperçu du portail | V | Souris/clavier/focus, clics rapides, retour et destinations |
+| Orbit et visites utiles | V pour les scénarios testés | 21/21 + comparaison, flèches, lancement depuis fiche ; voix non testée |
+| Constellation utile | V | Filtres sur relations réelles, sept projets, aperçus et liens communs |
+
+Bilan complet : `CORRECTIONS_CIBLEES_2026-10-15.md`. Les états globaux plus bas sont ceux de la mission précédente ; ils ne constituent pas une promesse de couverture exhaustive. Mobile général et Skills sont différés.
+
+## Mission globale du 15 octobre (hors du lot ciblé)
+
+| ID | Demande | Implantation / état initial | Statut | Vérification ou validation nécessaire |
+|---|---|---|---|---|
+| M01 | Sauvegarde avant correction | Archive `.backups/avant-codex-20261015-170633.zip` | V | 10 537 fichiers, CRC et manifeste |
+| M02 | Mémoire commune Claude/Codex | AGENTS, CLAUDE, README, exigences, relais | P | Maintenir après chaque lot |
+| M03 | Symbole du portail ne persiste pas | `gl/champ.ts`, `explorateur.ts`, `accueil.css` | N | Souris, clavier, clics rapides, fermeture |
+| M04 | Introduction raccourcie d'environ 1 s | `intro.ts` | A | Mesure avant/après, Skip, interactivité |
+| M05 | Constellation utile | Domaines actuellement non interactifs ; projets BTS seulement | P | Navigation par compétence, relations explicites, liens |
+| M06 | Orbit : bouton et interface soignés | `OrbitalHub.astro`, `hub.css`, `jeu.css` | P | Bureau, tactile, états et débordements |
+| M07 | Orbit : réponses documentées, utiles | Données actuelles limitées à phrase + stack | P | Objectifs, rôle, résultat, suivi de question, aucun fait inventé |
+| M08 | Mobile complet | Défauts de composition déjà notés dans README | P | 320–1920 px, portrait/paysage/tablettes, tactile, menus et jeu |
+| M09 | Crédits honnêtes Claude Code/autres outils | Pied de page cite IA et stack mais pas Claude Code | P | FR/EN ; aucune attribution inventée |
+| M10 | Réalisation correspondant à l'image d'accueil | Dunes Figma AI et fiche portfolio existantes ; Portal Rush déjà présent | P | Identifier la ressource et éviter un doublon artificiel |
+| M11 | Audit sécurité | `netlify.toml`, dépendances, entrées et stockage | A | Sources OWASP, audit dépendances, build sous CSP, secrets |
+| M12 | Vérification exhaustive | Présent tableau | P | Compléter les preuves et les écarts |
+| M13 | Trois prompts de reconstruction/réutilisation | `docs/` | A | Basés sur la version réelle et ses ressources |
+| M14 | Tutoriels interactifs futurs | Proposition à documenter | A | Sans refonte de la galerie |
+
+## Exigences conservées du prompt et des décisions successives
+
+| ID | Exigence actuelle | Fichiers principaux | Statut / contrôle prévu |
+|---|---|---|---|
+| E01 | Dunes inchangées, verre partout, portail sans texte permanent | assets/scene, tokens, base, gl | N — empreintes et captures |
+| E02 | Cinq sections, flèches circulaires, scroll libre, historique | voyage, defilement, nav | N — destinations/alignement/retour navigateur |
+| E03 | Saut spectaculaire Contact ↔ Accueil ; navigation légère ailleurs | saut, voyage | N — les deux sens sont une décision explicite |
+| E04 | Intro à chaque chargement, seule commande Skip, pas en navigation interne | intro, public/avant.js | N — mouvement normal/réduit |
+| E05 | Galerie 3D 0,68 ; hover 40 %, maintien pause, compteur, liens | galerie | N — pas de galerie épinglée (ancienne demande remplacée) |
+| E06 | Carte monumentale, six destinations, orbite, retour fragments | explorateur, gl | N — vide ne ferme pas ; logo/bouton/Échap ferment |
+| E07 | FR/EN sans reload, section/scroll/réglages conservés | langue, contenu | N — fiches et panneaux compris |
+| E08 | Audio procédural, volumes réels, Atmosphere quatre modes | sons, ambiances, atmosphere, reglages | N — autoplay soumis au navigateur ; écoute humaine à valider |
+| E09 | Thème verre unique, opacité/flou/lueur utiles, sans Recruiter View | tokens, reglages | N — ne pas restaurer les thèmes retirés |
+| E10 | Contenu réel : formation, histoire, IA, projet professionnel | contenu, PageAccueil | N — validation personnelle des textes |
+| E11 | Compétences reliées aux preuves, tableau BTS/CSV | referentiel, filtres, tableau-bts-sio.csv | N — pas de compétence inventée |
+| E12 | Fiches : phrase, contexte, objectifs, réalisation, difficultés, résultat, compétences, bilan | FicheProjet, contenu | N — `[À COMPLÉTER]` à lister ; vidéos optionnelles |
+| E13 | Veille deux sujets, sources, dates, modèle Markdown | contenu/veille | N — les avis personnels attendent validation |
+| E14 | Contact/CV/LinkedIn/GitHub/partage/raccourcis réels | contact, acces, Chrome | N — liens, presse-papiers, clavier |
+| E15 | Explore My Universe et Behind the Build réels | hub | N — parcours et flèches ; technologies du code |
+| E16 | Portal Rush 3 voies, collisions, combos, Overdrive, records, rangs | rush/moteur, equilibrage, sauvegarde | N — simulations distinctes des parties humaines |
+| E17 | 8 secteurs, 4 difficultés, boss, Endless, Daily déterministe | rush/donnees, moteur | N — équité et objectifs |
+| E18 | Garage/déblocages/étoiles persistants, commandes clavier/tactiles | rush, sauvegarde | N — nouvelle partie, reload, pause, reprise |
+| E19 | Vraie 3D : décors/virages/relief/vaisseau, fin cinématique, repli 2D | rush/scene, rendu | N — WebGL et repli ; sortie vers accueil |
+| E20 | Encart compact 4 s, barre blanche, entrée Work jouable | vitrine, PageAccueil | N — compte à rebours et jeu |
+| E21 | Souris/focus, réduit, sans WebGL, menus/fiches accessibles | styles, outils, gl | N — clavier, zoom et émulation |
+| E22 | SEO/OG/JSON-LD/sitemap/robots/404/image partage | Base, pages, public | N — build, titres et ressources |
+| E23 | Lighthouse ≥90/95/95/100, LCP<2,5s CLS<0,05 INP<200ms | outils | B — Lighthouse absent, installation soumise à accord ; ne pas annoncer ces scores |
+| E24 | Console, builds, captures sept largeurs, liens, rapides clics | outils/recettes à créer | P — historique non transféré automatiquement |
+| E25 | Anonymisation capture Windows | worldwide-check.jpg | N — contrôle visuel |
+| E26 | Design system, animations expliquées, glossaire, jury, contenu/déploiement | docs et README | P — documentation initiale incomplète |
+| E27 | Rien en ligne, budget nul, aucune API IA payante, pas de secrets | Ensemble | N — local seulement ; déploiement réservé à l'accord explicite |
+
+## Décisions remplacées et questions
+
+- Mobile auparavant différé : repris explicitement par M08.
+- Intro auparavant rallongée : M04 demande maintenant environ une seconde de moins, effets conservés.
+- Thèmes clair/sombre, Recruiter View, scroll piégé, galerie plate : abandonnés explicitement ; ne pas les réintroduire.
+- Son par défaut / saut uniquement dans un sens dans certains prompts : décisions explicites conservées (musique 2 %, saut bidirectionnel).
+- Réalisation image d'accueil : ne pas inventer un auteur ou une nouvelle production ; vérifier s'il s'agit des dunes ou de Portal Rush déjà listé.

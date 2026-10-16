@@ -1,0 +1,67 @@
+---
+// LA CARTE DU PORTAIL : le cube se brise, et ses éclats forment une carte du site.
+// Elle occupe tout l'écran : un noyau au centre, des orbites, et les six
+// destinations (les cinq sections et le CV) posées en rond autour de lui.
+//
+// Ce fichier ne contient que ce qui se lit et se clique : le titre, le bouton
+// de fermeture, le noyau et les six liens. Tout le reste (les éclats de verre,
+// les orbites, la poussière d'étoiles) est dessiné sur la toile par
+// src/scripts/explorateur.ts, qui place aussi chaque lien à sa position.
+//
+// C'est un second menu, pas un passage obligé : le menu du haut, le fil du bas
+// et le défilement mènent aux mêmes endroits.
+import { SECTIONS } from '../contenu';
+import type { Contenu } from '../contenu/types';
+import Symbole from './Symbole.astro';
+
+interface Props {
+  contenu: Contenu;
+}
+
+const { contenu: c } = Astro.props;
+
+// De quel côté de son point s'écrit le nom de chaque destination. Elles sont
+// posées en rond, dans le sens des aiguilles d'une montre, la première en haut.
+const COTES = ['haut', 'droite', 'droite', 'bas', 'gauche', 'gauche'];
+// Les nombres cités dans les descriptions viennent du contenu réel.
+const nombres: Record<string, number> = { competences: c.competences.domaines.length, realisations: c.realisations.projets.length };
+const decrire = (id: keyof Contenu['explorateur']['destinations']) => c.explorateur.destinations[id].replace('{n}', String(nombres[id] ?? ''));
+---
+
+<dialog class="explorateur toujours-sombre" aria-labelledby="explorateur-titre" data-lenis-prevent>
+  <canvas class="explorateur__toile" aria-hidden="true"></canvas>
+
+  <header class="explorateur__tete etiquette">
+    <h2 id="explorateur-titre">{c.explorateur.titre}</h2>
+    <button class="pastille explorateur__fermer" type="button">{c.interface.fermer}</button>
+  </header>
+
+  <!-- Le noyau de la carte : le symbole du site. Un clic dessus referme la carte. -->
+  <button class="explorateur__noyau" type="button" aria-label={c.explorateur.refermer} title={c.explorateur.refermer}>
+    <Symbole taille={30} />
+  </button>
+
+  <nav class="explorateur__astres" aria-label={c.explorateur.titre}>
+    {
+      SECTIONS.map((id, i) => (
+        <a class="astre" href={`#${id}`} data-destination={id} data-cote={COTES[i]} style={`--i: ${i}`}>
+          <i aria-hidden="true" />
+          <span class="astre__texte">
+            <b>{c.sections[id]}</b>
+            <small>{decrire(id)}</small>
+            <em class="etiquette">{c.explorateur.ici}</em>
+          </span>
+        </a>
+      ))
+    }
+    <a class="astre astre--annexe" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener" data-destination="cv" data-cote={COTES[5]} style="--i: 5">
+      <i aria-hidden="true"></i>
+      <span class="astre__texte">
+        <b>{c.explorateur.cv} <span aria-hidden="true">↗</span></b>
+        <small>{decrire('cv')}</small>
+      </span>
+    </a>
+  </nav>
+
+  <p class="explorateur__aide etiquette">{c.explorateur.aide}</p>
+</dialog>

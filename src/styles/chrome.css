@@ -1,0 +1,991 @@
+/* ==========================================================================
+   L'INTERFACE FIXE : barre du haut (marque, menu, outils), curseur, boutons
+   ========================================================================== */
+
+/* ---- Barre du haut ---- */
+.barre {
+  position: fixed;
+  left: var(--marge-cadre);
+  right: var(--marge-cadre);
+  top: var(--marge-cadre);
+  z-index: 30;
+  height: var(--barre-h);
+  padding: 0 clamp(12px, 1.9vw, 30px);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  color: var(--texte);
+  pointer-events: none;
+  transition: color var(--d-interface) var(--c-douce);
+}
+
+.barre > * {
+  pointer-events: auto;
+}
+
+/* (Le bloc d'identité, à gauche de la barre, est décrit dans identite.css.) */
+
+/* ---- Le menu : une pastille en verre, cinq catégories ----
+   La catégorie active est portée par un fond clair qui glisse de l'une à l'autre. */
+.nav {
+  justify-self: center;
+}
+
+.nav__liste {
+  position: relative;
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  transition:
+    background var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce);
+}
+
+.nav__liste a {
+  position: relative;
+  z-index: 1;
+  padding: 9px 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: color-mix(in srgb, var(--texte) 84%, transparent);
+  transition: color var(--d-interface) var(--c-douce);
+}
+
+.nav__liste a:hover {
+  color: var(--texte);
+}
+
+.nav__liste a[aria-current='true'] {
+  color: var(--fond);
+}
+
+.nav__actif {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 0;
+  border-radius: 999px;
+  background: var(--texte);
+  transition:
+    transform 0.65s var(--c-masque),
+    width 0.65s var(--c-masque),
+    background var(--d-interface) var(--c-douce);
+  will-change: transform;
+}
+
+.nav__annexe {
+  display: none;
+}
+
+.barre__outils {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Petites pastilles de la barre (langue, CV, menu). */
+.pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  color: var(--texte);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--d-interface) var(--c-douce),
+    color var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce);
+}
+
+.pastille--pleine {
+  border-color: transparent;
+  background: var(--texte);
+  color: var(--fond);
+}
+
+.pastille--pleine:hover {
+  background: color-mix(in srgb, var(--texte) 86%, var(--fond));
+}
+
+/* Pastille ronde : le drapeau de la langue, le bouton de contraste. */
+.pastille--ronde {
+  width: 38px;
+  padding: 0;
+  justify-content: center;
+}
+
+.pastille--ronde svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.6s var(--c-masque);
+}
+
+.pastille--ronde:hover svg {
+  transform: rotate(180deg) scale(1.08);
+}
+
+.drapeau {
+  border-radius: 50%;
+}
+
+.pastille--ronde:hover .drapeau {
+  transform: scale(1.14);
+}
+
+.barre__menu {
+  display: none;
+}
+
+/* ---- Téléphone : le menu devient un panneau plein écran ---- */
+@media (max-width: 860px) {
+  .barre {
+    grid-template-columns: 1fr auto;
+  }
+
+  /* Sur téléphone, la langue, le contraste et le CV se rangent dans le menu. */
+  .barre__secondaire {
+    display: none;
+  }
+
+  .barre__menu {
+    display: inline-flex;
+  }
+
+  .nav {
+    position: fixed;
+    inset: var(--marge-cadre);
+    justify-self: stretch;
+    z-index: -1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--s-4);
+    padding: calc(var(--barre-h) + 2rem) 7vw 8vw;
+    border-radius: var(--rayon-cadre);
+    background: color-mix(in srgb, var(--fond) 88%, transparent);
+    -webkit-backdrop-filter: blur(28px);
+    backdrop-filter: blur(28px);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition:
+      opacity var(--d-interface) var(--c-douce),
+      transform var(--d-interface) var(--c-douce),
+      visibility var(--d-interface);
+  }
+
+  html.menu-ouvert .nav {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+
+  .nav__liste {
+    flex-direction: column;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .nav__liste a {
+    padding: 0.18em 0;
+    border-radius: 0;
+    font-size: 11.5vw;
+    font-weight: 400;
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+    color: var(--discret);
+  }
+
+  .nav__liste a[aria-current='true'] {
+    color: var(--texte);
+  }
+
+  .nav__actif {
+    display: none;
+  }
+
+  .nav__annexe {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* À l'ouverture, les catégories montent l'une après l'autre. */
+  .nav__liste a,
+  .nav__annexe {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.5s var(--c-douce),
+      transform 0.7s var(--c-masque),
+      color var(--d-interface) var(--c-douce);
+  }
+
+  html.menu-ouvert .nav__liste a,
+  html.menu-ouvert .nav__annexe {
+    opacity: 1;
+    transform: none;
+  }
+
+  html.menu-ouvert .nav__liste a:nth-of-type(1) { transition-delay: 0.06s; }
+  html.menu-ouvert .nav__liste a:nth-of-type(2) { transition-delay: 0.11s; }
+  html.menu-ouvert .nav__liste a:nth-of-type(3) { transition-delay: 0.16s; }
+  html.menu-ouvert .nav__liste a:nth-of-type(4) { transition-delay: 0.21s; }
+  html.menu-ouvert .nav__liste a:nth-of-type(5) { transition-delay: 0.26s; }
+  html.menu-ouvert .nav__annexe { transition-delay: 0.34s; }
+}
+
+/* ---- Curseur personnalisé (souris uniquement) ----
+   Il est blanc et lumineux partout (un halo), avec un liseré sombre très fin qui
+   le garde lisible sur le panneau clair du contact. */
+.curseur {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  /* (Plus d'inversion des couleurs : sur les images des projets, elle le rendait beige. Blanc, lumineux,
+     et un liseré sombre très fin pour rester visible sur le panneau clair du contact.) */
+  --c-plein: #fff;
+  --c-vide: #0b0e14;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.55)) drop-shadow(0 0 1px rgba(8, 10, 16, 0.55));
+  transition: opacity var(--d-interface) var(--c-douce);
+}
+
+html.curseur-actif .curseur.est-visible {
+  opacity: 1;
+}
+
+html.curseur-actif,
+html.curseur-actif a,
+html.curseur-actif button {
+  cursor: none;
+}
+
+.curseur__disque,
+.curseur__anneau,
+.curseur__texte {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 92px;
+  height: 92px;
+  margin: -46px 0 0 -46px;
+  border-radius: 50%;
+  transition:
+    transform 0.5s var(--c-masque),
+    opacity var(--d-interface) var(--c-douce),
+    background-color var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce);
+}
+
+/* Au repos : un point. */
+.curseur__disque {
+  background: var(--c-plein);
+  transform: scale(0.085);
+}
+
+/* Sur un lien : le point s'efface, un anneau s'ouvre. */
+.curseur__anneau {
+  border: 1px solid var(--c-plein);
+  transform: scale(0.2);
+  opacity: 0;
+}
+
+.curseur--lien .curseur__disque {
+  transform: scale(0.04);
+}
+
+.curseur--lien .curseur__anneau {
+  transform: scale(0.46);
+  opacity: 1;
+}
+
+/* Sur une cible nommée (« Ouvrir », « Copier »…) : un disque avec son mot. */
+.curseur__texte {
+  display: grid;
+  place-items: center;
+  color: var(--c-vide);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+.curseur--mot .curseur__disque {
+  transform: scale(1);
+  box-shadow:
+    0 0 22px rgba(255, 255, 255, 0.6),
+    0 0 60px rgba(205, 228, 255, 0.4);
+}
+
+.curseur--mot .curseur__texte {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.curseur--presse .curseur__disque {
+  transform: scale(0.82);
+}
+
+/* ---- Boutons : des pastilles ---- */
+.bouton {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 999px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  color: var(--texte);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    color var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce);
+}
+
+/* Le remplissage monte depuis le bas, comme un niveau de liquide. */
+.bouton::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--texte);
+  transform: translateY(101%);
+  transition: transform 0.55s var(--c-masque);
+}
+
+.bouton:hover,
+.bouton:focus-visible {
+  color: var(--fond);
+  border-color: var(--texte);
+}
+
+.bouton:hover::before,
+.bouton:focus-visible::before {
+  transform: none;
+}
+
+.bouton--plein {
+  border-color: var(--texte);
+  background: var(--texte);
+  color: var(--fond);
+}
+
+.bouton--plein::before {
+  background: var(--lampe);
+}
+
+.bouton--plein:hover,
+.bouton--plein:focus-visible {
+  color: var(--encre);
+  border-color: var(--lampe);
+}
+
+/* Bouton rond (flèches de la galerie). */
+.bouton--rond {
+  width: 48px;
+  padding: 0;
+}
+
+.bouton--rond svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Lien souligné au survol. */
+.lien {
+  position: relative;
+  padding: 6px 0;
+  text-decoration: none;
+}
+
+.lien::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--d-interface) var(--c-trait);
+}
+
+.lien:hover::after,
+.lien:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ---- Filtres : une rangée de boutons dans une pastille en verre ----
+   Même grammaire que le menu : un fond plein glisse sous le bouton choisi.
+   Le JavaScript (filtres.ts) mesure le bouton et place ce fond. */
+.filtre {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--filet);
+  border-radius: 23px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+}
+
+.filtre button {
+  position: relative;
+  z-index: 1;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: color-mix(in srgb, var(--texte) 84%, transparent);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce);
+}
+
+.filtre button:hover {
+  color: var(--texte);
+}
+
+html.js .filtre button[aria-pressed='true'] {
+  color: var(--fond);
+}
+
+/* Au survol d'une compétence, les réalisations qui la prouvent sont cerclées. */
+.filtre button.est-prouve {
+  color: var(--texte);
+  box-shadow: inset 0 0 0 1px var(--filet-fort);
+}
+
+.filtre__actif {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: 999px;
+  background: var(--texte);
+  transition:
+    transform 0.65s var(--c-masque),
+    width 0.65s var(--c-masque),
+    height 0.65s var(--c-masque),
+    background var(--d-interface) var(--c-douce);
+  will-change: transform;
+}
+
+@media (max-width: 860px) {
+  .filtre button {
+    min-height: 40px;
+  }
+
+  /* Libellés longs (les sujets de veille) : un bouton par ligne. */
+  .filtre--pile {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ---- Le signe « plus » des blocs dépliables : il devient « moins » à l'ouverture ---- */
+.signe {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--filet);
+  border-radius: 50%;
+  transition: border-color var(--d-interface) var(--c-douce);
+}
+
+.signe::before,
+.signe::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 1.5px;
+  margin: -0.75px 0 0 -5.5px;
+  background: currentColor;
+  transition: transform 0.5s var(--c-masque);
+}
+
+.signe::after {
+  transform: rotate(90deg);
+}
+
+details[open] > summary .signe::after {
+  transform: rotate(0deg);
+}
+
+summary:hover .signe,
+summary:focus-visible .signe {
+  border-color: var(--texte);
+}
+
+/* ---- L'éclair de tunnel : sa toile couvre toute la page, sans jamais capter les clics ---- */
+.voyage {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.voyage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Le saut dans le temps (accueil ↔ Contact) : la toile où sont dessinés les éclats ----
+   Elle est juste sous le tunnel, affichée seulement pendant la séquence (voir saut.ts). */
+.retour {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  display: none;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Pendant le saut, le fil prend les couleurs de la nuit : le décor s'assombrit sous lui. */
+html.en-retour .trajet,
+html.en-aller:not(.saut-arrive) .trajet {
+  --fond: var(--noir);
+  --texte: var(--givre);
+  --discret: var(--acier);
+  --filet-fort: rgba(243, 244, 246, 0.3);
+}
+
+/* ---- Le fil de navigation, en bas de l'écran ----
+   Une ligne fine et un point par section. La partie parcourue est allumée, et
+   une tête lumineuse avance avec le défilement (--avance, de 0 à 1, posée par
+   voyage.ts). Quand on change de section, un faisceau file d'un point à l'autre.
+   Pas de cadre : une ombre douce, derrière, suffit à le garder lisible. */
+.trajet {
+  --pas: 58px; /* la distance entre deux points */
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--marge-cadre) + 22px);
+  translate: -50% 0;
+  z-index: 28;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  color: var(--texte);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.trajet::before {
+  content: '';
+  position: absolute;
+  inset: -12px -30px -22px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--fond) 82%, transparent) 35%, transparent);
+  pointer-events: none;
+}
+
+.trajet__bouton {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: color-mix(in srgb, var(--texte) 60%, transparent);
+  cursor: pointer;
+  transition:
+    color var(--d-micro) var(--c-douce),
+    background var(--d-micro) var(--c-douce);
+}
+
+.trajet__bouton svg {
+  width: 13px;
+  height: 13px;
+}
+
+.trajet__bouton:focus-visible {
+  color: var(--texte);
+  background: color-mix(in srgb, var(--texte) 12%, transparent);
+}
+
+/* (Seulement avec une vraie souris : sur un écran tactile, le survol resterait « collé » après un toucher.) */
+@media (hover: hover) {
+  .trajet__bouton:hover {
+    color: var(--texte);
+    background: color-mix(in srgb, var(--texte) 12%, transparent);
+  }
+}
+
+.trajet__fil {
+  position: relative;
+  height: 100%;
+}
+
+.trajet__fil ol {
+  display: flex;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trajet__fil li {
+  width: var(--pas);
+}
+
+/* La ligne, du premier point au dernier, puis sa partie allumée. */
+.trajet__fil::before,
+.trajet__fil::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--pas) / 2);
+  right: calc(var(--pas) / 2);
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: var(--filet-fort);
+  pointer-events: none;
+}
+
+.trajet__fil::after {
+  background: var(--texte);
+  transform: scaleX(var(--avance, 0));
+  transform-origin: left;
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 9px) color-mix(in srgb, var(--lampe) 70%, transparent);
+}
+
+/* La tête du fil, et la traîne du faisceau (visible seulement pendant un changement de section). */
+.trajet__faisceau {
+  position: absolute;
+  left: calc(var(--pas) / 2);
+  right: calc(var(--pas) / 2);
+  top: 50%;
+  z-index: 2;
+  height: 0;
+  pointer-events: none;
+}
+
+.trajet__faisceau::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--avance, 0) * 100%);
+  top: 0;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
+  border-radius: 50%;
+  background: var(--texte);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 10px) 1px var(--lampe);
+}
+
+/* (--sens vaut 1 quand le faisceau va vers la droite, -1 vers la gauche : la traîne reste derrière la tête.) */
+.trajet__faisceau::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--avance, 0) * 100%);
+  top: -1px;
+  width: 56px;
+  height: 2px;
+  translate: calc(-50% - var(--sens, 1) * 28px) 0;
+  scale: var(--sens, 1) 1;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--texte));
+  opacity: 0;
+  transition: opacity 0.2s var(--c-douce);
+}
+
+.trajet.est-en-route .trajet__faisceau::after {
+  opacity: 1;
+}
+
+/* Un point, et le nom de sa section dessous. */
+.trajet__point {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--discret);
+  text-decoration: none;
+}
+
+.trajet__point i {
+  position: relative;
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fond);
+  box-shadow: inset 0 0 0 1px var(--filet-fort);
+  transition:
+    transform 0.45s var(--c-ressort),
+    background var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce);
+}
+
+.trajet__point.est-passe i {
+  background: var(--texte);
+  box-shadow: none;
+}
+
+.trajet__point[aria-current] i {
+  background: var(--texte);
+  transform: scale(1.35);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--lampe) calc(var(--lueur, 0.7) * 34%), transparent),
+    0 0 calc(var(--lueur, 0.7) * 12px) var(--lampe);
+}
+
+.trajet__point:hover i,
+.trajet__point:focus-visible i {
+  background: var(--texte);
+  transform: scale(1.5);
+}
+
+.trajet__point span {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 3px);
+  translate: -50% 0;
+  white-space: nowrap;
+  text-shadow: 0 1px 10px var(--fond);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--d-micro) var(--c-douce),
+    color var(--d-micro) var(--c-douce);
+}
+
+/* Fil compact : seul le nom de la section affichée est écrit ; au survol, celui du point visé. */
+.trajet__point[aria-current] span,
+.trajet__point:hover span,
+.trajet__point:focus-visible span {
+  color: var(--texte);
+  opacity: 1;
+}
+
+.trajet__fil:hover .trajet__point[aria-current]:not(:hover) span {
+  opacity: 0;
+}
+
+/* Grand écran : la place ne manque pas, les cinq noms sont écrits sous leurs points. */
+@media (min-width: 1400px) {
+  .trajet {
+    --pas: 108px;
+  }
+
+  .trajet__point span,
+  .trajet__fil:hover .trajet__point[aria-current]:not(:hover) span {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Téléphone : le fil se serre, et se décale pour laisser sa place au bouton du mini-jeu. */
+@media (max-width: 860px) {
+  .trajet {
+    --pas: 44px;
+    left: calc(50% - 24px);
+    bottom: calc(var(--marge-cadre) + 26px);
+    height: 38px;
+  }
+
+  .trajet__bouton {
+    width: 32px;
+    height: 38px;
+  }
+
+  html.menu-ouvert .trajet {
+    visibility: hidden;
+  }
+}
+
+/* ---- Le terminal caché (touche ² ou le mot « trace », voir terminal.ts) ---- */
+.terminal {
+  position: fixed;
+  left: var(--marge-cadre);
+  right: var(--marge-cadre);
+  bottom: var(--marge-cadre);
+  z-index: 60;
+  max-width: 44rem;
+  height: min(64svh, 31rem);
+  margin-inline: auto;
+  display: grid;
+  grid-template-rows: auto minmax(3.5rem, 1fr) auto auto;
+  overflow: hidden;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  background: color-mix(in srgb, var(--fond) 86%, transparent);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  color: var(--texte);
+  /* Un terminal s'écrit en chasse fixe : on prend celle du système, sans rien télécharger. */
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.3s var(--c-douce),
+    transform 0.5s var(--c-masque);
+}
+
+.terminal[hidden] {
+  display: none;
+}
+
+.terminal.est-ouvert {
+  opacity: 1;
+  transform: none;
+}
+
+.terminal__tete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 6px 6px 14px;
+  border-bottom: 1px solid var(--filet);
+  color: var(--discret);
+}
+
+.terminal__fermer {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.terminal__sortie {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+}
+
+.terminal__sortie .est-commande {
+  color: var(--discret);
+}
+
+.terminal__tete kbd {
+  margin-left: 0.6em;
+  padding: 2px 6px;
+  border: 1px solid var(--filet);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+/* La liste des commandes : une ligne par commande, son nom puis ce qu'elle fait. */
+.terminal__suggestions {
+  max-height: 11.2rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 6px;
+  border-top: 1px solid var(--filet);
+}
+
+.terminal__suggestions:empty {
+  display: none;
+}
+
+.terminal__suggestions button {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 0.8rem;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.terminal__suggestions b {
+  font-weight: 600;
+}
+
+.terminal__suggestions span {
+  color: var(--discret);
+}
+
+.terminal__suggestions button:hover,
+.terminal__suggestions button.est-choisie {
+  background: color-mix(in srgb, var(--texte) 12%, transparent);
+}
+
+.terminal__saisie {
+  display: flex;
+  gap: 0.6em;
+  padding: 10px 14px;
+  border-top: 1px solid var(--filet);
+}
+
+.terminal__saisie label {
+  color: var(--discret);
+  white-space: nowrap;
+}
+
+.terminal__saisie input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+/* Le champ n'a pas de contour : c'est tout le terminal qui montre qu'il a le focus. */
+.terminal:focus-within {
+  border-color: var(--texte);
+}

@@ -1,0 +1,133 @@
+---
+// LA CONSTELLATION DES RÉALISATIONS : une autre façon de les parcourir.
+// Chaque réalisation est une étoile, sur les côtés ; les cinq domaines de
+// compétences forment une colonne au centre. Un trait relie une étoile à chaque
+// domaine qu'elle prouve. Choisir une étoile allume ses traits et affiche sa
+// fiche courte à côté.
+//
+// Rien n'est saisi ici : les liens viennent de la liste des compétences
+// (src/contenu/fr.ts, « competences.domaines »), où chaque compétence nomme
+// les réalisations qui la prouvent. La galerie reste la présentation
+// principale : cette vue s'ouvre par-dessus, dans une fenêtre (<dialog>).
+import { cheminFiche, images, typo } from '../contenu';
+import { Image } from 'astro:assets';
+import type { Contenu } from '../contenu/types';
+
+interface Props {
+  contenu: Contenu;
+}
+
+const { contenu: c } = Astro.props;
+const langue = c.langue;
+const t = (texte: string) => typo(texte, langue);
+const projets = c.realisations.projets;
+const domaines = c.competences.domaines;
+
+// ---- Où placer chaque point ----
+// La carte mesure 1000 × 620 unités. Les domaines forment une colonne brisée
+// au centre : leurs noms sont longs, chacun a donc sa propre ligne. Les
+// réalisations se partagent les deux côtés, sur deux arcs bombés vers l'extérieur.
+const parCote = Math.ceil(projets.length / 2);
+const etoiles = projets.map((p, i) => {
+  const gauche = i % 2 === 0;
+  const t = parCote > 1 ? Math.floor(i / 2) / (parCote - 1) : 0.5; // 0 en haut, 1 en bas
+  const bombe = Math.sin(t * Math.PI) * 62;
+  return { ...p, x: Math.round(gauche ? 158 - bombe : 842 + bombe), y: Math.round(118 + t * 392) };
+});
+const noeuds = domaines.map((d, j) => ({
+  ...d,
+  x: 500 + (j % 2 ? 44 : -44),
+  y: Math.round(100 + (j / Math.max(1, domaines.length - 1)) * 424),
+}));
+
+// ---- Qui est relié à qui ----
+const liens = etoiles.flatMap((etoile) =>
+  noeuds
+    .map((noeud, j) => ({ etoile, noeud, j, prouve: noeud.competences.some((k) => k.projets.includes(etoile.slug)) }))
+    .filter((lien) => lien.prouve),
+);
+/** Les compétences qu'une réalisation prouve, tous domaines confondus. */
+const competencesDe = (slug: string) => domaines.flatMap((d) => d.competences.filter((k) => k.projets.includes(slug)).map((k) => k.nom));
+const relationsDe = (slug: string) => [...new Set([...competencesDe(slug), ...(projets.find(p => p.slug === slug)?.stack ?? [])])];
+const enPourcent = (p: { x: number; y: number }) => `left: ${p.x / 10}%; top: ${(p.y / 620) * 100}%`;
+---
+
+<dialog class="constellation" aria-labelledby="constellation-titre" data-lenis-prevent>
+  <header class="constellation__tete">
+    <div>
+      <h2 id="constellation-titre">{t(c.constellation.titre)}</h2>
+      <p class="constellation__aide">{t(c.constellation.aide)}</p>
+    </div>
+    <button class="pastille etiquette constellation__fermer" type="button">{c.interface.fermer}</button>
+  </header>
+
+  <div class="constellation__filtres" aria-label={c.constellation.competences}>
+    <button class="pastille etiquette" type="button" data-filtre="" aria-pressed="true">{c.constellation.tous}</button>
+    {domaines.map((d, j) => <button class="pastille etiquette" type="button" data-filtre={j} aria-pressed="false">{d.nom} <small>({projets.filter(p => d.competences.some(k => k.projets.includes(p.slug))).length})</small></button>)}
+  </div>
+
+  <div class="constellation__carte">
+    <svg viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
+      {liens.map((l) => <line x1={l.etoile.x} y1={l.etoile.y} x2={l.noeud.x} y2={l.noeud.y} data-projet={l.etoile.slug} data-domaine={l.j} />)}
+    </svg>
+
+    {
+      noeuds.map((noeud, j) => (
+        <button type="button" class="constellation__domaine etiquette" style={enPourcent(noeud)} data-domaine={j} data-filtre={j} aria-pressed="false">
+          <i />
+          <span>{t(noeud.nom)}</span>
+        </button>
+      ))
+    }
+    {
+      etoiles.map((etoile) => (
+        <button class="constellation__etoile etiquette" type="button" style={enPourcent(etoile)} data-projet={etoile.slug} aria-pressed="false">
+          <i />
+          <span>{etoile.court}</span>
+        </button>
+      ))
+    }
+  </div>
+
+  <!-- Une fiche courte par réalisation : une seule est affichée à la fois. -->
+  <div class="constellation__fiches" aria-live="polite">
+    {
+      etoiles.map((p) => (
+        <article data-fiche={p.slug} hidden>
+          {images[p.slug] && <Image class="constellation__apercu" src={images[p.slug]!} alt={p.alt} width={640} loading="lazy" />}
+          <p class="etiquette constellation__genre">
+            {p.genre}, {p.annee}
+          </p>
+          <h3>{p.nom}</h3>
+          <p class="constellation__phrase">{t(p.phrase)}</p>
+          <dl>
+            <dt class="etiquette">{t(c.constellation.objectif)}</dt>
+            <dd>{t(p.objectifs)}</dd>
+            <dt class="etiquette">{t(c.constellation.competences)}</dt>
+            <dd>{competencesDe(p.slug).map(t).join(', ') || (langue === 'fr' ? 'Projet personnel hors du référentiel BTS ; technologies présentées ci-dessous.' : 'Personal project outside the BTS framework; technologies are listed below.')}</dd>
+            <dt class="etiquette">{t(c.realisations.fiche.stack)}</dt>
+            <dd>{p.stack.join(', ')}</dd>
+          </dl>
+          <div class="constellation__liens">
+            <a class="bouton bouton--plein etiquette" href={cheminFiche(langue, p.slug)}>
+              {t(c.constellation.fiche)}
+            </a>
+            {
+              p.lien && (
+                <a class="bouton etiquette" href={p.lien.href} target="_blank" rel="noopener">
+                  {p.lien.texte}
+                </a>
+              )
+            }
+          </div>
+          <div class="constellation__connexes">
+            <h4 class="etiquette">{c.constellation.connexes}</h4>
+            {projets.filter(autre => autre.slug !== p.slug).map(autre => ({ projet: autre, commun: relationsDe(autre.slug).filter(k => relationsDe(p.slug).includes(k)) })).filter(x => x.commun.length).sort((a,b) => b.commun.length - a.commun.length).slice(0,3).map(x => (
+              <button class="lien" type="button" data-lie={x.projet.slug}>{x.projet.court}<small>{x.commun.join(' · ')}</small></button>
+            ))}
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</dialog>

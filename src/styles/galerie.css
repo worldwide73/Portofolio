@@ -1,0 +1,372 @@
+/* ==========================================================================
+   SECTION 3 : RÉALISATIONS — la galerie
+   Deux présentations pour le même HTML :
+   - le « ruban »  : une liste horizontale à faire glisser (téléphone, tablette,
+     mouvement réduit, ou JavaScript absent). C'est le style de base.
+   - l'« anneau » : sur ordinateur, les cartes tournent sur un cylindre, toutes
+     seules et en boucle. Le JavaScript ajoute .galerie--anneau.
+   Dans les deux cas la section n'est jamais épinglée : la page défile librement.
+   ========================================================================== */
+
+.galerie {
+  position: relative;
+  margin-top: var(--s-6);
+}
+
+.galerie__scene {
+  position: relative;
+  min-height: 100svh;
+  padding: calc(var(--barre-h) + var(--marge-cadre) + 1.5rem) 0 clamp(20px, 3svh, 36px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  row-gap: var(--s-3);
+  overflow: hidden;
+}
+
+.galerie__tete {
+  position: relative;
+  z-index: 2;
+  padding: 0 var(--gouttiere);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.galerie__compteur {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+  font-size: var(--t-titre);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Téléphone : le titre, le bouton et le compteur ne tiennent pas sur une ligne (à 390 px, le compteur
+   s'écrasait sur deux lignes) ; le compteur passe dessous. */
+@media (max-width: 440px) {
+  .galerie__tete {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .galerie__compteur {
+    font-size: 1.9rem;
+  }
+}
+
+.galerie__compteur .total {
+  color: var(--discret);
+  letter-spacing: 0;
+}
+
+/* Le compteur qui roule : chaque chiffre a sa colonne, qui masque ce qui en
+   dépasse. L'ancien chiffre et le nouveau occupent la même case de grille ;
+   le JavaScript fait sortir l'un et entrer l'autre (voir compteur.ts). */
+.rouleau {
+  display: inline-grid;
+  overflow: hidden;
+  overflow: clip;
+  padding-block: 0.06em;
+  margin-block: -0.06em;
+}
+
+.rouleau > span {
+  grid-area: 1 / 1;
+  will-change: transform;
+}
+
+/* ---- Ruban (base) ---- */
+.galerie__piste {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 max(var(--gouttiere), calc((100vw - min(84vw, 560px)) / 2));
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.galerie__piste::-webkit-scrollbar {
+  display: none;
+}
+
+.carte {
+  position: relative;
+  flex: 0 0 min(84vw, 560px);
+  scroll-snap-align: center;
+}
+
+/* Un projet jouable : le repère à côté de son nom, et le bouton posé sur sa capture. */
+.carte__badge {
+  margin-left: 0.6rem;
+  padding: 0.2em 0.6em;
+  border: 1px solid color-mix(in srgb, var(--lampe) 45%, transparent);
+  border-radius: 999px;
+  color: var(--lampe);
+  font-size: 0.66rem;
+  vertical-align: middle;
+}
+
+.carte__jouer {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.95rem 0.55rem 0.7rem;
+  border: 1px solid var(--filet-fort);
+  border-radius: 999px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--texte);
+  cursor: pointer;
+  opacity: var(--net, 1);
+  transition:
+    background var(--d-micro),
+    border-color var(--d-micro),
+    transform var(--d-micro) var(--c-douce);
+}
+
+.carte__jouer-icone {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid var(--lampe);
+}
+
+.carte__jouer:hover,
+.carte__jouer:focus-visible {
+  border-color: var(--lampe);
+  transform: translateY(-1px);
+}
+
+.carte__lien {
+  display: block;
+  text-decoration: none;
+  border-radius: var(--rayon-carte);
+  outline-offset: 8px;
+}
+
+.carte__corps {
+  display: block;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.7s var(--c-masque);
+  transform-style: preserve-3d;
+}
+
+.carte__image {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: var(--rayon-carte);
+  background: var(--surface);
+}
+
+/* Le contour : un filet d'un pixel posé par-dessus l'image. */
+.carte__image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--filet);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* --net est posé par galerie.ts sur chaque carte : 1 quand elle est au centre,
+   0 à une carte de distance. Les cartes voisines sont ternies : elles s'assombrissent. */
+.carte__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+  will-change: transform, filter;
+  filter: grayscale(calc(1 - var(--net, 1))) brightness(calc(0.6 + var(--net, 1) * 0.4));
+}
+
+/* Cette couverture est une page entière : conserver le nom et la navigation
+   dans le cadre, sans le zoom réservé aux captures d'applications. */
+.carte__image--portfolio img { object-fit: contain; transform: none !important; }
+
+/* Reflet spéculaire : une tache de lumière qui suit la souris. */
+.carte__reflet {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--mx, 50%) var(--my, 50%),
+    rgba(207, 225, 255, 0.28),
+    transparent 46%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity var(--d-interface) var(--c-douce);
+  pointer-events: none;
+}
+
+.carte__lien:hover .carte__reflet {
+  opacity: 1;
+}
+
+/* Couverture dessinée pour un projet sans capture. */
+.carte__dessin {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.3rem, 2.6vw, 2.4rem);
+  letter-spacing: -0.04em;
+  color: var(--givre);   /* le fond de cette couverture est sombre dans les deux thèmes */
+  background:
+    radial-gradient(90% 70% at 50% 62%, rgba(207, 225, 255, 0.16), transparent 70%),
+    linear-gradient(to bottom, #0b1120, #1b2434 55%, #0c1018);
+}
+
+.carte__texte {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: var(--s-2);
+  row-gap: 0.35rem;
+  padding-top: 1rem;
+  will-change: transform;
+}
+
+.carte__nom {
+  font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.carte__annee {
+  color: var(--discret);
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.carte__phrase {
+  grid-column: 1 / -1;
+  max-width: 54ch;
+  font-size: var(--t-petit);
+  line-height: 1.45;
+  color: var(--discret);
+}
+
+.carte__stack {
+  grid-column: 1 / -1;
+  color: var(--discret);
+}
+
+.galerie__pied {
+  position: relative;
+  z-index: 2;
+  padding: 0 var(--gouttiere);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.galerie__fleches {
+  display: flex;
+  gap: 8px;
+}
+
+/* (La barre reste courte et l'aide part à droite : le milieu du pied est laissé au fil de navigation.) */
+.galerie__progression {
+  position: relative;
+  flex: 0 1 clamp(80px, 12vw, 200px);
+  height: 1px;
+  background: var(--filet);
+}
+
+.galerie__progression span {
+  position: absolute;
+  inset: 0;
+  background: var(--texte);
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
+}
+
+.galerie__aide {
+  margin-left: auto;
+  padding-right: 52px; /* la place du bouton du mini-jeu */
+  color: var(--discret);
+}
+
+@media (max-width: 1100px) {
+  .galerie__aide {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .galerie__aide {
+    display: none;
+  }
+
+  .galerie__scene {
+    min-height: 0;
+  }
+}
+
+/* ---- Anneau (ordinateur) ---- */
+.galerie--anneau .galerie__scene {
+  height: 100svh;
+  min-height: 0;
+}
+
+.galerie--anneau .galerie__piste {
+  display: block;
+  padding: 0;
+  overflow: visible;
+  scroll-snap-type: none;
+  perspective: 1700px;
+  perspective-origin: 50% 44%;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.galerie--anneau .galerie__piste.est-saisie {
+  cursor: grabbing;
+}
+
+.galerie--anneau .carte {
+  --carte-l: min(46vw, 64svh, 780px);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--carte-l);
+  translate: -50% -50%;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.galerie--anneau .carte:not(.est-centre) .carte__lien {
+  pointer-events: none;
+}
+
+/* Sur l'anneau, même la carte centrale garde un quart de gris : la couleur
+   pleine n'arrive qu'au survol. */
+.galerie--anneau .carte__image img {
+  filter: grayscale(calc(1 - var(--net, 1) * 0.75)) brightness(calc(0.5 + var(--net, 1) * 0.5));
+}
+
+/* ---- Le bouton « pause » du défilement automatique ----
+   Deux barres ; enfoncé (défilement arrêté), une flèche « lecture ». */
+.galerie__pause svg {
+  width: 14px;
+  height: 14px;
+}
+
+.galerie__pause[aria-pressed='false'] :is(.galerie__pause-fleche, .galerie__pause-reprendre),
+.galerie__pause[aria-pressed='true'] :is(.galerie__pause-barres, .galerie__pause-dire) {
+  display: none;
+}

@@ -1,0 +1,5 @@
+# Consignes pour les robots des moteurs de recherche : tout le site peut être lu.
+User-agent: *
+Allow: /
+
+Sitemap: https://matheomaleyran.com/sitemap.xml

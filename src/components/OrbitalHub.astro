@@ -1,0 +1,168 @@
+---
+// L'ORBITAL HUB : l'icône flottante en bas à droite ouvre ce panneau.
+// Il s'ouvre sur l'Orbit Assistant ; un rang d'onglets mène aux trois autres
+// fonctions : Portal Rush (le jeu), Explore My Universe (des visites guidées
+// courtes) et Behind the Build (les coulisses techniques réelles).
+//
+// L'assistant est local : il répond à partir du contenu réel du site, que ce
+// fichier lui transmet (data-savoir), sans IA en ligne. Le comportement est
+// dans src/scripts/hub.ts ; la petite carte de la visite guidée est ici aussi.
+import { cheminAccueil, cheminFiche, estACompleter } from '../contenu';
+import type { Contenu } from '../contenu/types';
+import Symbole from './Symbole.astro';
+
+interface Props {
+  contenu: Contenu;
+  page: 'accueil' | 'fiche';
+  cheminAutreLangue: string;
+}
+
+const { contenu: c, page, cheminAutreLangue } = Astro.props;
+const h = c.hub;
+const langue = c.langue;
+// Ce que l'assistant sait : le contenu réel du site, rien d'autre.
+const savoir = {
+  page,
+  accueil: cheminAccueil(langue),
+  autreLangue: cheminAutreLangue,
+  cv: '/cv-matheo-maleyran.pdf',
+  email: c.contact.email,
+  projets: c.realisations.projets.map((p) => ({
+    nom: p.nom,
+    court: p.court,
+    annee: p.annee,
+    genre: p.genre,
+    phrase: estACompleter(p.phrase) ? '' : p.phrase,
+    details: Object.fromEntries(['contexte', 'objectifs', 'realisation', 'difficultes', 'resultat', 'retiens'].map(k => [k, estACompleter(p[k as keyof typeof p] as string) ? '' : p[k as keyof typeof p]])),
+    stack: p.stack,
+    lien: p.lien?.href ?? '',
+    fiche: cheminFiche(langue, p.slug),
+  })),
+  // Chaque compétence, avec les noms des projets qui la prouvent.
+  domaines: c.competences.domaines.map((d) => ({
+    nom: d.nom,
+    competences: d.competences.map((k) => ({ nom: k.nom, projets: k.projets.map((slug) => c.realisations.projets.find((p) => p.slug === slug)?.nom ?? slug) })),
+  })),
+  parcours: c.apropos.parcours.etapes.filter((e) => !estACompleter(e.nom)).map((e) => ({ date: e.date, nom: e.nom, lieu: estACompleter(e.lieu) ? '' : e.lieu })),
+  cap: estACompleter(c.apropos.cap.titre) ? '' : c.apropos.cap.titre,
+  veille: Object.values(c.veille.sujets),
+  libelles: c.realisations.fiche,
+};
+const onglets = ['assistant', 'rush', 'explorer', 'coulisses'] as const;
+const sujets = Object.entries(h.assistant.sujets);
+---
+
+<button class="jeu-bouton" type="button" popovertarget="hub" aria-label={h.ouvrir} title={h.ouvrir}>
+  <Symbole taille={20} />
+</button>
+
+<div
+  class="hub"
+  id="hub"
+  popover
+  data-lenis-prevent
+  data-vue="assistant"
+  aria-labelledby="hub-titre"
+  data-langue={langue}
+  data-textes={JSON.stringify(h)}
+  data-savoir={JSON.stringify(savoir)}
+>
+  <header class="hub__tete">
+    <Symbole taille={18} />
+    <h2 id="hub-titre" class="etiquette">{h.titre}</h2>
+    <button class="pastille etiquette hub__fermer" type="button" popovertarget="hub" popovertargetaction="hide">{h.fermer}</button>
+  </header>
+
+  <nav class="hub__onglets etiquette" aria-label={h.titre}>
+    {
+      onglets.map((id) => (
+        <button type="button" data-onglet={id} aria-pressed={id === 'assistant' ? 'true' : 'false'} title={h.entrees[id].texte}>
+          {h.entrees[id].nom}
+          {id === 'rush' && <span class="hub__jouable">{c.vitrine.badge}</span>}
+        </button>
+      ))
+    }
+  </nav>
+
+  <!-- Orbit Assistant -->
+  <section class="hub__vue hub__vue--assistant" data-vue="assistant" aria-label={h.entrees.assistant.nom}>
+    <p class="hub__note">{h.assistant.note}</p>
+    <div class="hub__fil" role="log" aria-live="polite">
+      <p class="hub__message hub__message--assistant">{h.assistant.accueil}</p>
+      <div class="hub__messages"></div>
+    </div>
+    <div class="hub__sujets" aria-label={h.entrees.assistant.nom}>
+      {
+        sujets.map(([id, nom]) => (
+          <button class="pastille" type="button" data-intention={id}>
+            {nom}
+          </button>
+        ))
+      }
+    </div>
+    <form class="hub__saisie">
+      <button class="hub__micro" type="button" aria-pressed="false" aria-label={h.assistant.micro} title={h.assistant.micro} data-arret={h.assistant.microArret} hidden>
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+          <rect x="6.5" y="2" width="5" height="9" rx="2.5"></rect>
+          <path d="M3.8 8.6a5.2 5.2 0 0 0 10.4 0M9 13.8V16"></path>
+        </svg>
+      </button>
+      <label class="sr" for="hub-question">{h.assistant.invite}</label>
+      <input id="hub-question" type="text" maxlength="600" autocomplete="off" spellcheck="false" placeholder={h.assistant.invite} enterkeyhint="send" />
+      <button class="pastille pastille--pleine" type="submit">{h.assistant.envoyer}</button>
+    </form>
+    <label class="hub__voix etiquette" hidden>
+      <input type="checkbox" data-voix />
+      <span>{h.assistant.voix}</span>
+    </label>
+  </section>
+
+  <!-- Explore My Universe -->
+  <section class="hub__vue" data-vue="explorer" aria-label={h.entrees.explorer.nom}>
+    <p class="hub__texte">{h.explorer.texte}</p>
+    {page !== 'accueil' && <p class="hub__note">{h.explorer.depuisAccueil}</p>}
+    <ul class="hub__parcours">
+      {
+        (Object.entries(h.explorer.parcours) as [string, { nom: string; texte: string; etapes: unknown[] }][]).map(([id, p]) => (
+          <li>
+            <button type="button" data-parcours={id}>
+              <b>{p.nom}</b>
+              <small>{p.texte}</small>
+            </button>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <!-- Behind the Build -->
+  <section class="hub__vue" data-vue="coulisses" aria-label={h.entrees.coulisses.nom}>
+    <p class="hub__texte">{h.coulisses.texte}</p>
+    {
+      h.coulisses.groupes.map((g) => (
+        <div class="hub__groupe">
+          <h3 class="etiquette">{g.nom}</h3>
+          <ul>
+            {g.points.map((point) => (
+              <li>{point}</li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+    <a class="lien hub__fiche" href={cheminFiche(langue, 'portfolio')}>{h.coulisses.fiche} →</a>
+  </section>
+</div>
+
+<!-- La carte de la visite guidée : une étape à la fois, en bas de l'écran. -->
+<aside class="visite" hidden aria-live="polite">
+  <p class="etiquette visite__etape" data-visite="etape"></p>
+  <h3 class="visite__titre" data-visite="titre"></h3>
+  <p class="visite__texte" data-visite="texte"></p>
+  <div class="visite__ressource" data-visite-ressource></div>
+  <div class="visite__actions etiquette">
+    <button class="pastille" type="button" data-visite="precedent">{h.explorer.precedent}</button>
+    <button class="pastille pastille--pleine" type="button" data-visite="suivant">{h.explorer.suivant}</button>
+    <button class="pastille" type="button" data-visite="quitter">{h.explorer.quitter}</button>
+  </div>
+</aside>

@@ -1,0 +1,158 @@
+/* ==========================================================================
+   SECTION 1, suite : À PROPOS
+   Sous le panneau « méthode » : l'histoire (à gauche), le parcours, c'est-à-dire
+   le CV présenté sur le site (à droite), puis le cap, sur toute la largeur.
+   ========================================================================== */
+
+.apropos {
+  margin: var(--s-6) var(--gouttiere) 0;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--colonne);
+  row-gap: var(--s-5);
+}
+
+/* ---- L'histoire : un titre, puis quatre moments dans l'ordre où ils sont arrivés ---- */
+.apropos__histoire {
+  grid-column: 1 / span 6;
+  display: grid;
+  align-content: start;
+  gap: var(--s-4);
+}
+
+.apropos__titre span {
+  display: block;
+}
+
+.apropos__titre .second {
+  color: var(--discret);
+}
+
+.moment {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  column-gap: var(--colonne);
+  align-items: baseline;
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--filet);
+}
+
+.moment:last-child {
+  border-bottom: 1px solid var(--filet);
+}
+
+.moment__nom {
+  color: var(--discret);
+}
+
+.moment__texte {
+  max-width: 46ch;
+  line-height: 1.45;
+}
+
+/* ---- Le parcours : formation et stages, du plus récent au plus ancien ---- */
+.apropos__parcours {
+  grid-column: 8 / -1;
+  display: grid;
+  align-content: start;
+  gap: var(--s-3);
+}
+
+.apropos__label {
+  color: var(--discret);
+}
+
+.parcours__etape {
+  display: grid;
+  grid-template-columns: 6.8rem minmax(0, 1fr);
+  column-gap: var(--colonne);
+  row-gap: 0.2rem;
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--filet);
+}
+
+.parcours__etape:last-child {
+  border-bottom: 1px solid var(--filet);
+}
+
+.parcours__date {
+  grid-row: 1 / span 3;
+  padding-top: 0.3em;
+  color: var(--discret);
+  font-variant-numeric: tabular-nums;
+}
+
+.parcours__nom {
+  grid-column: 2;
+  font-size: var(--t-sous-titre);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.parcours__lieu {
+  grid-column: 2;
+  color: var(--discret);
+}
+
+.parcours__texte {
+  grid-column: 2;
+  margin-top: 0.25rem;
+  font-size: var(--t-petit);
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--texte) 86%, transparent);
+}
+
+.apropos__cv {
+  justify-self: start;
+}
+
+/* ---- Le cap : une phrase large, et sa précision à droite ---- */
+.apropos__cap {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  row-gap: var(--s-2);
+  align-items: end;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--filet);
+}
+
+.apropos__cap-titre {
+  grid-column: 1 / span 8;
+}
+
+.apropos__cap-texte {
+  grid-column: 9 / -1;
+  max-width: 40ch;
+  font-size: var(--t-petit);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--texte) 86%, transparent);
+}
+
+@media (max-width: 860px) {
+  .apropos__histoire,
+  .apropos__parcours,
+  .apropos__cap-titre,
+  .apropos__cap-texte {
+    grid-column: 1 / -1;
+  }
+
+  .moment {
+    grid-template-columns: 5.4rem minmax(0, 1fr);
+  }
+
+  .parcours__etape {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .parcours__date {
+    grid-row: auto;
+    padding-top: 0;
+  }
+
+  .parcours__nom,
+  .parcours__lieu,
+  .parcours__texte {
+    grid-column: 1;
+  }
+}

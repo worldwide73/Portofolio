@@ -1,0 +1,233 @@
+/* ==========================================================================
+   SECTION 2 : COMPÉTENCES
+   À gauche, le titre et un filtre par réalisation. À droite, cinq domaines.
+   Choisir une réalisation éteint les compétences qu'elle ne prouve pas
+   (voir src/scripts/filtres.ts). En dessous : le tableau de synthèse BTS SIO.
+   ========================================================================== */
+
+.competences {
+  margin: var(--s-6) var(--gouttiere) 0;
+  padding-top: var(--s-3);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--colonne);
+  row-gap: var(--s-5);
+  border-top: 1px solid var(--filet);
+}
+
+.competences__tete {
+  grid-column: 1 / span 5;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 1.4rem;
+}
+
+.competences__texte {
+  max-width: 34ch;
+  font-size: var(--t-chapo);
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+}
+
+.competences__filtre {
+  display: grid;
+  justify-items: start;
+  gap: 0.7rem;
+  margin-top: 0.4rem;
+}
+
+.competences__lire {
+  color: var(--discret);
+}
+
+/* ---- Les cinq domaines ---- */
+.competences__domaines {
+  grid-column: 7 / -1;
+}
+
+.domaine {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1.1rem 0 1.25rem;
+  border-top: 1px solid var(--filet);
+}
+
+.domaine:last-child {
+  border-bottom: 1px solid var(--filet);
+}
+
+.domaine__nom {
+  color: var(--discret);
+}
+
+.domaine__liste {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.5rem;
+  row-gap: 0.35rem;
+}
+
+.savoir {
+  font-size: var(--t-sous-titre);
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+  transition: opacity 0.5s var(--c-douce);
+}
+
+/* Le petit chiffre : combien de réalisations prouvent cette compétence. */
+.savoir__nombre {
+  margin-left: 0.3em;
+  font-size: 0.56em;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--discret);
+  font-variant-numeric: tabular-nums;
+}
+
+.savoir.est-eteint {
+  opacity: 0.3;
+}
+
+/* ---- Le tableau de synthèse BTS SIO, replié par défaut ---- */
+.tableau {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--filet-fort);
+  border-bottom: 1px solid var(--filet-fort);
+}
+
+.tableau__resume {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 1.15rem 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tableau__resume::-webkit-details-marker {
+  display: none;
+}
+
+.tableau__titre {
+  font-size: var(--t-sous-titre);
+  letter-spacing: -0.025em;
+}
+
+.tableau__corps {
+  display: grid;
+  gap: var(--s-3);
+  padding: 0.4rem 0 var(--s-4);
+}
+
+.tableau__intro {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--s-2);
+}
+
+.tableau__texte {
+  max-width: 54ch;
+  font-size: var(--t-petit);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--texte) 86%, transparent);
+}
+
+/* Sur petit écran, le tableau défile de gauche à droite dans son cadre ;
+   la première colonne reste en place. */
+.tableau__cadre {
+  overflow-x: auto;
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon-carte);
+}
+
+.tableau table {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--t-petit);
+  line-height: 1.35;
+}
+
+.tableau th,
+.tableau td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--filet);
+  font-weight: 400;
+  text-align: left;
+}
+
+.tableau tbody:last-child tr:last-child > * {
+  border-bottom: 0;
+}
+
+.tableau thead th {
+  font-size: var(--t-etiquette);
+  font-weight: 500;
+  color: var(--discret);
+  white-space: nowrap;
+}
+
+.tableau thead th:not(:first-child),
+.tableau td {
+  width: 5.6rem;
+  text-align: center;
+}
+
+.tableau thead a {
+  text-decoration: none;
+}
+
+.tableau thead a:hover,
+.tableau thead a:focus-visible {
+  color: var(--texte);
+}
+
+.tableau tr > :first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--fond);
+}
+
+.tableau__bloc th {
+  position: static;
+  font-size: var(--t-etiquette);
+  font-weight: 500;
+  color: var(--discret);
+  background: var(--surface);
+}
+
+.tableau .point {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--filet-fort);
+  vertical-align: middle;
+}
+
+.tableau .est-demontree .point {
+  width: 11px;
+  height: 11px;
+  background: var(--texte);
+}
+
+.tableau__source {
+  color: var(--discret);
+}
+
+@media (max-width: 860px) {
+  .competences__tete,
+  .competences__domaines {
+    grid-column: 1 / -1;
+  }
+
+  .tableau tbody th[scope='row'] {
+    min-width: 14rem;
+  }
+}

@@ -1,0 +1,27 @@
+---
+// LE SYMBOLE PERSONNEL : la lame de verre, ceinte d'une orbite, et le voyageur.
+// Trois éléments, les mêmes que sur le site : le portail (un quadrilatère
+// dressé, légèrement en biais), l'anneau d'une trajectoire qui passe derrière
+// lui puis devant, et un point qui la parcourt.
+// Il est dessiné au trait, dans la couleur du texte qui l'entoure, et reste
+// lisible à 16 pixels. On le retrouve dans la barre, l'introduction, le favicon
+// (public/favicon.svg, même tracé) et le bouton du mini-jeu.
+interface Props {
+  taille?: number;
+  /** Ajoute une classe sur le <svg>, pour l'animer ou le placer. */
+  classe?: string;
+}
+
+const { taille = 18, classe } = Astro.props;
+---
+
+<svg class:list={['symbole', classe]} width={taille} height={taille} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <!-- L'orbite, moitié arrière : elle s'interrompt derrière la lame. -->
+  <path class="symbole__orbite" d="M1.5 12.5A10.5 3.6 0 0 1 8.5 9.1M15.5 9.1A10.5 3.6 0 0 1 22.5 12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+  <!-- La lame de verre. -->
+  <path class="symbole__lame" d="M8.5 3 15.5 4.5v17L8.5 20z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>
+  <!-- L'orbite, moitié avant : elle passe devant la lame. -->
+  <path class="symbole__orbite" d="M22.5 12.5A10.5 3.6 0 0 1 1.5 12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path>
+  <!-- Le voyageur. -->
+  <circle class="symbole__point" cx="18" cy="15.45" r="1.5" fill="currentColor"></circle>
+</svg>

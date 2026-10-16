@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Le symbole personnel (même tracé que src/components/Symbole.astro), sur la nuit du site. -->
+  <rect width="32" height="32" rx="7" fill="#0c0d10"/>
+  <g transform="translate(4 4)" fill="none" stroke="#f3f4f6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1.5 12.5A10.5 3.6 0 0 1 8.5 9.1M15.5 9.1A10.5 3.6 0 0 1 22.5 12.5" stroke-width="1.4"/>
+    <path d="M8.5 3 15.5 4.5v17L8.5 20z" stroke-width="1.7"/>
+    <path d="M22.5 12.5A10.5 3.6 0 0 1 1.5 12.5" stroke-width="1.4"/>
+    <circle cx="18" cy="15.45" r="1.7" fill="#cfe1ff" stroke="none"/>
+  </g>
+</svg>

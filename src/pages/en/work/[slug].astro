@@ -1,0 +1,13 @@
+---
+// Une page par projet, en anglais : /en/work/<slug>/
+import FicheProjet from '../../../components/FicheProjet.astro';
+import { contenu } from '../../../contenu';
+
+export function getStaticPaths() {
+  return contenu('en').realisations.projets.map((p) => ({ params: { slug: p.slug } }));
+}
+
+const { slug } = Astro.params;
+---
+
+<FicheProjet langue="en" slug={slug} />

@@ -1,0 +1,544 @@
+---
+// PORTAL RUSH : le jeu de course à trois voies, ouvert depuis l'Orbital Hub.
+// Ce fichier contient ce qui se lit et se clique : la barre du haut (Échap,
+// langue, records, réglages), le HUD et les écrans (menu, campagne, survie, défi
+// du jour, records, garage, pause, fin de partie, victoire), et le panneau des
+// réglages, qui s'ouvre par-dessus l'écran en cours. Le monde 3D et la course
+// sont dessinés par src/scripts/rush/. L'attribut data-ecran de la fenêtre dit
+// quel écran est affiché (vide pendant la course) ; data-panneau, si les réglages
+// sont ouverts ; data-theme, le monde du secteur.
+//
+// Les textes qui dépendent de la progression (records, états, objectifs du
+// secteur choisi) sont écrits par rush.ts, à partir des vraies données.
+import { EMPLACEMENTS, NIVEAUX, PIECES, ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from '../scripts/rush/donnees';
+import type { Contenu } from '../contenu/types';
+import Drapeau from './Drapeau.astro';
+
+interface Props {
+  contenu: Contenu;
+  cheminAutreLangue: string;
+}
+
+const { contenu: c, cheminAutreLangue } = Astro.props;
+const r = c.rush;
+const locale = c.langue === 'en' ? 'en-GB' : 'fr-FR';
+const ici = Astro.url.pathname;
+const chemins = { fr: c.langue === 'fr' ? ici : cheminAutreLangue, en: c.langue === 'en' ? ici : cheminAutreLangue };
+const mult = (d: (typeof ORDRE_DIFFICULTES)[number]) => `×${PROFILS[d].score.toLocaleString(locale)}`;
+const deux = (n: number) => String(n).padStart(2, '0');
+const verrou = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>`;
+const ETOILE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.85 6.05 6.62.8-4.88 4.56 1.27 6.55L12 17.3l-5.86 3.26 1.27-6.55L2.53 9.45l6.62-.8z"/></svg>';
+// Les icônes de l'interface : traits fins, angles nets.
+const I = {
+  roue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/><path d="M19.4 13.5l1.8 1.4-1.9 3.3-2.1-.8a7.6 7.6 0 0 1-2 1.2l-.3 2.2h-3.8l-.3-2.2a7.6 7.6 0 0 1-2-1.2l-2.1.8-1.9-3.3 1.8-1.4a7.7 7.7 0 0 1 0-3l-1.8-1.4 1.9-3.3 2.1.8a7.6 7.6 0 0 1 2-1.2l.3-2.2h3.8l.3 2.2a7.6 7.6 0 0 1 2 1.2l2.1-.8 1.9 3.3-1.8 1.4a7.7 7.7 0 0 1 0 3z"/></svg>',
+  trophee: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 3.5h9v4.8a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 5.2H4.2v1.4a3.3 3.3 0 0 0 3.6 3.3M16.5 5.2h3.3v1.4a3.3 3.3 0 0 1-3.6 3.3"/><path d="M12 12.8v3.6M8.6 20.5h6.8l-.8-4.1H9.4z"/></svg>',
+  fermer: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>',
+  campagne: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18.5l5-4 4.5 2.5 6.5-9"/><circle cx="4" cy="18.5" r="1.6"/><circle cx="9" cy="14.5" r="1.6"/><circle cx="13.5" cy="17" r="1.6"/><circle cx="20" cy="8" r="1.6"/></svg>',
+  infini: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c-2-2.6-3.6-3.9-5.4-3.9a3.9 3.9 0 0 0 0 7.8c1.8 0 3.4-1.3 5.4-3.9zm0 0c2 2.6 3.6 3.9 5.4 3.9a3.9 3.9 0 0 0 0-7.8c-1.8 0-3.4 1.3-5.4 3.9z"/></svg>',
+  defi: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5h15v13h-15zM4.5 10.5h15M8.5 4v4M15.5 4v4"/><path d="M10 15l1.6 1.6L15 13"/></svg>',
+  garage: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.3 7.2 6.2 4.3-6.6.9L12 20.5l-1.9-4.6-6.6-.9 6.2-4.3z"/></svg>',
+};
+const modes = [
+  ['campagne', '01', I.campagne],
+  ['infini', '02', I.infini],
+  ['defi', '03', I.defi],
+  ['garage', '04', I.garage],
+] as const;
+const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from 0deg, #8ff, #f8f, #ff8, #8ff)' : `rgb(${couleur})`);
+---
+
+<dialog class="rush toujours-sombre" aria-labelledby="rush-titre" data-lenis-prevent data-ecran="accueil" data-panneau="" data-theme="lancement" data-langue={c.langue} data-textes={JSON.stringify(r)}>
+  <canvas class="rush__monde" aria-hidden="true"></canvas>
+  <canvas class="rush__toile" tabindex="-1" aria-label={r.commandes.lignes[0]}></canvas>
+  <div class="rush__cadre" aria-hidden="true"><i></i><i></i><i></i><i></i><span class="rush__code">PR-OS · RULES v{REGLES_VERSION}</span></div>
+  <div class="rush__seuil" aria-hidden="true"><i></i></div>
+
+  <!-- ================= LA BARRE DU HAUT ================= -->
+  <div class="rush__barre">
+    <div class="barre__gauche">
+      <button class="touche-echap" type="button" data-rush="echap">
+        <kbd>Esc</kbd><span data-echap>{r.barre.echap.quitter}</span>
+      </button>
+      <p class="barre__module etiquette"><i aria-hidden="true"></i><span data-module>{r.barre.principal}</span></p>
+    </div>
+    <div class="barre__droite">
+      <div class="langue-jeu">
+        <button class="icone" type="button" data-rush="langue" aria-haspopup="true" aria-expanded="false" aria-label={r.barre.langue} data-info={r.barre.langue} data-bloc>
+          <Drapeau langue={c.langue} />
+        </button>
+        <div class="langue-jeu__liste" data-langues hidden>
+          <p class="etiquette">{r.barre.langue}</p>
+          <a href={chemins.fr} hreflang="fr" lang="fr" data-langue-choix="fr" aria-current={c.langue === 'fr' ? 'true' : undefined} data-langue={c.langue === 'fr' ? undefined : ''}>
+            <b>FR</b><span>{r.barre.langues.fr}</span>
+          </a>
+          <a href={chemins.en} hreflang="en" lang="en" data-langue-choix="en" aria-current={c.langue === 'en' ? 'true' : undefined} data-langue={c.langue === 'en' ? undefined : ''}>
+            <b>EN</b><span>{r.barre.langues.en}</span>
+          </a>
+        </div>
+      </div>
+      <button class="icone" type="button" data-rush="records" aria-label={r.menu.records} data-info={r.menu.records} set:html={I.trophee} />
+      <button class="icone" type="button" data-rush="reglages" aria-label={r.menu.reglages} data-info={r.menu.reglages} set:html={I.roue} />
+    </div>
+  </div>
+
+  <!-- ================= LE HUD ================= -->
+  <div class="rush__hud" hidden>
+    <div class="hud__gauche">
+      <p class="hud__secteur etiquette"><span data-hud="secteur"></span> <span class="hud__phase" data-hud="phase"></span></p>
+      <p class="hud__score"><b data-hud="score">0</b><span class="hud__gain" data-hud="gain"></span></p>
+      <p class="hud__record etiquette">{r.hud.record} <span data-hud="record">—</span></p>
+    </div>
+    <div class="hud__centre">
+      <div class="hud__progression"><span data-hud="progression"></span><div class="hud__reperes" data-hud="reperes"></div></div>
+      <p class="hud__objectif etiquette" data-hud="objectif"></p>
+      <div class="hud__boss" data-hud="boss" hidden>
+        <span class="etiquette">{r.hud.boss}</span>
+        <div class="hud__boss-barre"><span data-hud="bossVie"></span></div>
+        <span class="etiquette" data-hud="bossPhase"></span>
+      </div>
+    </div>
+    <div class="hud__droite">
+      <p class="etiquette hud__libelle">{r.hud.boucliers}</p>
+      <p class="hud__boucliers" data-hud="boucliers"></p>
+      <p class="etiquette hud__libelle">{r.hud.fragments} <b data-hud="fragments">0</b></p>
+      <button class="hud__pause" type="button" data-rush="pause" aria-label={r.hud.pause} title={r.hud.pause}><span aria-hidden="true">II</span></button>
+    </div>
+    <div class="hud__overdrive">
+      <div class="hud__jauge"><span data-hud="jauge"></span></div>
+      <p class="etiquette">{r.hud.overdrive}</p>
+      <p class="hud__touche etiquette" data-hud="touche">{r.hud.touche}</p>
+      <p class="hud__charges etiquette" data-hud="charges"></p>
+    </div>
+    <div class="hud__combo">
+      <p class="hud__mult" data-hud="mult">×1</p>
+      <p class="etiquette">{r.hud.combo} <span data-hud="combo">0</span></p>
+      <div class="hud__delai"><span data-hud="delai"></span></div>
+    </div>
+    <button class="hud__od-tactile etiquette" type="button" data-rush="overdrive">{r.hud.overdrive}</button>
+  </div>
+  <p class="rush__annonce" aria-live="polite"></p>
+  <p class="rush__conseil etiquette" aria-live="polite" hidden></p>
+  <!-- La séquence de fin d'un niveau : bandes de cinéma et titre (voir finDePartie dans rush.ts). -->
+  <div class="rush__cine" aria-hidden="true">
+    <p class="rush__cine-titre" data-cine-titre></p>
+    <p class="rush__cine-sous etiquette" data-cine-sous></p>
+  </div>
+
+  <!-- ================= LE MENU PRINCIPAL ================= -->
+  <section class="ecran ecran--accueil" data-ecran="accueil" aria-labelledby="rush-titre">
+    <div class="accueil__centre">
+      <p class="accueil__surtitre etiquette">{r.surtitre}</p>
+      <h2 id="rush-titre" class="logotype" aria-label={r.titre}>
+        <span class="logotype__ligne" aria-hidden="true">Portal</span>
+        <span class="logotype__ligne logotype__ligne--contour" aria-hidden="true">Rush</span>
+      </h2>
+      <p class="accueil__accroche">{r.accroche}</p>
+      <button class="action-principale" type="button" data-rush="continuer">
+        <span class="action-principale__texte">
+          <b data-libelle-continuer>{r.menu.continuer}</b>
+          <small data-desc="continuer"></small>
+        </span>
+        <span class="action-principale__touches" aria-hidden="true"><kbd>{r.barre.entree}</kbd><kbd>{r.barre.espace}</kbd></span>
+        <span class="action-principale__chevrons" aria-hidden="true"><i></i><i></i><i></i></span>
+      </button>
+      <p class="accueil__bienvenue etiquette" data-stat="bienvenue">{r.stats.bienvenue}</p>
+      <nav class="modes" aria-label={r.titre}>
+        {
+          modes.map(([id, index, icone]) => (
+            <button class="mode" type="button" data-rush={id}>
+              <span class="mode__index">{index}</span>
+              <span class="mode__icone" set:html={icone} />
+              <b class="mode__nom">{r.menu[id]}</b>
+              <small class="mode__texte">{r.descriptions[id]}</small>
+            </button>
+          ))
+        }
+      </nav>
+    </div>
+    <div class="accueil__pied">
+      <dl class="accueil__stats">
+        <div>
+          <dt class="etiquette">{r.stats.campagne}</dt>
+          <dd><span data-stat="campagne">0 / {NIVEAUX.length}</span><span class="stats__segments" data-stat="segments">{NIVEAUX.map(() => <i />)}</span></dd>
+        </div>
+        <div><dt class="etiquette">{r.stats.etoiles}</dt><dd data-stat="etoiles">0 / {NIVEAUX.length * 12}</dd></div>
+        <div><dt class="etiquette">{r.stats.pieces}</dt><dd data-stat="pieces">0 / {PIECES.length}</dd></div>
+        <div><dt class="etiquette">{r.stats.defis}</dt><dd data-stat="defis">0</dd></div>
+        <div><dt class="etiquette">{r.stats.derniere}</dt><dd data-stat="derniere">—</dd></div>
+      </dl>
+      <p class="meilleur-score">
+        <span class="etiquette">{r.stats.meilleur}</span>
+        <b data-stat="meilleur">—</b>
+        <small class="etiquette" data-stat="meilleurOrigine"></small>
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= LA CAMPAGNE ================= -->
+  <section class="ecran ecran--campagne" data-ecran="campagne" aria-labelledby="rush-campagne">
+    <header class="ecran__tete">
+      <p class="ecran__module etiquette">CMP · 01</p>
+      <h3 id="rush-campagne">{r.menu.campagne}</h3>
+      <p class="campagne__total etiquette" data-campagne="etoiles"></p>
+    </header>
+    <div class="campagne__corps">
+      <fieldset class="difficultes">
+        <legend class="etiquette">{r.difficulte}</legend>
+        {
+          ORDRE_DIFFICULTES.map((d, k) => (
+            <label class="difficulte" data-difficulte={d}>
+              <input type="radio" name="rush-difficulte" value={d} checked={d === 'as'} />
+              <span class="difficulte__tete">
+                <span class="difficulte__index">{deux(k + 1)}</span>
+                <b>{r.difficultes[d].nom}</b>
+                <em>{mult(d)}</em>
+              </span>
+              <span class="difficulte__role etiquette">{r.difficultes[d].role}</span>
+              <small>{r.difficultes[d].texte}</small>
+              {d === 'cauchemar' && <small class="difficulte__verrou" data-verrou-cauchemar>{r.verrouCauchemar}</small>}
+            </label>
+          ))
+        }
+      </fieldset>
+      <div class="carte-secteurs">
+        <svg class="carte-secteurs__trace" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M12.5 30 L87.5 30 C98 30 98 78 87.5 78 L12.5 78"></path></svg>
+        <ol class="secteurs" aria-label={r.menu.campagne}>
+          {
+            NIVEAUX.map((n, i) => (
+              <li>
+                <button type="button" class="secteur" data-secteur={n.id} data-theme={n.theme}>
+                  <span class="secteur__image" aria-hidden="true">
+                    <img data-apercu-secteur alt="" width="384" height="216" hidden />
+                    <span class="secteur__verrou" set:html={verrou} />
+                    <span class="secteur__numero">{deux(n.id)}</span>
+                  </span>
+                  <b class="secteur__nom">{r.niveaux[i].nom}</b>
+                  <span class="secteur__etoiles" data-etoiles>{[0, 1, 2].map(() => <i set:html={ETOILE} />)}</span>
+                  <span class="secteur__etat etiquette" data-etat />
+                </button>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+      <aside class="preparation" aria-live="polite">
+        <div class="preparation__apercu" data-apercu data-theme="lancement" aria-hidden="true"><img data-apercu-grand alt="" width="720" height="340" hidden /><i></i></div>
+        <p class="etiquette preparation__secteur" data-prep="secteur"></p>
+        <h4 class="preparation__nom" data-prep="nom"></h4>
+        <p class="preparation__mecanique" data-prep="mecanique"></p>
+        <h5 class="etiquette">{r.etoiles.titre}</h5>
+        <ul class="etoiles-liste" data-prep="etoiles">{[0, 1, 2].map((k) => <li data-etoile={k}><i set:html={ETOILE} /><span /></li>)}</ul>
+        <h5 class="etiquette">{r.etoiles.recompenses}</h5>
+        <ul class="preparation__recompenses" data-prep="recompenses"></ul>
+        <p class="preparation__record etiquette" data-prep="record"></p>
+        <p class="preparation__verrou" data-prep="verrou" hidden></p>
+        <button class="lancer" type="button" data-rush="lancer"><span>{r.menu.lancer}</span><i aria-hidden="true"></i></button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= LA SURVIE INFINIE ================= -->
+  <section class="ecran ecran--infini" data-ecran="infini" aria-labelledby="rush-infini">
+    <header class="ecran__tete">
+      <p class="ecran__module etiquette">END · 02</p>
+      <h3 id="rush-infini">{r.infini.titre}</h3>
+      <p class="ecran__sous">{r.infini.texte}</p>
+    </header>
+    <fieldset class="difficultes difficultes--ligne">
+      <legend class="etiquette">{r.difficulte}</legend>
+      {
+        ORDRE_DIFFICULTES.map((d, k) => (
+          <label class="difficulte" data-difficulte={d}>
+            <input type="radio" name="rush-difficulte-infini" value={d} checked={d === 'as'} />
+            <span class="difficulte__tete">
+              <span class="difficulte__index">{deux(k + 1)}</span>
+              <b>{r.difficultes[d].nom}</b>
+              <em>{mult(d)}</em>
+            </span>
+            <small class="etiquette" data-infini-record={d} />
+          </label>
+        ))
+      }
+    </fieldset>
+    <button class="lancer" type="button" data-rush="lancer-infini"><span>{r.infini.lancer}</span><i aria-hidden="true"></i></button>
+  </section>
+
+  <!-- ================= LE DÉFI DU JOUR ================= -->
+  <section class="ecran ecran--defi" data-ecran="defi" aria-labelledby="rush-defi">
+    <header class="ecran__tete">
+      <p class="ecran__module etiquette">DLY · 03</p>
+      <h3 id="rush-defi">{r.defi.titre}</h3>
+      <p class="ecran__sous etiquette" data-defi="date"></p>
+    </header>
+    <div class="defi__corps">
+      <ol class="defi__regles">
+        <li>{r.defi.objectif}</li>
+        <li>{r.defi.parcours}</li>
+        <li>{r.defi.regles.replace('{v}', String(REGLES_VERSION))}</li>
+        <li>{r.defi.score}</li>
+      </ol>
+      <dl class="defi__resultats">
+        <div><dt class="etiquette">{r.defi.meilleur}</dt><dd data-defi="meilleur"></dd></div>
+        <div><dt class="etiquette">{r.defi.derniere}</dt><dd data-defi="derniere"></dd></div>
+      </dl>
+    </div>
+    <button class="lancer" type="button" data-rush="lancer-defi"><span>{r.defi.lancer}</span><i aria-hidden="true"></i></button>
+  </section>
+
+  <!-- ================= LES RECORDS ================= -->
+  <section class="ecran ecran--records" data-ecran="records" aria-labelledby="rush-records">
+    <header class="ecran__tete">
+      <p class="ecran__module etiquette">REC · 05</p>
+      <h3 id="rush-records">{r.records.titre}</h3>
+      <p class="ecran__sous">{r.records.sousTitre}</p>
+    </header>
+    <div class="records__vide" data-records-vide hidden>
+      <span class="records__vide-icone" set:html={I.trophee} />
+      <h4>{r.records.vide.titre}</h4>
+      <p>{r.records.vide.texte}</p>
+      <button class="lancer" type="button" data-rush="premiere"><span>{r.records.vide.action}</span><i aria-hidden="true"></i></button>
+    </div>
+    <div class="records__plein" data-records-plein>
+      <div class="onglets" role="tablist" aria-label={r.records.titre}>
+        {
+          (['resume', 'campagne', 'infini', 'defi'] as const).map((o, k) => (
+            <button class="onglet" type="button" role="tab" id={`rec-${o}`} aria-controls={`rec-page-${o}`} aria-selected={k === 0 ? 'true' : 'false'} data-onglet-records={o}>
+              <span class="onglet__index">{deux(k + 1)}</span>
+              {r.records.onglets[o]}
+            </button>
+          ))
+        }
+      </div>
+      <div class="records__page" id="rec-page-resume" role="tabpanel" aria-labelledby="rec-resume" data-page-records="resume">
+        <div class="records__cartes">
+          {
+            (['infini', 'distance', 'combo', 'parfaits', 'etoiles', 'defi'] as const).map((k) => (
+              <div class="carte-record" data-records-carte={k}>
+                <span class="etiquette">{r.records.cartes[k]}</span>
+                <b />
+                <small class="etiquette" />
+              </div>
+            ))
+          }
+        </div>
+      </div>
+      <div class="records__page" id="rec-page-campagne" role="tabpanel" aria-labelledby="rec-campagne" data-page-records="campagne" hidden>
+        <table class="records__table">
+          <thead>
+            <tr>
+              <th scope="col">{r.records.niveau}</th>
+              {
+                ORDRE_DIFFICULTES.map((d) => (
+                  <th scope="col">
+                    {r.difficultes[d].nom} <em>{mult(d)}</em>
+                  </th>
+                ))
+              }
+            </tr>
+          </thead>
+          <tbody>
+            {
+              NIVEAUX.map((n, i) => (
+                <tr>
+                  <th scope="row">
+                    <span class="records__num">{deux(n.id)}</span> {r.niveaux[i].nom}
+                  </th>
+                  {ORDRE_DIFFICULTES.map((d) => (
+                    <td data-record={`${n.id}-${d}`}>{r.records.aucun}</td>
+                  ))}
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="records__page" id="rec-page-infini" role="tabpanel" aria-labelledby="rec-infini" data-page-records="infini" hidden>
+        <table class="records__table records__table--etroite">
+          <thead>
+            <tr><th scope="col">{r.difficulte}</th><th scope="col">{r.records.score}</th><th scope="col">{r.records.distance}</th></tr>
+          </thead>
+          <tbody>
+            {
+              ORDRE_DIFFICULTES.map((d) => (
+                <tr>
+                  <th scope="row">
+                    {r.difficultes[d].nom} <em>{mult(d)}</em>
+                  </th>
+                  <td data-record-infini={d}>{r.records.aucun}</td>
+                  <td data-record-infini-distance={d}>{r.records.aucun}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="records__page" id="rec-page-defi" role="tabpanel" aria-labelledby="rec-defi" data-page-records="defi" hidden>
+        <dl class="records__defi">
+          <div><dt class="etiquette">{r.records.aujourdhui}</dt><dd data-record-defi>{r.records.aucun}</dd></div>
+          <div><dt class="etiquette">{r.records.tentatives}</dt><dd data-record-tentatives>0</dd></div>
+          <div><dt class="etiquette">{r.stats.defis}</dt><dd data-record-defis>0</dd></div>
+        </dl>
+      </div>
+      <p class="ecran__note">{r.records.regles.replace('{v}', String(REGLES_VERSION))}</p>
+    </div>
+  </section>
+
+  <!-- ================= LE GARAGE ================= -->
+  <section class="ecran ecran--garage" data-ecran="garage" aria-labelledby="rush-garage">
+    <header class="ecran__tete">
+      <p class="ecran__module etiquette">GAR · 04</p>
+      <h3 id="rush-garage">{r.garage.titre}</h3>
+      <p class="ecran__sous">{r.garage.texte}</p>
+    </header>
+    <div class="garage__corps">
+      <div class="garage__baie">
+        <canvas class="garage__apercu" width="360" height="300" aria-hidden="true"></canvas>
+        <span class="garage__repere etiquette" aria-hidden="true">PR-07 · {r.garage.titre}</span>
+      </div>
+      <div class="garage__emplacements">
+        {
+          EMPLACEMENTS.map((e, k) => (
+            <div class="garage__emplacement" role="group" aria-label={r.garage.emplacements[e]}>
+              <p class="etiquette"><span class="garage__index">{deux(k + 1)}</span>{r.garage.emplacements[e]}</p>
+              <div class="garage__pieces">
+                {PIECES.filter((p) => p.emplacement === e).map((p) => (
+                  <button type="button" class="piece" data-piece={p.id} aria-pressed="false">
+                    <i style={`--teinte: ${teinte(p.couleur)}`} aria-hidden="true" />
+                    <b>{r.garage.pieces[p.id]}</b>
+                    <small data-piece-etat />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LA PAUSE ================= -->
+  <section class="ecran ecran--court ecran--pause" data-ecran="pause" aria-labelledby="rush-pause">
+    <header class="pause__tete">
+      <p class="etiquette">{r.pause.sousTitre}</p>
+      <h3 id="rush-pause">{r.pause.titre}</h3>
+    </header>
+    <div class="ecran__colonne">
+      <button class="entree entree--principale" type="button" data-rush="reprendre"><span class="entree__index" aria-hidden="true">01</span><span class="entree__texte"><b>{r.pause.reprendre}</b></span><kbd aria-hidden="true">{r.barre.entree}</kbd></button>
+      <button class="entree" type="button" data-rush="recommencer" data-confirmer={r.pause.confirmer} data-libelle={r.pause.recommencer}><span class="entree__index" aria-hidden="true">02</span><span class="entree__texte"><b data-libelle-cible>{r.pause.recommencer}</b></span><kbd aria-hidden="true">R</kbd></button>
+      <button class="entree" type="button" data-rush="reglages"><span class="entree__index" aria-hidden="true">03</span><span class="entree__texte"><b>{r.pause.reglages}</b></span></button>
+      <button class="entree" type="button" data-rush="menu" data-confirmer={r.pause.confirmerMenu} data-libelle={r.pause.menu}><span class="entree__index" aria-hidden="true">04</span><span class="entree__texte"><b data-libelle-cible>{r.pause.menu}</b></span></button>
+      <button class="entree" type="button" data-rush="quitter" data-confirmer={r.pause.confirmerQuitter} data-libelle={r.pause.quitter}><span class="entree__index" aria-hidden="true">05</span><span class="entree__texte"><b data-libelle-cible>{r.pause.quitter}</b></span></button>
+    </div>
+  </section>
+
+  <!-- ================= FIN DE PARTIE ================= -->
+  <section class="ecran ecran--resultat ecran--fin" data-ecran="fin" aria-labelledby="rush-fin">
+    <p class="etiquette resultat__surtitre" data-fin="secteur"></p>
+    <h3 id="rush-fin" data-fin="titre"></h3>
+    <p class="resultat__score" data-fin="score"></p>
+    <p class="resultat__record etiquette" data-fin="record"></p>
+    <dl class="resultat__stats" data-fin="stats"></dl>
+    <ul class="resultat__objectifs" data-fin="objectifs"></ul>
+    <div class="etoiles-resultat etoiles-resultat--petit" data-fin="etoiles" hidden>
+      <p class="etiquette">{r.etoiles.aGagner}</p>
+      {[0, 1, 2].map((k) => <div class="etoile-resultat" data-etoile={k}><i set:html={ETOILE} /><small /></div>)}
+    </div>
+    <p class="resultat__progres etiquette" data-fin="progres"></p>
+    <div class="ecran__ligne">
+      <button class="lancer" type="button" data-rush="rejouer"><span>{r.fin.rejouer}</span><i aria-hidden="true"></i></button>
+      <button class="entree" type="button" data-rush="autre"><span class="entree__texte"><b>{r.fin.autreDifficulte}</b></span></button>
+      <button class="entree" type="button" data-rush="menu"><span class="entree__texte"><b>{r.fin.menu}</b></span></button>
+    </div>
+  </section>
+
+  <!-- ================= VICTOIRE ================= -->
+  <section class="ecran ecran--resultat ecran--victoire" data-ecran="victoire" aria-labelledby="rush-victoire">
+    <div class="victoire__portail" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="etiquette resultat__surtitre" data-victoire="secteur"></p>
+    <h3 id="rush-victoire">{r.victoire.titre}</h3>
+    <div class="etoiles-resultat" data-victoire="etoiles">{[0, 1, 2].map((k) => <div class="etoile-resultat" data-etoile={k}><i set:html={ETOILE} /><small /><em class="etiquette">{r.etoiles.nouvelle}</em></div>)}</div>
+    <p class="resultat__score" data-victoire="score"></p>
+    <p class="resultat__record etiquette"><span class="resultat__rang" data-victoire="rang"></span> <span data-victoire="record"></span></p>
+    <div class="resultat__recompenses">
+      <p class="etiquette">{r.victoire.recompenses}</p>
+      <ul data-victoire="recompenses"></ul>
+    </div>
+    <div class="ecran__ligne">
+      <button class="lancer" type="button" data-rush="suivant"><span>{r.victoire.suivant}</span><i aria-hidden="true"></i></button>
+      <button class="entree" type="button" data-rush="rejouer"><span class="entree__texte"><b>{r.victoire.rejouer}</b></span></button>
+      <button class="entree" type="button" data-rush="menu"><span class="entree__texte"><b>{r.victoire.menu}</b></span></button>
+    </div>
+  </section>
+
+  <!-- ================= LE PANNEAU DES RÉGLAGES (par-dessus l'écran en cours) ================= -->
+  <section class="panneau" data-panneau-id="reglages" role="dialog" aria-modal="true" aria-labelledby="rush-reglages">
+    <header class="panneau__tete">
+      <p class="etiquette">SET · 06</p>
+      <h3 id="rush-reglages">{r.reglages.titre}</h3>
+      <button class="icone icone--petite" type="button" data-rush="fermer-panneau" aria-label={r.reglages.fermer} data-info={`${r.reglages.fermer} · Esc`} set:html={I.fermer} />
+    </header>
+    <div class="onglets" role="tablist" aria-label={r.reglages.titre}>
+      {
+        (['audio', 'affichage', 'commandes'] as const).map((o, k) => (
+          <button class="onglet" type="button" role="tab" id={`set-${o}`} aria-controls={`set-page-${o}`} aria-selected={k === 0 ? 'true' : 'false'} data-onglet-reglages={o}>
+            <span class="onglet__index">{deux(k + 1)}</span>
+            {r.reglages.onglets[o]}
+          </button>
+        ))
+      }
+    </div>
+    <div class="panneau__page" id="set-page-audio" role="tabpanel" aria-labelledby="set-audio" data-page-reglages="audio">
+      <div class="option option--curseur">
+        <label class="option__texte" for="rush-volume"><b>{r.reglages.effets}</b></label>
+        <span class="curseur-jeu"><input id="rush-volume" type="range" min="0" max="100" step="5" data-reglage="volume" /><output data-sortie="volume"></output></span>
+      </div>
+      <label class="option">
+        <span class="option__texte"><b>{r.reglages.sons}</b><small>{r.reglages.sonsTexte}</small></span>
+        <input class="interrupteur" type="checkbox" role="switch" data-reglage="sons" />
+      </label>
+      <label class="option">
+        <span class="option__texte"><b>{r.reglages.musique}</b><small>{r.reglages.partage}</small></span>
+        <input class="interrupteur" type="checkbox" role="switch" data-reglage="musique" />
+      </label>
+      <div class="option option--curseur">
+        <label class="option__texte" for="rush-volume-musique"><b>{r.reglages.volumeMusique}</b></label>
+        <span class="curseur-jeu"><input id="rush-volume-musique" type="range" min="0" max="100" step="1" data-reglage="volumeMusique" /><output data-sortie="volumeMusique"></output></span>
+      </div>
+    </div>
+    <div class="panneau__page" id="set-page-affichage" role="tabpanel" aria-labelledby="set-affichage" data-page-reglages="affichage" hidden>
+      <fieldset class="option option--choix">
+        <legend class="option__texte"><b>{r.reglages.animations}</b><small>{r.reglages.animationsTexte}</small></legend>
+        <span class="segments">
+          <label><input type="radio" name="rush-animations" value="1" data-reglage="animations" /><span>{r.reglages.animationsChoix.complet}</span></label>
+          <label><input type="radio" name="rush-animations" value="0.5" data-reglage="animations" /><span>{r.reglages.animationsChoix.allege}</span></label>
+          <label><input type="radio" name="rush-animations" value="0" data-reglage="animations" /><span>{r.reglages.animationsChoix.coupe}</span></label>
+        </span>
+      </fieldset>
+      <label class="option">
+        <span class="option__texte"><b>{r.reglages.effetsReduits}</b><small>{r.reglages.effetsReduitsTexte}</small></span>
+        <input class="interrupteur" type="checkbox" role="switch" data-reglage="effetsReduits" />
+      </label>
+      <label class="option">
+        <span class="option__texte"><b>{r.reglages.secousses}</b></span>
+        <input class="interrupteur" type="checkbox" role="switch" data-reglage="secousses" />
+      </label>
+    </div>
+    <div class="panneau__page" id="set-page-commandes" role="tabpanel" aria-labelledby="set-commandes" data-page-reglages="commandes" hidden>
+      <label class="option">
+        <span class="option__texte"><b>{r.reglages.aide}</b></span>
+        <input class="interrupteur" type="checkbox" role="switch" data-reglage="aideCommandes" />
+      </label>
+      <fieldset class="option option--choix">
+        <legend class="option__texte"><b>{r.reglages.tactile}</b></legend>
+        <span class="segments">
+          <label><input type="radio" name="rush-tactile" value="toucher" data-reglage="tactile" /><span>{r.reglages.toucher}</span></label>
+          <label><input type="radio" name="rush-tactile" value="glisser" data-reglage="tactile" /><span>{r.reglages.glisser}</span></label>
+        </span>
+      </fieldset>
+      <h4 class="etiquette panneau__sous-titre">{r.commandes.titre}</h4>
+      <ul class="commandes__lignes">
+        {r.commandes.lignes.map((ligne) => <li>{ligne}</li>)}
+      </ul>
+    </div>
+  </section>
+</dialog>

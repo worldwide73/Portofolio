@@ -1,0 +1,383 @@
+---
+// L'interface fixe : barre du haut (marque, menu des 5 catégories, outils),
+// curseur personnalisé, et le terminal caché.
+import { SECTIONS, cheminAccueil, cheminFiche } from '../contenu';
+import type { Contenu } from '../contenu/types';
+import Drapeau from './Drapeau.astro';
+import OrbitalHub from './OrbitalHub.astro';
+import PortalRush from './PortalRush.astro';
+import Symbole from './Symbole.astro';
+
+interface Props {
+  contenu: Contenu;
+  page: 'accueil' | 'fiche';
+  cheminAutreLangue: string;
+}
+
+const { contenu, page, cheminAutreLangue } = Astro.props;
+const langue = contenu.langue;
+const autre = langue === 'fr' ? 'en' : 'fr';
+const accueil = cheminAccueil(langue);
+// Sur l'accueil, les liens du menu sont des ancres (#contact) : le défilement
+// est animé. Depuis une fiche, ils ramènent à l'accueil, à la bonne section.
+const ancre = (id: string) => (page === 'accueil' ? `#${id}` : `${accueil}#${id}`);
+// Ce que le terminal caché doit connaître : ses textes et la liste des réalisations.
+const projetsDuTerminal = contenu.realisations.projets.map((p) => ({ nom: p.nom, href: cheminFiche(langue, p.slug) }));
+// Le panneau d'actions rapides réutilise les vraies adresses du projet (bloc contact, adresse du site).
+const lien = (nom: string) => contenu.contact.liens.find((l) => l.nom === nom)?.href;
+const linkedin = lien('LinkedIn');
+const github = lien('GitHub');
+const adresseSite = new URL(accueil, Astro.site ?? 'https://matheomaleyran.com').href;
+const a = contenu.acces;
+const ICONES = {
+  linkedin: '<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="1.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.6 7.6v5M5.6 5.3v.1M8.4 12.6V7.6M8.4 9.9c0-1.4.9-2.4 2.1-2.4s2 .8 2 2.3v2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  github: '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1.6a7.4 7.4 0 0 0-2.3 14.4c.4.1.5-.2.5-.4v-1.4c-2 .4-2.5-.9-2.5-.9-.3-.8-.8-1-.8-1-.7-.5 0-.5 0-.5.7.1 1.1.8 1.1.8.7 1.1 1.8.8 2.2.6.1-.5.3-.8.5-1-1.7-.2-3.4-.8-3.4-3.6 0-.8.3-1.5.8-2-.1-.2-.3-1 .1-2 0 0 .6-.2 2 .8a7 7 0 0 1 3.7 0c1.4-1 2-.8 2-.8.4 1 .2 1.8.1 2 .5.5.8 1.2.8 2 0 2.9-1.7 3.4-3.4 3.6.3.2.5.7.5 1.4v2c0 .2.1.5.5.4A7.4 7.4 0 0 0 9 1.6Z" fill="currentColor"/></svg>',
+  cv: '<svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 1.8H5a1.5 1.5 0 0 0-1.5 1.5v11.4A1.5 1.5 0 0 0 5 16.2h8a1.5 1.5 0 0 0 1.5-1.5V5.8Z"/><path d="M10.5 1.8v4h4M9 8.3v5M6.9 11.2 9 13.3l2.1-2.1"/></svg>',
+  partager: '<svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M7.6 10.4a3 3 0 0 0 4.3 0l2.3-2.3a3 3 0 0 0-4.3-4.3l-.9.9"/><path d="M10.4 7.6a3 3 0 0 0-4.3 0L3.8 9.9a3 3 0 0 0 4.3 4.3l.9-.9"/></svg>',
+  email: '<svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><rect x="2" y="3.8" width="14" height="10.4" rx="2"/><path d="m2.6 5 6.4 4.8L15.4 5"/></svg>',
+  clavier: '<svg viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="1.6" y="4.4" width="14.8" height="9.2" rx="2"/><path d="M4.6 7.4h.1M7.2 7.4h.1M9.8 7.4h.1M12.4 7.4h.1M4.6 10.6h.1M12.4 10.6h.1M7 10.6h4"/></svg>',
+};
+---
+
+<div class="progression" aria-hidden="true"></div>
+
+<!-- L'introduction « initialisation du portail » : jouée à chaque arrivée sur
+     l'accueil (voir src/scripts/intro.ts). Ce calque ne porte que le symbole et
+     trois lignes de texte ; le décor et le portail sont ceux du site, derrière. -->
+{
+  page === 'accueil' && (
+    <div class="initialisation">
+      <!-- Le symbole se trace sur le portail pendant qu'il se construit, puis s'efface. -->
+      <Symbole taille={72} classe="initialisation__symbole" />
+      <div class="initialisation__textes" aria-hidden="true">
+        <p class="initialisation__nom">{contenu.initialisation.nom}</p>
+        <p class="initialisation__metier">{contenu.initialisation.metier}</p>
+        <p class="initialisation__etat"><span data-decode>{contenu.initialisation.etat}</span></p>
+      </div>
+      <button class="initialisation__passer pastille etiquette" type="button">{contenu.initialisation.passer}</button>
+    </div>
+  )
+}
+
+<header class="barre">
+  <!-- Le bloc d'identité : le symbole et le nom ramènent à l'accueil (sans recharger
+       la page quand on y est déjà) ; le chevron ouvre l'accès rapide. -->
+  <div class="identite" data-intro="barre">
+    <a class="identite__lien" href={page === 'accueil' ? '#accueil' : accueil}>
+      <Symbole taille={20} />
+      <b class="identite__nom">Mathéo Maleyran</b>
+    </a>
+    <button class="identite__commande" type="button" popovertarget="acces" aria-expanded="false" aria-label={contenu.acces.titre} title={contenu.acces.titre}>
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </button>
+  </div>
+
+  <nav class="nav etiquette" id="menu" aria-label={contenu.interface.navigation}>
+    <div class="nav__liste" data-intro="barre">
+      <span class="nav__actif" aria-hidden="true"></span>
+      {
+        SECTIONS.map((id) => (
+          <a href={ancre(id)} data-section-lien={id}>
+            {contenu.sections[id]}
+          </a>
+        ))
+      }
+    </div>
+
+    <!-- Sur téléphone, ces deux boutons vivent dans le menu plutôt que dans la barre. -->
+    <div class="nav__annexe">
+      <a class="pastille pastille--ronde" href={cheminAutreLangue} hreflang={autre} data-langue data-bloc aria-label={contenu.interface.changerLangue}>
+        <Drapeau langue={langue} />
+      </a>
+      <a class="pastille pastille--pleine" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener">{contenu.interface.cv}</a>
+    </div>
+  </nav>
+
+  <div class="barre__outils etiquette">
+    <a
+      class="pastille pastille--ronde barre__secondaire"
+      href={cheminAutreLangue}
+      hreflang={autre}
+      data-langue
+      data-bloc
+      aria-label={contenu.interface.changerLangue}
+      title={contenu.interface.changerLangue}
+      data-intro="barre"
+    >
+      <Drapeau langue={langue} />
+    </a>
+    <a class="pastille pastille--pleine barre__secondaire" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener" data-intro="barre">
+      <span data-decode>{contenu.interface.cv}</span>
+    </a>
+    <button
+      class="pastille pastille--ronde"
+      type="button"
+      popovertarget="reglages"
+      aria-label={contenu.reglages.titre}
+      title={contenu.reglages.titre}
+      data-intro="barre"
+    >
+      <!-- Trois curseurs : le symbole des réglages. -->
+      <svg viewBox="0 0 18 18" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <path d="M3 5h5M12 5h3M3 9h2M9 9h6M3 13h7M14 13h1"></path>
+        <circle cx="10" cy="5" r="1.8"></circle><circle cx="7" cy="9" r="1.8"></circle><circle cx="12" cy="13" r="1.8"></circle>
+      </svg>
+    </button>
+    <button
+      class="pastille barre__menu"
+      type="button"
+      aria-expanded="false"
+      aria-controls="menu"
+      data-ouvrir={contenu.interface.menu}
+      data-fermer={contenu.interface.fermer}
+      data-intro="barre"
+    >
+      <span data-decode>{contenu.interface.menu}</span>
+    </button>
+  </div>
+</header>
+
+<!-- Le panneau d'actions rapides (« Personal Command Center ») : un petit panneau sous le bloc d'identité,
+     qui ne répète pas les catégories du site (voir src/scripts/acces.ts). Le navigateur gère l'ouverture,
+     la touche Échap, le clic à côté et le retour du focus (attribut « popover »). -->
+<div class="acces etiquette" id="acces" popover aria-label={a.titre} data-adresse={adresseSite}>
+  <p class="acces__titre">{a.titre}</p>
+  {
+    linkedin && (
+      <a class="acces__action" href={linkedin} target="_blank" rel="noopener noreferrer">
+        <span class="acces__icone" set:html={ICONES.linkedin} />
+        <span class="acces__texte">{a.linkedin}</span>
+        <span class="acces__suite" aria-hidden="true">↗</span>
+      </a>
+    )
+  }
+  {
+    github && (
+      <a class="acces__action" href={github} target="_blank" rel="noopener noreferrer">
+        <span class="acces__icone" set:html={ICONES.github} />
+        <span class="acces__texte">{a.github}</span>
+        <span class="acces__suite" aria-hidden="true">↗</span>
+      </a>
+    )
+  }
+  <a class="acces__action" href="/cv-matheo-maleyran.pdf" download="cv-matheo-maleyran.pdf">
+    <span class="acces__icone" set:html={ICONES.cv} />
+    <span class="acces__texte">{a.cv}</span>
+    <span class="acces__suite" aria-hidden="true">PDF</span>
+  </a>
+  <button class="acces__action" type="button" data-action="partager" data-fait={a.copie}>
+    <span class="acces__icone" set:html={ICONES.partager} />
+    <span class="acces__texte">{a.partager}</span>
+    <span class="acces__suite" aria-hidden="true"></span>
+  </button>
+  <div class="acces__contact">
+    <span class="acces__icone" set:html={ICONES.email} />
+    <span class="acces__texte">{a.contact}</span>
+    <span class="acces__boutons">
+      <button class="acces__mini" type="button" data-action="email" data-fait={a.emailCopie} data-email={contenu.contact.email}>{a.copierEmail}</button>
+      <a class="acces__mini" href={`mailto:${contenu.contact.email}`}>{a.ecrire}</a>
+    </span>
+  </div>
+  <button class="acces__action" type="button" data-action="raccourcis">
+    <span class="acces__icone" set:html={ICONES.clavier} />
+    <span class="acces__texte">{a.raccourcis}</span>
+    <span class="acces__suite" aria-hidden="true"><kbd>?</kbd></span>
+  </button>
+  <!-- Si le presse-papiers est indisponible : le texte s'affiche, sélectionné, pour une copie à la main. -->
+  <label class="acces__secours" hidden><span>{a.copieManuelle}</span><input type="text" readonly /></label>
+  <p class="acces__annonce sr" role="status" aria-live="polite"></p>
+</div>
+
+<!-- Les raccourcis clavier : seulement ceux qui existent réellement dans le code. -->
+<dialog class="raccourcis etiquette" aria-labelledby="raccourcis-titre">
+  <div class="raccourcis__tete">
+    <h2 id="raccourcis-titre">{a.raccourcis}</h2>
+    <button class="pastille" type="button" data-fermer-raccourcis>{a.fermer}</button>
+  </div>
+  {
+    a.groupes.map((g) => (
+      <section class="raccourcis__groupe">
+        <h3>{g.nom}</h3>
+        <dl>
+          {g.lignes.map(([touches, texte]) => (
+            <div>
+              <dt>{touches.map((t) => <kbd>{t}</kbd>)}</dt>
+              <dd>{texte}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    ))
+  }
+</dialog>
+
+<div class="curseur" aria-hidden="true">
+  <span class="curseur__disque"></span>
+  <span class="curseur__anneau"></span>
+  <span class="curseur__texte"></span>
+</div>
+
+<!-- Le panneau des réglages. « popover » : le navigateur gère seul l'ouverture, la
+     fermeture (touche Échap, clic à côté) et le focus. Les valeurs sont lues et
+     mémorisées par src/scripts/reglages-panneau.ts. -->
+<div class="reglages etiquette" id="reglages" popover data-lenis-prevent aria-label={contenu.reglages.titre}>
+  <!-- Deux pages : l'affichage, et l'atmosphère (ambiance, musique, effets sonores).
+       Les deux boutons du haut choisissent la page affichée (voir reglages.css). -->
+  <div class="reglages__choix reglages__onglets">
+    <label><input type="radio" name="onglet" value="affichage" checked /><span>{contenu.reglages.onglets.affichage}</span></label>
+    <label><input type="radio" name="onglet" value="atmosphere" /><span>{contenu.reglages.onglets.atmosphere}</span></label>
+  </div>
+
+  <div class="reglages__page" data-page="affichage">
+    <label class="reglages__ligne">
+      <span>{contenu.reglages.opacite} <output data-pour="opacite"></output></span>
+      <input type="range" name="opacite" min="20" max="90" step="1" />
+    </label>
+    <label class="reglages__ligne">
+      <span>{contenu.reglages.flou} <output data-pour="flou"></output></span>
+      <input type="range" name="flou" min="0" max="100" step="1" />
+    </label>
+    <label class="reglages__ligne">
+      <span>{contenu.reglages.lueur} <output data-pour="lueur"></output></span>
+      <input type="range" name="lueur" min="0" max="100" step="1" />
+    </label>
+
+    <fieldset class="reglages__groupe">
+      <legend>{contenu.reglages.animations}</legend>
+      <div class="reglages__choix">
+        <label><input type="radio" name="animations" value="1" /><span>{contenu.reglages.niveaux.complet}</span></label>
+        <label><input type="radio" name="animations" value="0.5" /><span>{contenu.reglages.niveaux.allege}</span></label>
+        <label><input type="radio" name="animations" value="0" /><span>{contenu.reglages.niveaux.coupe}</span></label>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="reglages__page" data-page="atmosphere">
+    <!-- Quatre ambiances facultatives : un seul bouton peut être enfoncé, ou aucun (le site d'origine). -->
+    <fieldset class="reglages__groupe">
+      <legend>{contenu.atmosphere.titre}</legend>
+      <div class="ambiances">
+        {
+          (['chill', 'espace', 'focus', 'silence'] as const).map((mode) => (
+            <button type="button" data-ambiance={mode} aria-pressed="false">
+              {contenu.atmosphere.modes[mode].nom}
+            </button>
+          ))
+        }
+      </div>
+      <!-- La description de l'ambiance choisie : une seule de ces phrases est affichée à la fois. -->
+      <p class="ambiances__texte" aria-live="polite">
+        <span data-pour="">{contenu.atmosphere.aide}</span>
+        {(['chill', 'espace', 'focus', 'silence'] as const).map((mode) => <span data-pour={mode}>{contenu.atmosphere.modes[mode].texte}</span>)}
+      </p>
+    </fieldset>
+
+    <!-- Le lecteur : les pistes disponibles, lecture ou pause, volume. -->
+    <fieldset class="reglages__groupe lecteur">
+      <legend>{contenu.reglages.musique} <output data-pour="volumeMusique"></output></legend>
+      <div class="lecteur__pistes">
+        {
+          (['derive', 'heure-bleue', 'trait'] as const).map((piste) => (
+            <label>
+              <input type="radio" name="piste" value={piste} />
+              <span>
+                <b>{contenu.atmosphere.pistes[piste].titre}</b>
+                <small>{contenu.atmosphere.pistes[piste].texte}</small>
+              </span>
+            </label>
+          ))
+        }
+      </div>
+      <div class="lecteur__commandes">
+        <button class="lecteur__lecture" type="button" data-lecture aria-pressed="false">
+          <span class="lecteur__lire">{contenu.atmosphere.lire}</span>
+          <span class="lecteur__pause">{contenu.atmosphere.pause}</span>
+        </button>
+        <input type="range" name="volumeMusique" min="0" max="100" step="1" aria-label={`${contenu.reglages.volume} : ${contenu.reglages.musique}`} />
+      </div>
+      <p class="lecteur__note">{contenu.atmosphere.genere}</p>
+      <p class="lecteur__silence">{contenu.atmosphere.silence}</p>
+    </fieldset>
+
+    <!-- Les effets sonores (portail, changements de section) se règlent à part. -->
+    <div class="reglages__son">
+      <label class="reglages__bascule">
+        <input type="checkbox" name="sons" />
+        <span>{contenu.reglages.sons} <output data-pour="volumeSons"></output></span>
+      </label>
+      <input type="range" name="volumeSons" min="0" max="100" step="1" aria-label={`${contenu.reglages.volume} : ${contenu.reglages.sons}`} />
+    </div>
+
+    <!-- Décochée : le site s'ouvre en silence (ni musique, ni son d'introduction). -->
+    <label class="reglages__bascule reglages__lancement">
+      <input type="checkbox" name="sonAuLancement" />
+      <span>{contenu.atmosphere.lancement}<small>{contenu.atmosphere.lancementTexte}</small></span>
+    </label>
+  </div>
+</div>
+
+<!-- L'éclair de tunnel : une toile par-dessus toute la page. Elle ne sert plus qu'à la fin de
+     l'introduction et quand le portail éclate (voir src/scripts/voyage.ts). -->
+<div class="voyage" aria-hidden="true"><canvas></canvas></div>
+
+<!-- Le fil de navigation : une ligne fine en bas de l'écran, un point par section.
+     Sa partie allumée suit le défilement ; un faisceau la parcourt quand on change
+     de section. Les deux flèches font le tour du site, en boucle. -->
+{
+  page === 'accueil' && (
+    <nav class="trajet" aria-label={contenu.trajet.titre}>
+      <button class="trajet__bouton" type="button" data-trajet="precedent" aria-label={contenu.trajet.precedent} title={contenu.trajet.precedent}>
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      <div class="trajet__fil">
+        <span class="trajet__faisceau" aria-hidden="true"></span>
+        <ol>
+          {
+            SECTIONS.map((id) => (
+              <li>
+                <a class="trajet__point" href={`#${id}`}>
+                  <i aria-hidden="true" />
+                  <span>{contenu.sections[id]}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+      <button class="trajet__bouton" type="button" data-trajet="suivant" aria-label={contenu.trajet.suivant} title={contenu.trajet.suivant}>
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+    </nav>
+  )
+}
+
+<!-- L'Orbital Hub : l'icône flottante en bas à droite, son panneau (l'assistant, la visite
+     guidée, les coulisses), et le jeu Portal Rush qu'il lance. -->
+<OrbitalHub contenu={contenu} page={page} cheminAutreLangue={cheminAutreLangue} />
+<PortalRush contenu={contenu} cheminAutreLangue={cheminAutreLangue} />
+
+<!-- La palette de commandes : Ctrl + K, touche ², ou le mot « trace » (voir src/scripts/terminal.ts).
+     Ses textes et la liste des réalisations lui sont transmis par les attributs data-. -->
+<div
+  class="terminal"
+  role="dialog"
+  aria-label={contenu.terminal.titre}
+  hidden
+  data-textes={JSON.stringify(contenu.terminal)}
+  data-projets={JSON.stringify(projetsDuTerminal)}
+  data-accueil={accueil}
+  data-cv="/cv-matheo-maleyran.pdf"
+  data-langue={cheminAutreLangue}
+>
+  <div class="terminal__tete">
+    <span>{contenu.terminal.titre} <kbd>Ctrl K</kbd></span>
+    <button class="terminal__fermer" type="button">{contenu.interface.fermer}</button>
+  </div>
+  <div class="terminal__sortie" aria-live="polite" data-lenis-prevent></div>
+  <!-- La liste des commandes, filtrée par ce qui est tapé (remplie par le script). -->
+  <div class="terminal__suggestions" data-lenis-prevent></div>
+  <form class="terminal__saisie" autocomplete="off">
+    <label for="terminal-champ">{contenu.terminal.invite} &gt;</label>
+    <input id="terminal-champ" type="text" spellcheck="false" autocapitalize="off" enterkeyhint="go" />
+  </form>
+</div>

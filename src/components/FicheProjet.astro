@@ -1,0 +1,164 @@
+---
+// La fiche d'une réalisation. Une seule mise en page pour tous les projets :
+// elle reçoit le slug et la langue, et va chercher le reste dans le contenu.
+// Ordre des rubriques : contexte, objectifs, réalisation, technologies,
+// difficultés et solutions, résultat, compétences démontrées, ce que j'en retiens.
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import { contenu as charger, images, cheminAccueil, cheminFiche, estACompleter, typo } from '../contenu';
+import { BLOCS, competencesDe } from '../contenu/referentiel';
+import type { Langue } from '../contenu/types';
+
+interface Props {
+  langue: Langue;
+  slug: string;
+}
+
+const { langue, slug } = Astro.props;
+const c = charger(langue);
+const t = (texte: string) => typo(texte, langue);
+const projets = c.realisations.projets;
+const index = projets.findIndex((p) => p.slug === slug);
+const p = projets[index];
+const precedent = projets[(index - 1 + projets.length) % projets.length];
+const suivant = projets[(index + 1) % projets.length];
+const image = images[slug];
+const fiche = c.realisations.fiche;
+const autre = langue === 'fr' ? 'en' : 'fr';
+
+// Compétences du référentiel démontrées par ce projet, avec le numéro de leur bloc.
+const competences = competencesDe(slug).map((comp) => ({
+  ...comp,
+  bloc: BLOCS.find((b) => b.competences.some((k) => k.id === comp.id))?.numero,
+}));
+
+// Vidéo facultative : il suffit de déposer un fichier <slug>.mp4 dans
+// src/assets/projets/ pour qu'elle apparaisse sous la capture.
+const videos = import.meta.glob<string>('../assets/projets/*.mp4', { eager: true, query: '?url', import: 'default' });
+const video = videos[`../assets/projets/${slug}.mp4`];
+
+const avant = [
+  { titre: fiche.contexte, texte: p.contexte },
+  { titre: fiche.objectifs, texte: p.objectifs },
+  { titre: fiche.realisation, texte: p.realisation },
+];
+---
+
+<Base
+  contenu={c}
+  page="fiche"
+  cheminAutreLangue={cheminFiche(autre, slug)}
+  titre={`${p.nom}, Mathéo Maleyran`}
+  description={p.phrase}
+>
+  <article class="fiche">
+    <a class="fiche__retour lien etiquette" href={`${cheminAccueil(langue)}#realisations`} data-intro="texte">
+      <span data-decode>{t(c.interface.retour)}</span>
+    </a>
+
+    <header class="fiche__tete">
+      <h1 class="titre fiche__titre" data-titre>{p.nom}</h1>
+      <p class="fiche__genre etiquette" data-intro="texte">{p.genre}<br />{p.annee}</p>
+      <p class="fiche__phrase" data-intro="texte">{t(p.phrase)}</p>
+      {
+        p.jouable && (
+          <div class="fiche__jouer" data-intro="texte">
+            <button class="bouton bouton--plein etiquette" type="button" data-jouer-rush data-aimant>
+              <span data-decode>{t(c.vitrine.jouer)}</span>
+            </button>
+            <p class="fiche__jouer-note etiquette">{t(c.vitrine.note)}</p>
+          </div>
+        )
+      }
+    </header>
+
+    <figure class="fiche__image" style={`view-transition-name: image-${p.slug}`}>
+      <!-- Cliquer l'image ramène aux réalisations, comme le lien du haut de la page. -->
+      <a class="fiche__image-lien" href={`${cheminAccueil(langue)}#realisations`} aria-label={t(c.interface.retour)} data-curseur={c.interface.curseur.retour}>
+        {
+          image ? (
+            <Image src={image} alt={p.alt} widths={[...[960, 1440, 1920].filter((l) => l < image.width), image.width]} sizes="94vw" loading="eager" />
+          ) : (
+            <span class="carte__dessin">{t(c.interface.ici)}</span>
+          )
+        }
+      </a>
+    </figure>
+
+    {
+      video && (
+        <figure class="fiche__video" data-apparait>
+          <video src={video} controls muted playsinline preload="metadata" aria-label={`${fiche.video} : ${p.nom}`} />
+        </figure>
+      )
+    }
+
+    {
+      avant.map((rubrique) => (
+        <section class="fiche__rubrique" data-apparait>
+          <h2>{t(rubrique.titre)}</h2>
+          <p class:list={{ 'a-rediger': estACompleter(rubrique.texte) }}>{t(rubrique.texte)}</p>
+        </section>
+      ))
+    }
+
+    <section class="fiche__rubrique" data-apparait>
+      <h2>{t(fiche.stack)}</h2>
+      <p>{p.stack.join(', ')}</p>
+    </section>
+
+    <section class="fiche__rubrique" data-apparait>
+      <h2>{t(fiche.difficultes)}</h2>
+      <p class:list={{ 'a-rediger': estACompleter(p.difficultes) }}>{t(p.difficultes)}</p>
+    </section>
+
+    <section class="fiche__rubrique" data-apparait>
+      <h2>{t(fiche.resultat)}</h2>
+      <div>
+        <p class:list={{ 'a-rediger': estACompleter(p.resultat) }}>{t(p.resultat)}</p>
+        {
+          p.lien && (
+            <p>
+              <a class="lien" href={p.lien.href} target="_blank" rel="noopener">
+                {p.lien.texte}
+              </a>
+            </p>
+          )
+        }
+      </div>
+    </section>
+
+    {!p.horsReferentiel && (
+    <section class="fiche__rubrique" data-apparait>
+      <h2>{t(fiche.competences)}</h2>
+      <!-- Intitulés officiels du référentiel BTS SIO : toujours en français. -->
+      <ul class="fiche__competences" lang="fr">
+        {
+          competences.map((comp) => (
+            <li>
+              <span class="bloc etiquette">Bloc {comp.bloc}</span>
+              <span>{typo(comp.intitule, 'fr')}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+    )}
+
+    <section class="fiche__rubrique" data-apparait>
+      <h2>{t(fiche.retiens)}</h2>
+      <p class:list={{ 'a-rediger': estACompleter(p.retiens) }}>{t(p.retiens)}</p>
+    </section>
+
+    <nav class="fiche__nav" aria-label={`${fiche.precedent}, ${fiche.suivant}`}>
+      <a href={cheminFiche(langue, precedent.slug)} data-curseur={c.interface.curseur.voir}>
+        <span class="etiquette">{t(fiche.precedent)}</span>
+        <span class="nom">{precedent.nom}</span>
+      </a>
+      <a href={cheminFiche(langue, suivant.slug)} data-curseur={c.interface.curseur.voir}>
+        <span class="etiquette">{t(fiche.suivant)}</span>
+        <span class="nom">{suivant.nom}</span>
+      </a>
+    </nav>
+  </article>
+</Base>

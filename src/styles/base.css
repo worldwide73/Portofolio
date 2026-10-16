@@ -1,0 +1,260 @@
+/* ==========================================================================
+   BASE : remise à zéro, typographie générale, accessibilité
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--fond);
+  color: var(--texte);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--filet-fort) var(--fond);
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  font-family: var(--f-texte);
+  font-size: var(--t-texte);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--lampe);
+  color: var(--encre);
+}
+
+main {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Où s'arrête une section quand on y navigue ----
+   Son haut vient se placer juste sous la barre fixe : le titre n'est jamais
+   masqué. Cette distance est LA règle d'alignement du site : le menu, le fil du
+   bas, les flèches, la carte du portail et la section « courante » la lisent
+   tous (voir voyage.ts). L'accueil et la galerie occupent tout l'écran et
+   prévoient déjà la place de la barre : pas de retrait pour eux. */
+[data-section] {
+  scroll-margin-top: calc(var(--barre-h) + var(--marge-cadre));
+}
+
+#accueil,
+#realisations {
+  scroll-margin-top: 0px;
+}
+
+/* Une section en forme de panneau (le contact, les compétences, la veille) : on laisse voir son bord, sous la barre. */
+#contact,
+#competences,
+#veille {
+  scroll-margin-top: calc(var(--barre-h) + var(--marge-cadre) + 1.5rem);
+}
+
+/* Une section qu'on vient de rejoindre reçoit le point de départ du clavier, sans cadre autour d'elle. */
+[data-section]:focus {
+  outline: none;
+}
+
+/* ---- Titres de section : graisse normale, serrés, taille mesurée ---- */
+.titre {
+  font-size: var(--t-titre);
+  font-weight: 400;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+/* Lignes découpées par SplitText. Le masque coupe tout ce qui dépasse de la
+   ligne : on lui laisse de la place pour les jambages (g, p, y), puis on
+   retire cette place avec une marge négative pour ne pas changer l'interligne. */
+.ligne-titre {
+  padding-bottom: 0.14em;
+}
+
+.ligne-titre-mask {
+  margin-bottom: -0.14em;
+}
+
+/* ---- Étiquettes : petits textes d'interface ---- */
+.etiquette {
+  font-size: var(--t-etiquette);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+}
+
+/* Un texte qui se « décode » garde sa largeur pendant l'effet. */
+[data-decode] {
+  display: inline-block;
+  white-space: pre;
+  text-align: left;
+}
+
+/* ---- Accessibilité ---- */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.evitement {
+  position: fixed;
+  left: var(--gouttiere);
+  top: 12px;
+  z-index: 200;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--givre);
+  color: var(--encre);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.evitement:focus {
+  transform: none;
+}
+
+/* La couleur du contour suit le thème de la zone (voir --focus dans tokens.css). */
+:focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 4px;
+}
+
+/* ---- Entrée de page : ce qui doit être caché avant que l'animation démarre.
+   La classe « intro » est posée dans le <head> et retirée à la fin. ---- */
+/* Pendant l'introduction longue, la page ne défile pas (ni molette, ni clavier) : seul « Passer l'intro » l'interrompt. */
+html.intro-longue {
+  overflow: hidden;
+}
+
+html.intro [data-intro] {
+  visibility: hidden;
+}
+
+/* ---- Transition entre deux pages (carte → fiche) ----
+   Le navigateur photographie l'ancienne page, la nouvelle, et fond l'une
+   dans l'autre. Les éléments qui portent le même view-transition-name
+   glissent de leur ancienne place à la nouvelle. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-group(*) {
+  animation-duration: 0.75s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+}
+
+/* ---- Blocs dépliables (<details>) : ils s'ouvrent en glissant ----
+   « interpolate-size » autorise le navigateur à animer une hauteur vers
+   « auto ». Là où ce n'est pas encore géré, le bloc s'ouvre d'un coup. */
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+
+  details::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height 0.6s var(--c-masque),
+      content-visibility 0.6s allow-discrete;
+  }
+
+  details[open]::details-content {
+    height: auto;
+  }
+}
+
+/* ---- Barre de progression de lecture, tout en haut de l'écran ----
+   Blanche, en mode de fusion « différence », comme le curseur : elle ressort
+   en clair sur un fond sombre et en sombre sur un fond clair. */
+.progression {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 40;
+  height: 2px;
+  background: #fff;
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 8px) rgba(255, 255, 255, 0.7);
+  transform: scaleX(0);
+  transform-origin: left;
+  pointer-events: none;
+}
+
+/* Sur le fond clair du panneau de contact, le trait devient sombre. */
+.progression.zone-claire {
+  background: #0b0c0e;
+  box-shadow: none;
+}
+
+/* ---- Moins de mouvement : on coupe tout ce qui est décoratif ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

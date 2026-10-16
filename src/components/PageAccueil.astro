@@ -1,0 +1,509 @@
+---
+// La page d'accueil : les 5 sections, dans une langue donnée.
+// Aucun texte n'est écrit ici : tout vient de src/contenu/fr.ts ou en.ts
+// (et, pour la veille, des fiches de src/contenu/veille/).
+import { Image, getImage } from 'astro:assets';
+import dunesPaysage from '../assets/scene/dunes-paysage.png';
+import dunesPortrait from '../assets/scene/dunes-portrait.png';
+import Base from '../layouts/Base.astro';
+import Constellation from './Constellation.astro';
+import Explorateur from './Explorateur.astro';
+import Symbole from './Symbole.astro';
+import { contenu as charger, images, cheminAccueil, cheminFiche, cheminTableau, typo } from '../contenu';
+import { BLOCS, DEMONTRE } from '../contenu/referentiel';
+import { chargerVeille } from '../contenu/veille';
+import type { Langue } from '../contenu/types';
+
+interface Props {
+  langue: Langue;
+}
+
+const { langue } = Astro.props;
+const c = charger(langue);
+const t = (texte: string) => typo(texte, langue);
+// Contact : LinkedIn est mis en avant à côté de l'e-mail ; GitHub et le CV suivent, avec le téléphone.
+const linkedin = c.contact.liens.find((l) => l.nom === 'LinkedIn');
+const secondaires = c.contact.liens.filter((l) => l.nom !== 'LinkedIn');
+const projets = c.realisations.projets;
+// (Le tableau BTS SIO et les filtres de compétences ne montrent que les réalisations du référentiel.)
+const projetsBts = projets.filter((p) => !p.horsReferentiel);
+const deuxChiffres = (n: number) => String(n).padStart(2, '0');
+const LARGEURS = [640, 960, 1280, 1680];
+const nomDe = (slug: string) => projets.find((p) => p.slug === slug)?.nom ?? slug;
+const veille = await chargerVeille(langue);
+
+// La photographie de la scène, convertie en WebP (plus léger que le PNG d'origine).
+const scenePaysage = await getImage({ src: dunesPaysage, format: 'webp', quality: 88 });
+const scenePortrait = await getImage({ src: dunesPortrait, format: 'webp', quality: 88 });
+---
+
+<Base contenu={c} page="accueil" cheminAutreLangue={cheminAccueil(langue === 'fr' ? 'en' : 'fr')}>
+  <!-- 1. ACCUEIL -->
+  <section id="accueil" data-section aria-label={c.sections.accueil}>
+    <!-- L'ouverture : la scène reste collée à l'écran tant que le panneau « méthode »
+         glisse par-dessus, et pas plus longtemps. C'est ce bloc qui fixe cette limite. -->
+    <div class="ouverture">
+    <div class="hero">
+      <div class="hero__cadre toujours-sombre" style={`--scene: url(${scenePaysage.src}); --scene-portrait: url(${scenePortrait.src})`}>
+        <!-- La scène : une photographie rendue vivante en WebGL (voir src/scripts/gl/).
+             Sans WebGL, la même image s'affiche en fond fixe. -->
+        <canvas id="champ" aria-hidden="true" data-scene={scenePaysage.src} data-scene-portrait={scenePortrait.src}></canvas>
+
+        <!-- Le portail au clavier et aux lecteurs d'écran : un vrai bouton, posé sur la lame. Il ouvre la carte du portail. -->
+        <button class="hero__portail" type="button" data-portail aria-haspopup="dialog" aria-label={`${c.trajet.portail}. ${c.trajet.portailAide}`}>
+          <!-- Le portail reste vide au repos. Le symbole ne s'y dessine qu'au survol, puis s'efface. -->
+          <Symbole taille={66} classe="hero__portail-symbole" />
+        </button>
+
+        <div class="hero__bas">
+          <!-- L'indication sous le portail : elle dit à quoi il sert. -->
+          <p class="hero__invite" aria-hidden="true" data-intro="action">{t(c.trajet.invite)} <span>↗</span></p>
+          <div class="hero__tete">
+            <p class="hero__surtitre etiquette" data-intro="texte">{t(c.hero.surtitre)}</p>
+            <h1 class="hero__titre">
+              <span class="ligne"><span data-titre-hero>{t(c.hero.titre[0])}</span></span>{' '}
+              <span class="ligne"><span data-titre-hero>{t(c.hero.titre[1])}</span></span>
+            </h1>
+          </div>
+          <p class="hero__accroche" data-intro="texte">{t(c.hero.accroche)}</p>
+          <!-- La création à la une : Portal Rush, jouable ici même. Un trait et un compte à rebours, puis l'encart part (vitrine.ts). -->
+          <aside class="vitrine-jeu" data-vitrine data-intro="texte" aria-labelledby="vitrine-titre">
+            <p class="vitrine-jeu__repere etiquette"><span class="vitrine-jeu__point" aria-hidden="true"></span>{t(c.vitrine.repere)}</p>
+            <p class="vitrine-jeu__titre" id="vitrine-titre">Portal Rush <span class="vitrine-jeu__badge etiquette">{t(c.vitrine.badge)}</span></p>
+            <div class="vitrine-jeu__actions">
+              <button class="bouton bouton--plein etiquette" type="button" data-jouer-rush aria-label={t(c.vitrine.jouer)}><span class="vitrine-jeu__icone" aria-hidden="true"></span>{t(c.vitrine.lancer)}</button>
+              <a class="lien etiquette vitrine-jeu__fiche" href={cheminFiche(langue, 'portal-rush')}>{t(c.vitrine.fiche)}</a>
+            </div>
+            <div class="vitrine-jeu__minuteur" aria-hidden="true"><span class="vitrine-jeu__trait"></span><span class="vitrine-jeu__compte" data-vitrine-compte>4s</span></div>
+          </aside>
+          <div class="hero__actions">
+            <a class="bouton bouton--plein etiquette" href="#realisations" data-intro="action" data-aimant>
+              <span data-decode>{t(c.hero.actions.realisations)}</span>
+            </a>
+            <a class="bouton etiquette" href="#contact" data-intro="action" data-aimant>
+              <span data-decode>{t(c.hero.actions.contact)}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="methode">
+      <div class="methode__tete">
+        <h2 class="titre methode__titre">
+          <span data-titre>{t(c.methode.titre[0])}</span>{' '}
+          <span class="second" data-titre>{t(c.methode.titre[1])}</span>
+        </h2>
+        <p class="methode__texte" data-apparait>{t(c.methode.texte)}</p>
+        <p class="methode__preuve etiquette" data-apparait>{t(c.methode.preuve)}</p>
+      </div>
+      <ol class="methode__suite">
+        {
+          c.methode.etapes.map((etape, i) => (
+            <li class="etape" data-apparait>
+              <span class="etape__num etiquette">{deuxChiffres(i + 1)}</span>
+              <span class="etape__nom">{t(etape.nom)}</span>
+              <span class="etape__texte">{t(etape.texte)}</span>
+              <!-- Un exemple réel, tiré de ce site : il apparaît quand l'étape s'éclaire. -->
+              <span class="etape__exemple"><b class="etiquette">{t(c.methode.surCeSite)}</b> {t(etape.exemple)}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+    </div>
+
+    <!-- À propos : l'histoire, le parcours (le CV, présenté ici) et le cap. -->
+    <div class="apropos">
+      <div class="apropos__histoire">
+        <h2 class="titre apropos__titre">
+          <span data-titre>{t(c.apropos.histoire.titre[0])}</span>{' '}
+          <span class="second" data-titre>{t(c.apropos.histoire.titre[1])}</span>
+        </h2>
+        <ol class="apropos__moments">
+          {
+            c.apropos.histoire.moments.map((moment) => (
+              <li class="moment" data-apparait>
+                <span class="moment__nom etiquette">{t(moment.nom)}</span>
+                <span class="moment__texte">{t(moment.texte)}</span>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+
+      <div class="apropos__parcours">
+        <h3 class="apropos__label etiquette">{t(c.apropos.parcours.titre)}</h3>
+        <ol class="parcours">
+          {
+            c.apropos.parcours.etapes.map((etape) => (
+              <li class="parcours__etape" data-apparait>
+                <span class="parcours__date etiquette">{etape.date}</span>
+                <span class="parcours__nom">{t(etape.nom)}</span>
+                <span class="parcours__lieu etiquette">{t(etape.lieu)}</span>
+                <span class="parcours__texte">{t(etape.texte)}</span>
+              </li>
+            ))
+          }
+        </ol>
+        <a class="bouton etiquette apropos__cv" href="/cv-matheo-maleyran.pdf" data-apparait data-aimant>
+          <span data-decode>{t(c.apropos.parcours.cv)}</span>
+        </a>
+      </div>
+
+      <div class="apropos__cap">
+        <h3 class="titre apropos__cap-titre" data-titre>{t(c.apropos.cap.titre)}</h3>
+        <p class="apropos__cap-texte" data-apparait>{t(c.apropos.cap.texte)}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. COMPÉTENCES -->
+  <section id="competences" class="competences" data-section>
+    <div class="competences__tete">
+      <h2 class="titre" data-titre>{t(c.sections.competences)}</h2>
+      <p class="competences__texte" data-apparait>{t(c.competences.texte)}</p>
+
+      <!-- Un clic sur une réalisation éteint les compétences qu'elle ne prouve pas. -->
+      <div class="competences__filtre" data-apparait>
+        <p class="etiquette competences__lire" id="lire-par">{t(c.competences.lire)}</p>
+        <div class="filtre etiquette" data-filtre="competences" role="group" aria-labelledby="lire-par">
+          <span class="filtre__actif" aria-hidden="true"></span>
+          <button type="button" aria-pressed="true" data-valeur="">{t(c.competences.tout)}</button>
+          {
+            projetsBts.map((p) => (
+              <button type="button" aria-pressed="false" data-valeur={p.slug}>
+                {p.court}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+
+    <ul class="competences__domaines">
+      {
+        c.competences.domaines.map((domaine) => (
+          <li class="domaine" data-apparait>
+            <h3 class="domaine__nom etiquette">{t(domaine.nom)}</h3>
+            <ul class="domaine__liste">
+              {domaine.competences.map((savoir) => (
+                <li class="savoir" data-projets={savoir.projets.join(' ')}>
+                  <span class="savoir__nom">{t(savoir.nom)}</span>
+                  {savoir.projets.length > 0 && (
+                    <>
+                      <sup class="savoir__nombre" aria-hidden="true">{savoir.projets.length}</sup>
+                      <span class="sr">, {t(c.competences.prouvePar.replace('{projets}', savoir.projets.map(nomDe).join(', ')))}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))
+      }
+    </ul>
+
+    <!-- Le tableau de synthèse du BTS SIO : compétences du référentiel × réalisations. -->
+    <details class="tableau" data-apparait>
+      <summary class="tableau__resume">
+        <span class="tableau__titre">{t(c.competences.tableau.titre)}</span>
+        <span class="signe" aria-hidden="true"></span>
+      </summary>
+      <div class="tableau__corps">
+        <div class="tableau__intro">
+          <p class="tableau__texte">{t(c.competences.tableau.texte)}</p>
+          <a class="bouton etiquette" href={cheminTableau()} download>
+            <span data-decode>{t(c.competences.tableau.telecharger)}</span>
+          </a>
+        </div>
+        <div class="tableau__cadre" tabindex="0" role="region" aria-label={c.competences.tableau.titre}>
+          <table lang="fr">
+            <thead>
+              <tr>
+                <th scope="col">{t(c.competences.tableau.colonne)}</th>
+                {
+                  projetsBts.map((p) => (
+                    <th scope="col">
+                      <a href={cheminFiche(langue, p.slug)} title={p.nom}>
+                        {p.court}
+                      </a>
+                    </th>
+                  ))
+                }
+              </tr>
+            </thead>
+            {
+              BLOCS.map((bloc) => (
+                <tbody>
+                  <tr class="tableau__bloc">
+                    <th scope="colgroup" colspan={projetsBts.length + 1}>
+                      Bloc {bloc.numero} : {typo(bloc.intitule, 'fr')}
+                    </th>
+                  </tr>
+                  {bloc.competences.map((comp) => (
+                    <tr>
+                      <th scope="row">{typo(comp.intitule, 'fr')}</th>
+                      {projetsBts.map((p) => {
+                        const oui = (DEMONTRE[p.slug] ?? []).includes(comp.id);
+                        return (
+                          <td class={oui ? 'est-demontree' : undefined}>
+                            <span class="point" aria-hidden="true" />
+                            <span class="sr">{oui ? c.competences.tableau.oui : c.competences.tableau.non}</span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              ))
+            }
+          </table>
+        </div>
+        <p class="tableau__source etiquette">{t(c.competences.tableau.source)}</p>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3. RÉALISATIONS -->
+  <section id="realisations" class="galerie" data-section>
+    <div class="galerie__scene">
+      <header class="galerie__tete">
+        <h2 class="titre">{t(c.sections.realisations)}</h2>
+        <!-- L'autre vue des réalisations : la constellation (voir Constellation.astro). -->
+        <button class="pastille etiquette galerie__vue" type="button" data-constellation>{t(c.constellation.ouvrir)}</button>
+        <p class="galerie__compteur" aria-hidden="true">
+          <span data-courant>01</span>
+          <span class="total etiquette">/ {deuxChiffres(projets.length)}</span>
+        </p>
+      </header>
+
+      <ul class="galerie__piste" data-curseur={c.interface.curseur.glisser}>
+        {
+          projets.map((p, i) => {
+            const image = images[p.slug];
+            return (
+              <li class="carte">
+                <a class="carte__lien" href={cheminFiche(langue, p.slug)} data-curseur={c.interface.curseur.ouvrir}>
+                  <div class="carte__corps">
+                    <figure class:list={['carte__image', { 'carte__image--portfolio': p.slug === 'portfolio' }]} style={`view-transition-name: image-${p.slug}`}>
+                      {image ? (
+                        <Image
+                          src={image}
+                          alt={p.alt}
+                          widths={[...LARGEURS.filter((l) => l < image.width), image.width]}
+                          sizes="(max-width: 860px) 84vw, 46vw"
+                          loading={i < 2 ? 'eager' : 'lazy'}
+                          draggable="false"
+                        />
+                      ) : (
+                        <span class="carte__dessin">{t(c.interface.ici)}</span>
+                      )}
+                      <span class="carte__reflet" />
+                    </figure>
+                    <div class="carte__texte">
+                      <h3 class="carte__nom">
+                        {p.nom}
+                        {p.jouable && <span class="carte__badge etiquette">{t(c.vitrine.badge)}</span>}
+                      </h3>
+                      <p class="carte__annee etiquette">{p.annee}</p>
+                      <p class="carte__phrase">{t(p.phrase)}</p>
+                      <p class="carte__stack etiquette">{p.stack.join(', ')}</p>
+                    </div>
+                  </div>
+                </a>
+                {p.jouable && (
+                  <button class="carte__jouer etiquette" type="button" data-jouer-rush>
+                    <span class="carte__jouer-icone" aria-hidden="true" />
+                    {t(c.vitrine.jouer)}
+                  </button>
+                )}
+              </li>
+            );
+          })
+        }
+      </ul>
+
+      <div class="galerie__pied">
+        <div class="galerie__fleches">
+          <button class="bouton bouton--rond" type="button" data-galerie="-1" aria-label={c.interface.precedent}>
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+          <button class="bouton bouton--rond" type="button" data-galerie="1" aria-label={c.interface.suivant}>
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+          <!-- Les réalisations défilent seules : ce bouton met ce défilement en pause, ou le relance. -->
+          <button class="bouton bouton--rond galerie__pause" type="button" data-galerie-pause aria-pressed="false">
+            <svg class="galerie__pause-barres" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.6 3.6v8.8M10.4 3.6v8.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+            <svg class="galerie__pause-fleche" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.6 3.4v9.2L12.6 8z" fill="currentColor"></path></svg>
+            <span class="sr galerie__pause-dire">{t(c.realisations.pause)}</span>
+            <span class="sr galerie__pause-reprendre">{t(c.realisations.reprendre)}</span>
+          </button>
+        </div>
+        <div class="galerie__progression" aria-hidden="true"><span></span></div>
+        <p class="galerie__aide etiquette">{t(c.realisations.aide)}</p>
+      </div>
+    </div>
+  </section>
+
+  <Constellation contenu={c} />
+
+  <!-- La carte du portail : elle s'ouvre au clic sur le portail (voir Explorateur.astro). -->
+  <Explorateur contenu={c} />
+
+  <!-- 4. VEILLE : une fiche Markdown par entrée, dans src/contenu/veille/ -->
+  <section id="veille" class="veille" data-section>
+    <div class="veille__tete">
+      <h2 class="titre" data-titre>{t(c.sections.veille)}</h2>
+      <p class="veille__texte" data-apparait>{t(c.veille.texte)}</p>
+      <div class="filtre filtre--pile etiquette" data-filtre="veille" data-apparait role="group" aria-label={c.veille.filtrer}>
+        <span class="filtre__actif" aria-hidden="true"></span>
+        <button type="button" aria-pressed="true" data-valeur="">{t(c.veille.tout)}</button>
+        {
+          Object.entries(c.veille.sujets).map(([cle, nom]) => (
+            <button type="button" aria-pressed="false" data-valeur={cle}>
+              {t(nom)}
+            </button>
+          ))
+        }
+      </div>
+      <p class="veille__maj etiquette" data-apparait>
+        {t(c.veille.majLe)}{langue === 'fr' ? ' : ' : ': '}<time datetime={veille.majIso}>{veille.majLe}</time>
+      </p>
+    </div>
+
+    <ol class="veille__liste">
+      {
+        veille.entrees.map((entree, i) => (
+          <li class="note" data-sujet={entree.sujet} data-apparait>
+            <!-- « name » identique : ouvrir une note referme les autres. La plus récente est ouverte d'office. -->
+            <details name="veille" open={i === 0}>
+              <summary class="note__resume">
+                <time class="note__date etiquette" datetime={entree.dateIso}>{entree.dateLisible}</time>
+                <span class="note__sujet etiquette">{t(c.veille.sujets[entree.sujet] ?? entree.sujet)}</span>
+                <span class="note__titre">{t(entree.titre)}</span>
+                <span class="signe" aria-hidden="true"></span>
+              </summary>
+              <div class="note__corps" data-bloc lang={entree.traduit ? undefined : 'fr'}>
+                <p class="note__label etiquette">{t(c.veille.retiens)}</p>
+                {entree.paragraphes.map((p) => <p class="note__texte">{typo(p, entree.traduit ? langue : 'fr')}</p>)}
+                {!entree.traduit && <p class="note__mention etiquette" lang={langue}>{c.veille.nonTraduit}</p>}
+                <p class="note__source etiquette" lang={langue}>
+                  {t(c.veille.source)}{langue === 'fr' ? ' : ' : ': '}
+                  <a class="lien" href={entree.lien} target="_blank" rel="noopener">
+                    {entree.source}{entree.article ? `, « ${entree.article} »` : ''}
+                  </a>
+                </p>
+              </div>
+            </details>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="veille__vide" hidden>{t(c.veille.vide)}</p>
+  </section>
+
+  <!-- 5. CONTACT : la dernière section, dans le même verre que les autres. Les deux moyens directs
+       d'abord (l'e-mail, LinkedIn), puis le téléphone, GitHub et le CV. -->
+  <section id="contact" class="contact" data-section>
+    <header class="contact__tete">
+      <p class="contact__repere etiquette" data-apparait>
+        <span class="contact__point" aria-hidden="true"></span>{t(c.contact.repere)}<span class="contact__index">05 / 05</span>
+      </p>
+      <h2 class="titre contact__titre" data-titre>{t(c.contact.titre)}</h2>
+      <p class="contact__texte" data-apparait>{t(c.contact.texte)}</p>
+    </header>
+
+    <div class="contact__canaux">
+      <div class="contact__canal contact__email" data-apparait>
+        <span class="contact__nom etiquette">{c.contact.emailNom}</span>
+        <a class="contact__adresse" href={`mailto:${c.contact.email}`}>{c.contact.email}</a>
+        <div class="contact__actions">
+          <a class="bouton bouton--plein etiquette" href={`mailto:${c.contact.email}`}>{t(c.contact.ecrire)}</a>
+          <button class="bouton etiquette" type="button" data-copier={c.contact.email} data-copie={t(c.contact.copie)} data-curseur={c.interface.curseur.copier}>
+            <span class="contact__action" data-decode aria-live="polite">{t(c.contact.copier)}</span>
+          </button>
+        </div>
+      </div>
+      {
+        linkedin && (
+          <a class="contact__canal contact__linkedin" href={linkedin.href} target="_blank" rel="noopener noreferrer" data-apparait>
+            <span class="contact__nom etiquette">
+              <svg viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="1.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.3" /><path d="M5.6 7.6v5M5.6 5.3v.1M8.4 12.6V7.6M8.4 9.9c0-1.4.9-2.4 2.1-2.4s2 .8 2 2.3v2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" /></svg>
+              LinkedIn
+            </span>
+            <span class="contact__profil">{linkedin.texte}</span>
+            <span class="contact__voir etiquette">{t(c.contact.voirProfil)}<span aria-hidden="true">↗</span></span>
+          </a>
+        )
+      }
+    </div>
+
+    <ul class="contact__liste">
+      <li data-apparait>
+        <a href="#contact" data-telephone={JSON.stringify(c.contact.telephone)}>
+          <span class="nom etiquette">{c.contact.telephoneNom}</span>
+          <span class="valeur"></span>
+        </a>
+      </li>
+      {
+        secondaires.map((lien) => (
+          <li data-apparait>
+            <a href={lien.href} target="_blank" rel="noopener noreferrer">
+              <span class="nom etiquette">{lien.nom}</span>
+              <span class="valeur">
+                {lien.texte} <span aria-hidden="true">↗</span>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="contact__dispo etiquette" data-apparait>
+      <span class="contact__pouls" aria-hidden="true"></span>
+      <span>{t(c.contact.dispo)}</span>
+      <span class="contact__horloge"><span>{c.interface.lieuHorloge}</span><time data-horloge>--:--</time></span>
+    </p>
+  </section>
+
+  <!-- LE PIED DE PAGE : la signature du portfolio, ses crédits, les liens utiles, le retour en haut. -->
+  <footer class="pied" aria-labelledby="pied-titre">
+    <div class="pied__trait" aria-hidden="true"></div>
+    <div class="pied__grille">
+      <div class="pied__signature">
+        <Symbole taille={34} />
+        <p class="pied__nom">Mathéo Maleyran</p>
+        <p class="pied__edition etiquette">{t(c.contact.credits.signature)}</p>
+      </div>
+      <div class="pied__credits">
+        <h2 class="pied__titre etiquette" id="pied-titre">{t(c.contact.credits.titre)}</h2>
+        <dl>
+          <div>
+            <dt class="etiquette">{t(c.contact.credits.role)}</dt>
+            <dd>{t(c.contact.credits.roleTexte)}</dd>
+          </div>
+          <div>
+            <dt class="etiquette">{t(c.contact.credits.outils)}</dt>
+            <dd>{c.contact.credits.outilsTexte}</dd>
+          </div>
+        </dl>
+      </div>
+      <nav class="pied__liens" aria-label={t(c.contact.credits.liens)}>
+        <p class="pied__titre etiquette">{t(c.contact.credits.liens)}</p>
+        {
+          c.contact.liens.map((lien) => (
+            <a class="pied__lien" href={lien.href} target="_blank" rel="noopener noreferrer">
+              {lien.nom} <span aria-hidden="true">↗</span>
+            </a>
+          ))
+        }
+        <a class="pied__lien" href={cheminFiche(langue, 'portfolio')}>{t(c.contact.coulisses)}</a>
+      </nav>
+    </div>
+    <div class="pied__bas etiquette">
+      <p>© <span data-annee>{new Date().getFullYear()}</span> Mathéo Maleyran. {t(c.contact.credits.droits)}</p>
+      <a class="pied__haut" href="#accueil">{t(c.contact.haut)}<span aria-hidden="true">↑</span></a>
+    </div>
+  </footer>
+</Base>

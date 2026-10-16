@@ -1,0 +1,421 @@
+/* ==========================================================================
+   LE BLOC D'IDENTITÉ (en haut à gauche) ET L'ACCÈS RAPIDE
+   Une pastille en verre, comme le menu. Le symbole et le nom ramènent à
+   l'accueil ; le chevron, à droite, ouvre un petit menu d'accès rapide.
+   ========================================================================== */
+
+.identite {
+  justify-self: start;
+  display: inline-flex;
+  align-items: stretch;
+  min-height: 38px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  transition:
+    background var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce);
+}
+
+.identite__lien {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0 11px 0 12px;
+  border-radius: 999px 0 0 999px;
+  text-decoration: none;
+}
+
+.identite__lien svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.identite__nom {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.identite__commande {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 0 3px 0 0;
+  border: 0;
+  border-left: 1px solid var(--filet);
+  border-radius: 0 999px 999px 0;
+  background: none;
+  color: color-mix(in srgb, var(--texte) 70%, transparent);
+  cursor: pointer;
+  transition:
+    color var(--d-micro) var(--c-douce),
+    background var(--d-micro) var(--c-douce);
+}
+
+.identite__commande svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.45s var(--c-masque);
+}
+
+.identite__commande:hover,
+.identite__commande:focus-visible,
+.identite__commande[aria-expanded='true'] {
+  color: var(--texte);
+  background: color-mix(in srgb, var(--texte) 10%, transparent);
+}
+
+.identite__commande[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+/* Très petit téléphone (320 px) : tout se serre pour que le bouton « Menu » tienne dans la barre. */
+@media (max-width: 380px) {
+  .identite__nom {
+    font-size: 0.8rem;
+    letter-spacing: -0.02em;
+  }
+
+  .identite__lien {
+    gap: 6px;
+    padding: 0 7px 0 9px;
+  }
+
+  .barre__outils {
+    gap: 4px;
+  }
+
+  .barre__menu {
+    padding-inline: 12px;
+  }
+}
+
+/* Entre le téléphone et le grand écran, la barre est étroite : le nom et le menu se serrent un peu. */
+@media (min-width: 861px) and (max-width: 1000px) {
+  .identite__nom {
+    font-size: 0.875rem;
+  }
+
+  .identite__lien {
+    padding: 0 9px 0 10px;
+  }
+
+  .nav__liste a {
+    padding-inline: 11px;
+  }
+}
+
+/* ---- L'accès rapide (attribut « popover » : le navigateur gère l'ouverture,
+        la touche Échap et le clic à côté) ---- */
+.acces {
+  position: fixed;
+  inset: auto;
+  top: calc(var(--marge-cadre) + var(--barre-h) + 2px);
+  left: calc(var(--marge-cadre) + clamp(12px, 1.9vw, 30px));
+  width: min(17.5rem, calc(100vw - 2 * var(--marge-cadre) - 24px));
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  background: rgba(14, 20, 34, 0.72);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+  backdrop-filter: blur(28px) saturate(1.3);
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 50px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.14)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--texte);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.25s var(--c-douce),
+    transform 0.45s var(--c-masque),
+    display 0.25s allow-discrete,
+    overlay 0.25s allow-discrete;
+}
+
+.acces:popover-open {
+  display: grid;
+  gap: 2px;
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .acces:popover-open {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.acces__titre {
+  margin: 4px 10px 6px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--discret);
+}
+
+/* Une action : une icône, son nom, et à droite un indice (↗ lien externe, PDF, ✓ copié). */
+.acces__action,
+.acces__contact {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: color-mix(in srgb, var(--texte) 88%, transparent);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--d-micro) var(--c-douce),
+    color var(--d-micro) var(--c-douce);
+}
+
+.acces__contact {
+  cursor: default;
+}
+
+.acces__action:hover,
+.acces__action:focus-visible {
+  background: rgba(150, 192, 255, 0.12);
+  color: var(--texte);
+}
+
+.acces__icone {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: #cfe1ff;
+}
+
+.acces__icone svg {
+  width: 17px;
+  height: 17px;
+}
+
+.acces__suite {
+  font-size: 0.6875rem;
+  color: var(--discret);
+}
+
+.acces__suite kbd,
+.raccourcis kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.7em;
+  padding: 0.1em 0.45em;
+  border: 1px solid var(--filet-fort);
+  border-radius: 6px;
+  background: rgba(150, 192, 255, 0.08);
+  font: inherit;
+  font-size: 0.6875rem;
+  color: var(--texte);
+}
+
+/* Copie réussie : la ligne s'allume un instant (bleu glacier) et dit « copié ». */
+.acces .est-fait,
+.acces .est-fait .acces__suite {
+  color: #9fe6ff;
+}
+
+/* Le contact rapide : copier l'e-mail, ou écrire (mailto). */
+.acces__boutons {
+  display: flex;
+  gap: 4px;
+}
+
+.acces__mini {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  background: rgba(150, 192, 255, 0.06);
+  color: var(--texte);
+  font: inherit;
+  font-size: 0.6875rem;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color var(--d-micro) var(--c-douce),
+    background var(--d-micro) var(--c-douce);
+}
+
+.acces__mini:hover,
+.acces__mini:focus-visible {
+  border-color: var(--filet-fort);
+  background: rgba(150, 192, 255, 0.16);
+}
+
+/* Le secours, si le presse-papiers est indisponible : le texte, sélectionné. */
+.acces__secours {
+  display: grid;
+  gap: 4px;
+  margin: 4px 8px 6px;
+  font-size: 0.6875rem;
+  color: var(--discret);
+}
+
+.acces__secours[hidden] {
+  display: none;
+}
+
+.acces__secours input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 8px;
+  background: rgba(150, 192, 255, 0.08);
+  color: var(--texte);
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+/* ---- La fenêtre des raccourcis clavier ---- */
+.raccourcis {
+  width: min(30rem, calc(100vw - 32px));
+  max-height: min(80svh, 40rem);
+  margin: auto;
+  padding: 18px 20px 20px;
+  overflow-y: auto;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  background: rgba(14, 20, 34, 0.86);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+  backdrop-filter: blur(28px) saturate(1.3);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 60px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.16));
+  color: var(--texte);
+}
+
+.raccourcis::backdrop {
+  background: rgba(4, 7, 14, 0.5);
+}
+
+.raccourcis[open] {
+  animation: raccourcis-entree 0.3s var(--c-douce) both;
+}
+
+@keyframes raccourcis-entree {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+.raccourcis__tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.raccourcis h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.raccourcis .pastille {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.75rem;
+}
+
+.raccourcis__groupe + .raccourcis__groupe {
+  margin-top: 14px;
+}
+
+.raccourcis h3 {
+  margin: 0 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--discret);
+}
+
+.raccourcis dl {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.raccourcis dl > div {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--filet);
+}
+
+.raccourcis dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.raccourcis dd {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--texte) 86%, transparent);
+}
+
+html.curseur-actif .raccourcis {
+  cursor: auto;
+}
+
+html.curseur-actif .raccourcis button {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .raccourcis[open] {
+    animation: none;
+  }
+}
+
+/* Le menu s'affiche au-dessus de tout, curseur personnalisé compris : on y rend le curseur du système. */
+html.curseur-actif .acces {
+  cursor: auto;
+}
+
+html.curseur-actif .acces :is(a, button) {
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .acces {
+    width: min(18rem, calc(100vw - 2 * var(--marge-cadre) - 24px));
+  }
+
+  .acces__action,
+  .acces__contact {
+    min-height: 48px;
+  }
+
+  .acces__mini {
+    min-height: 34px;
+  }
+
+  .raccourcis dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}

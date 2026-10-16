@@ -1,0 +1,14 @@
+---
+// Une page par projet, en français : /realisations/<slug>/
+// getStaticPaths dit à Astro quelles pages fabriquer : une par projet du contenu.
+import FicheProjet from '../../components/FicheProjet.astro';
+import { contenu } from '../../contenu';
+
+export function getStaticPaths() {
+  return contenu('fr').realisations.projets.map((p) => ({ params: { slug: p.slug } }));
+}
+
+const { slug } = Astro.params;
+---
+
+<FicheProjet langue="fr" slug={slug} />

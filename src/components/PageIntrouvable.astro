@@ -1,0 +1,55 @@
+---
+// La page 404 : la même scène que l'accueil, et deux boutons pour repartir.
+// Elle sert pour toute adresse qui n'existe pas (voir netlify.toml pour l'anglais).
+import { getImage } from 'astro:assets';
+import dunesPaysage from '../assets/scene/dunes-paysage.png';
+import dunesPortrait from '../assets/scene/dunes-portrait.png';
+import Base from '../layouts/Base.astro';
+import { contenu as charger, cheminAccueil, typo } from '../contenu';
+import type { Langue } from '../contenu/types';
+
+interface Props {
+  langue: Langue;
+}
+
+const { langue } = Astro.props;
+const c = charger(langue);
+const t = (texte: string) => typo(texte, langue);
+const accueil = cheminAccueil(langue);
+
+const scenePaysage = await getImage({ src: dunesPaysage, format: 'webp', quality: 88 });
+const scenePortrait = await getImage({ src: dunesPortrait, format: 'webp', quality: 88 });
+---
+
+<Base
+  contenu={c}
+  page="fiche"
+  cheminAutreLangue={cheminAccueil(langue === 'fr' ? 'en' : 'fr')}
+  titre={c.introuvable.titreOnglet}
+  indexable={false}
+>
+  <div class="hero">
+    <div class="hero__cadre toujours-sombre" style={`--scene: url(${scenePaysage.src}); --scene-portrait: url(${scenePortrait.src})`}>
+      <canvas id="champ" aria-hidden="true" data-scene={scenePaysage.src} data-scene-portrait={scenePortrait.src}></canvas>
+
+      <div class="hero__bas">
+        <div class="hero__tete">
+          <p class="hero__surtitre etiquette" data-intro="texte">{t(c.introuvable.surtitre)}</p>
+          <h1 class="hero__titre">
+            <span class="ligne"><span data-titre-hero>{t(c.introuvable.titre[0])}</span></span>{' '}
+            <span class="ligne"><span data-titre-hero>{t(c.introuvable.titre[1])}</span></span>
+          </h1>
+        </div>
+        <p class="hero__accroche" data-intro="texte">{t(c.introuvable.texte)}</p>
+        <div class="hero__actions">
+          <a class="bouton bouton--plein etiquette" href={accueil} data-intro="action" data-aimant>
+            <span data-decode>{t(c.introuvable.accueil)}</span>
+          </a>
+          <a class="bouton etiquette" href={`${accueil}#realisations`} data-intro="action" data-aimant>
+            <span data-decode>{t(c.introuvable.realisations)}</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Base>

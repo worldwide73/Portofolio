@@ -1,0 +1,328 @@
+/* ==========================================================================
+   LA CARTE DU PORTAIL
+   Elle occupe tout l'écran. Le paysage reste visible derrière, assombri.
+   Les éclats de verre, les orbites et la poussière d'étoiles sont dessinés sur
+   la toile (src/scripts/explorateur.ts) ; ici, on met en forme ce qui se lit
+   et se clique : le titre, le bouton de fermeture, le noyau, les six
+   destinations. Elle garde les couleurs de la nuit, comme la scène.
+   ========================================================================== */
+
+.explorateur {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  /* Un voile de nuit, plus dense sur les bords : le désert se devine toujours au centre. */
+  background: radial-gradient(ellipse 78% 72% at 50% 52%, rgba(7, 11, 22, 0.46), rgba(3, 5, 11, 0.84) 80%);
+  color: var(--texte);
+}
+
+/* Ouverte ailleurs que sur l'accueil : il n'y a pas de paysage derrière, mais du texte. Le voile le couvre. */
+.explorateur.sans-scene {
+  background: radial-gradient(ellipse 78% 72% at 50% 52%, rgba(7, 11, 22, 0.9), rgba(3, 5, 11, 0.97) 80%);
+}
+
+.explorateur::backdrop {
+  background: transparent;
+}
+
+.explorateur[open] {
+  animation: explorateur-voile 0.5s var(--c-douce) both;
+}
+
+@keyframes explorateur-voile {
+  from {
+    background-color: transparent;
+    opacity: 0.4;
+  }
+}
+
+.explorateur__toile {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ---- Le titre et le bouton de fermeture ---- */
+.explorateur__tete {
+  position: absolute;
+  top: clamp(14px, 2.2vw, 30px);
+  left: clamp(16px, 2.6vw, 40px);
+  right: clamp(16px, 2.6vw, 40px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.explorateur__tete h2 {
+  margin: 0;
+  font: inherit;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--texte) 76%, transparent);
+}
+
+.explorateur__fermer {
+  min-height: 38px;
+}
+
+.explorateur__aide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(12px, 2vw, 26px);
+  text-align: center;
+  color: var(--discret);
+  pointer-events: none;
+}
+
+/* ---- Le noyau : le symbole du site, au centre des orbites ---- */
+.explorateur__noyau {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  translate: -50% -50%;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--lampe);
+  cursor: pointer;
+}
+
+.explorateur__noyau svg {
+  filter: drop-shadow(0 0 calc(var(--lueur, 0.7) * 12px) rgba(150, 190, 255, 0.8));
+  transition: transform 0.6s var(--c-ressort);
+}
+
+.explorateur__noyau:hover svg,
+.explorateur__noyau:focus-visible svg {
+  transform: scale(1.14);
+}
+
+/* ---- Les six destinations ---- */
+.explorateur__astres {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Un point lumineux, posé exactement sur sa position ; son nom s'écrit à côté. */
+.astre {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  left: 0;
+  top: 0;
+  width: 68px;
+  height: 68px;
+  translate: -50% -50%; /* (explorateur.ts y ajoute la place de la destination sur son orbite) */
+  border-radius: 50%;
+  color: var(--texte);
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.astre i {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  scale: calc(0.82 + var(--pres, 0.5) * 0.36); /* devant, le point est plus gros */
+  box-shadow:
+    0 0 0 7px rgba(190, 215, 255, 0.13),
+    0 0 calc(var(--lueur, 0.7) * 30px) 6px rgba(150, 190, 255, calc(0.35 + var(--lueur, 0.7) * 0.6));
+  transition:
+    transform 0.45s var(--c-ressort),
+    box-shadow var(--d-interface) var(--c-douce);
+}
+
+.astre__texte {
+  position: absolute;
+  display: grid;
+  gap: 5px;
+  width: max-content;
+  max-width: 17rem;
+}
+
+.astre__texte b {
+  font-size: clamp(1.35rem, 2.2vw, 2.05rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-shadow: 0 2px 24px rgba(3, 6, 14, 0.9);
+}
+
+/* La description : toujours là, discrète ; elle s'éclaire avec le survol. */
+.astre__texte small {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: var(--discret);
+  text-shadow: 0 1px 14px rgba(3, 6, 14, 0.95);
+  transition: color var(--d-interface) var(--c-douce);
+}
+
+.astre__texte em {
+  display: none;
+  font-style: normal;
+  color: var(--lampe);
+}
+
+.astre[aria-current] .astre__texte em {
+  display: block;
+}
+
+/* Le nom s'écrit du côté qui s'éloigne du noyau. Les destinations tournent :
+   explorateur.ts donne à chaque instant ce côté (--ax et --ay, de −1 à 1), et le
+   nom glisse autour de son point, en continu. À −1 / 1, il est tout à fait à
+   gauche / à droite (ou au-dessus / au-dessous), comme avant l'orbite.
+   Derrière (--pres proche de 0), il est un peu plus petit et plus pâle. */
+.astre__texte {
+  left: 50%;
+  top: 50%;
+  translate: calc(-50% + var(--ax, 0) * (50% + 40px) + var(--dx, 0px)) calc(-50% + var(--ay, 0) * (50% + 38px) + var(--dy, 0px));
+  scale: calc(0.92 + var(--pres, 0.5) * 0.12);
+  opacity: calc(0.74 + var(--pres, 0.5) * 0.26);
+}
+
+/* data-cote ne règle plus que l'alignement du texte. */
+.astre:is([data-cote='haut'], [data-cote='bas']) .astre__texte {
+  text-align: center;
+  justify-items: center;
+}
+
+.astre[data-cote='gauche'] .astre__texte {
+  text-align: right;
+  justify-items: end;
+}
+
+/* Le CV : un point un peu plus petit, il mène hors de la page. */
+.astre--annexe i {
+  width: 12px;
+  height: 12px;
+}
+
+/* L'endroit où l'on se trouve : un anneau autour du point. */
+.astre[aria-current] i {
+  outline: 1px solid color-mix(in srgb, var(--lampe) 80%, transparent);
+  outline-offset: 9px;
+}
+
+/* ---- Les états ----
+   Tant que la constellation n'est pas formée, rien de ce qui se lit n'est visible.
+   Les destinations apparaissent l'une après l'autre (--i est leur rang). */
+.explorateur__tete,
+.explorateur__aide,
+.explorateur__noyau,
+.astre {
+  opacity: 0;
+  transition:
+    opacity 0.5s var(--c-douce),
+    scale 0.7s var(--c-ressort);
+}
+
+.astre {
+  scale: 0.5;
+  transition-delay: calc(var(--i, 0) * 55ms);
+}
+
+.explorateur.est-formee :is(.explorateur__tete, .explorateur__aide, .explorateur__noyau, .astre) {
+  opacity: 1;
+  scale: 1;
+}
+
+/* Survol ou focus d'une destination : elle s'illumine, les autres s'atténuent. */
+.explorateur.est-formee.a-survol .astre:not(.est-survole) {
+  opacity: 0.42;
+  transition-delay: 0s;
+}
+
+.astre.est-survole i,
+.astre:focus-visible i {
+  transform: scale(1.6);
+  box-shadow:
+    0 0 0 9px rgba(190, 215, 255, 0.2),
+    0 0 calc(var(--lueur, 0.7) * 44px) 12px rgba(160, 198, 255, 0.95);
+}
+
+.astre.est-survole .astre__texte small,
+.astre:focus-visible .astre__texte small {
+  color: var(--texte);
+}
+
+/* Une destination est choisie : elle seule reste. */
+.explorateur.a-choisi :is(.astre:not(.est-choisie), .explorateur__tete, .explorateur__aide, .explorateur__noyau) {
+  opacity: 0;
+  transition-delay: 0s;
+  transition-duration: 0.2s;
+}
+
+.astre.est-choisie i {
+  transform: scale(2.1);
+}
+
+/* La carte se referme : tout ce qui se lit s'efface d'abord. */
+.explorateur.se-ferme :is(.astre, .explorateur__tete, .explorateur__aide, .explorateur__noyau) {
+  opacity: 0;
+  transition-delay: 0s;
+  transition-duration: 0.18s;
+}
+
+/* La carte s'affiche au-dessus de tout, curseur personnalisé compris : on y rend le curseur du système. */
+html.curseur-actif .explorateur {
+  cursor: auto;
+}
+
+html.curseur-actif .explorateur :is(a, button) {
+  cursor: pointer;
+}
+
+/* ---- Téléphone : la figure est plus haute que large, les noms s'écrivent sous leurs points ---- */
+@media (max-width: 860px) {
+  .explorateur__noyau {
+    top: 50%;
+    width: 76px;
+    height: 76px;
+  }
+
+  .astre__texte b {
+    font-size: 1.25rem;
+  }
+
+  .astre__texte small {
+    display: none;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explorateur[open] {
+    animation: none;
+  }
+}
+
+/* ---- Pendant que la carte est ouverte, l'interface de la page s'efface ----
+   Il ne reste derrière elle que le paysage. (« filter » plutôt qu'« opacity » pour
+   le texte de l'accueil : son opacité est déjà pilotée par la scène.) */
+html.carte-ouverte :is(.barre, .trajet, .jeu-bouton, .progression, .curseur) {
+  opacity: 0;
+  transition: opacity 0.3s var(--c-douce);
+}
+
+html.carte-ouverte .hero__bas {
+  filter: opacity(0);
+  transition: filter 0.3s var(--c-douce);
+}

@@ -1,0 +1,150 @@
+/* ==========================================================================
+   SECTION 4 : VEILLE
+   À gauche, le titre, le filtre par sujet et la date de dernière mise à jour.
+   À droite, les notes, de la plus récente à la plus ancienne. Chaque note est
+   un élément <details> : un clic l'ouvre et referme les autres.
+   ========================================================================== */
+
+.veille {
+  margin: var(--s-6) var(--gouttiere) 0;
+  padding-top: var(--s-3);
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: var(--colonne);
+  row-gap: var(--s-4);
+  border-top: 1px solid var(--filet);
+}
+
+.veille__tete {
+  grid-column: 1 / span 5;
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 1.4rem;
+}
+
+.veille__texte {
+  max-width: 34ch;
+  font-size: var(--t-chapo);
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+}
+
+.veille__maj {
+  color: var(--discret);
+}
+
+.veille__maj time {
+  color: var(--texte);
+}
+
+.veille__liste,
+.veille__vide {
+  grid-column: 7 / -1;
+}
+
+.veille__vide {
+  color: var(--discret);
+}
+
+/* ---- Une note ---- */
+.note {
+  border-top: 1px solid var(--filet);
+}
+
+.note:last-child {
+  border-bottom: 1px solid var(--filet);
+}
+
+.note[hidden] {
+  display: none;
+}
+
+.note__resume {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 0.9rem;
+  row-gap: 0.5rem;
+  align-items: center;
+  padding: 1.05rem 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.note__resume::-webkit-details-marker {
+  display: none;
+}
+
+.note__date {
+  color: var(--discret);
+  font-variant-numeric: tabular-nums;
+}
+
+.note__sujet {
+  justify-self: start;
+  padding: 4px 10px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  color: var(--discret);
+}
+
+.note__titre {
+  grid-column: 1 / span 2;
+  font-size: var(--t-sous-titre);
+  line-height: 1.22;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.note .signe {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.note__corps {
+  display: grid;
+  gap: 0.7rem;
+  max-width: 58ch;
+  padding: 0.1rem 0 1.4rem;
+}
+
+.note__label,
+.note__mention {
+  color: var(--discret);
+}
+
+.note__texte {
+  line-height: 1.55;
+}
+
+.note__source {
+  margin-top: 0.3rem;
+  color: var(--discret);
+}
+
+.note__source a {
+  color: var(--texte);
+}
+
+@media (max-width: 860px) {
+  .veille__tete,
+  .veille__liste,
+  .veille__vide {
+    grid-column: 1 / -1;
+  }
+
+  .note__resume {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .note__date,
+  .note__sujet,
+  .note__titre {
+    grid-column: 1;
+  }
+
+  .note .signe {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
+}

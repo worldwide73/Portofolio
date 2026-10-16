@@ -1,0 +1,49 @@
+/* ==========================================================================
+   LE BOUTON FLOTTANT DE L’ORBITAL HUB (en bas à droite ; le panneau est dans hub.css)
+   ========================================================================== */
+
+/* ---- Le bouton : le symbole personnel, en bas à droite, discret ---- */
+.jeu-bouton {
+  position: fixed;
+  right: calc(var(--marge-cadre) + 8px);
+  bottom: calc(var(--marge-cadre) + 8px);
+  z-index: 28;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--filet);
+  border-radius: 50%;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  color: color-mix(in srgb, var(--texte) 80%, transparent);
+  cursor: pointer;
+  transition:
+    color var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce);
+}
+
+.jeu-bouton:hover,
+.jeu-bouton:focus-visible {
+  color: var(--texte);
+  border-color: var(--filet-fort);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 26px) rgba(150, 190, 255, calc(var(--lueur, 0.7) * 0.4));
+}
+
+/* Le point du symbole tourne autour de la lame quand on survole le bouton. */
+.jeu-bouton .symbole__point {
+  transform-origin: 12px 12.5px;
+  transition: transform 0.9s var(--c-masque);
+}
+
+.jeu-bouton:hover .symbole__point {
+  transform: rotate(-40deg);
+}
+
+html.menu-ouvert .jeu-bouton,
+html.intro .jeu-bouton {
+  visibility: hidden;
+}

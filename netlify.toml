@@ -1,0 +1,45 @@
+# RÉGLAGES DE NETLIFY (l'hébergeur prévu pour matheomaleyran.com)
+# Ce fichier ne déclenche rien tout seul : il sera lu par Netlify le jour où
+# le site y sera mis en ligne. Voir la section « Déploiement » du README.
+
+[build]
+  # La commande qui fabrique le site, et le dossier où elle le dépose.
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# ---- En-têtes de sécurité, envoyés avec chaque page ----
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Politique de sécurité du contenu : la liste de ce que le navigateur a le
+    # droit de charger. Ici, uniquement ce qui vient du site lui-même ('self') :
+    # aucun script, police ou image d'un autre serveur. 'unsafe-inline' n'est
+    # accordé qu'aux styles (les animations écrivent des styles sur les éléments).
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    # Interdit au navigateur de deviner le type d'un fichier.
+    X-Content-Type-Options = "nosniff"
+    # N'envoie aux autres sites que le nom de domaine, pas l'adresse complète de la page.
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Le micro facultatif d'Orbit exige toujours le geste et l'accord du visiteur.
+    Permissions-Policy = "camera=(), microphone=(self), geolocation=(), payment=(), usb=()"
+    # Interdit d'afficher le site dans le cadre d'un autre site.
+    X-Frame-Options = "DENY"
+    # Impose le HTTPS pendant un an.
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+# Les fichiers fabriqués par le build portent une empreinte dans leur nom :
+# s'ils changent, leur nom change. Le navigateur peut donc les garder un an.
+[[headers]]
+  for = "/_astro/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Page 404 en anglais pour toute adresse inconnue sous /en/.
+# (La page 404 en français, dist/404.html, est servie d'office par Netlify.)
+[[redirects]]
+  from = "/en/*"
+  to = "/en/404/index.html"
+  status = 404

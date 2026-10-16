@@ -1,0 +1,256 @@
+/* ==========================================================================
+   LA CONSTELLATION DES RÉALISATIONS
+   Une fenêtre qui s'ouvre par-dessus la galerie : la carte à gauche, la fiche
+   de l'étoile choisie à droite (l'une sous l'autre sur téléphone).
+   ========================================================================== */
+
+/* Le bouton qui l'ouvre, dans l'en-tête de la galerie. */
+.galerie__vue {
+  margin-right: auto;
+  align-self: center;
+}
+
+.constellation {
+  width: min(96vw, 74rem);
+  max-height: 94svh;
+  padding: clamp(16px, 2vw, 28px);
+  overflow-y: auto;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-cadre);
+  background: color-mix(in srgb, var(--fond) 93%, transparent);
+  color: var(--texte);
+}
+
+.constellation[open] {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  grid-template-areas:
+    'tete tete'
+    'filtres filtres'
+    'carte fiches';
+  gap: clamp(14px, 2vw, 28px);
+}
+
+.constellation::backdrop {
+  background: rgba(4, 6, 12, 0.66);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.constellation__tete {
+  grid-area: tete;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.constellation__tete h2 {
+  margin: 0;
+  font-size: var(--t-sous-titre);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+.constellation__aide {
+  margin-top: 0.35rem;
+  max-width: 52ch;
+  font-size: var(--t-petit);
+  color: var(--discret);
+}
+
+/* ---- La carte ---- */
+.constellation__carte {
+  grid-area: carte;
+  position: relative;
+  aspect-ratio: 1000 / 620;
+  align-self: start;
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon-carte);
+  background:
+    radial-gradient(60% 55% at 50% 52%, rgba(120, 160, 255, 0.1), transparent 70%),
+    var(--surface);
+  overflow: hidden;
+}
+
+.constellation__carte svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.constellation__carte line {
+  stroke: var(--filet);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition:
+    stroke var(--d-interface) var(--c-douce),
+    opacity var(--d-interface) var(--c-douce);
+}
+
+.constellation__carte line.est-relie {
+  stroke: var(--texte);
+}
+
+/* Les points : un domaine est un petit anneau, une réalisation une étoile pleine. */
+.constellation__domaine,
+.constellation__etoile {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  translate: -50% -9px;
+  white-space: nowrap;
+}
+
+.constellation__domaine {
+  color: var(--discret);
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--d-interface) var(--c-douce);
+}
+
+.constellation__domaine i {
+  width: 9px;
+  height: 9px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: var(--fond);
+}
+
+.constellation__domaine.est-relie {
+  color: var(--texte);
+}
+
+.constellation__etoile {
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: color-mix(in srgb, var(--texte) 82%, transparent);
+  cursor: pointer;
+  translate: -50% -13px;
+}
+
+.constellation__etoile i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 16px) rgba(170, 205, 255, calc(var(--lueur, 0.7) * 0.9));
+  transition: transform 0.5s var(--c-ressort);
+}
+
+.constellation__etoile:hover,
+.constellation__etoile[aria-pressed='true'] {
+  color: var(--texte);
+}
+
+.constellation__etoile[aria-pressed='true'] i {
+  transform: scale(1.7);
+}
+
+/* ---- La fiche de l'étoile choisie ---- */
+.constellation__fiches {
+  grid-area: fiches;
+}
+.constellation__apercu { width: 100%; height: auto; aspect-ratio: 16/10; object-fit: cover; border: 1px solid var(--filet-fort); border-radius: 12px; }
+
+.constellation__fiches article:not([hidden]) {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.constellation__genre {
+  color: var(--discret);
+}
+
+.constellation__fiches h3 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.4vw, 2.2rem);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+}
+
+.constellation__phrase {
+  font-size: var(--t-chapo);
+  line-height: 1.4;
+  letter-spacing: -0.012em;
+}
+
+.constellation__fiches dl {
+  margin: 0.2rem 0 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.constellation__fiches dt {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--filet);
+  color: var(--discret);
+}
+
+.constellation__fiches dd {
+  font-size: var(--t-petit);
+  line-height: 1.45;
+}
+
+.constellation__liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0.8rem;
+}
+
+.constellation__liens .bouton {
+  min-height: 42px;
+}
+
+html.curseur-actif .constellation,
+html.curseur-actif .constellation :is(a, button) {
+  cursor: auto;
+}
+
+html.curseur-actif .constellation :is(a, button) {
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .constellation[open] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'tete'
+      'filtres'
+      'carte'
+      'fiches';
+  }
+
+  /* Sur petit écran, on ne garde que le point des domaines : leurs noms se chevaucheraient. */
+  .constellation__domaine span {
+    display: none;
+  }
+
+  .constellation__carte {
+    aspect-ratio: 1000 / 760;
+  }
+}
+
+.constellation__filtres { grid-area: filtres; display: flex; flex-wrap: wrap; gap: 8px; }
+.constellation__filtres button { min-height: 40px; white-space: normal; text-align: left; }
+.constellation [data-filtre][aria-pressed='true'] { color: #fff; border-color: #b9e7ff; text-shadow: 0 0 12px #a2d4ff; }
+.constellation__etoile:disabled { opacity: .22; cursor: default; }
+.constellation__carte line.est-filtre { opacity: .12; }
+.constellation__connexes { display: grid; gap: 12px; border-top: 1px solid var(--filet); padding-top: 16px; }
+.constellation__connexes h4 { margin: 0; }
+.constellation__connexes button { background: none; border: 0; color: var(--texte); text-align: left; cursor: pointer; }
+.constellation__connexes small { display: block; color: var(--discret); font-size: .75rem; margin-top: 4px; }
+@media (max-width: 600px) {
+  .constellation__carte { aspect-ratio: auto; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: 14px; }
+  .constellation__carte svg, .constellation__domaine { display: none; }
+  .constellation__etoile { position: static; translate: none; min-height: 60px; white-space: normal; }
+}

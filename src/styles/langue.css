@@ -1,0 +1,32 @@
+/* ==========================================================================
+   LE CHANGEMENT DE LANGUE : le trait de lumière qui traverse l'écran
+   (animé par src/scripts/langue.ts ; invisible le reste du temps).
+   ========================================================================== */
+
+.balayage {
+  --trait: #fff;
+  --voile: 207 225 255;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 80;
+  width: 12vw;
+  /* Un sillage à peine perceptible, derrière le trait. */
+  background: linear-gradient(90deg, transparent, rgb(var(--voile) / 0.03) 55%, rgb(var(--voile) / 0.085));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Le trait lui-même, à l'avant du sillage : un pixel de large, qui s'efface en haut et en bas. */
+.balayage::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--trait) 16%, var(--trait) 84%, transparent);
+  box-shadow: 0 0 calc(3px + var(--lueur, 0.7) * 9px) rgb(var(--voile) / 0.7);
+}
+
