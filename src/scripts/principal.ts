@@ -5,7 +5,6 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { initAcces } from './acces';
 import { initApparitions } from './apparitions';
-import { initAtmosphere } from './atmosphere';
 import { initConstellation } from './constellation';
 import { initContact } from './contact';
 import { initCurseur } from './curseur';
@@ -33,6 +32,7 @@ import { initHub } from './hub';
 import { initRush } from './rush/rush';
 import { initReglages } from './reglages-panneau';
 import { initSons } from './sons';
+import { initDreamRadio } from './audio/dream';
 import { initSouvenirs } from './souvenirs';
 import { initVoyage } from './voyage';
 import { initVitrine } from './vitrine';
@@ -51,7 +51,6 @@ async function demarrer(): Promise<void> {
   await Promise.race([police, new Promise((suite) => setTimeout(suite, 1500))]);
 
   appliquerReglages();
-  initAtmosphere();
   initDetails();
   initLangue();
   initDefilement();
@@ -78,6 +77,7 @@ async function demarrer(): Promise<void> {
   initRapide();
   initReglages();
   initSons();
+  initDreamRadio();
   initRush();
   initHub();
   initConstellation();

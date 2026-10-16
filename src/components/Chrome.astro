@@ -9,6 +9,7 @@ import PortalRush from './PortalRush.astro';
 import Recherche from './Recherche.astro';
 import Symbole from './Symbole.astro';
 import VisiteRapide from './VisiteRapide.astro';
+import { CATALOGUE_DREAM, minutes } from '../scripts/audio/catalogue';
 
 // Les destinations, dans l'ordre du site : la barre écrit celle qui est affichée (html[data-lieu]).
 const DESTINATIONS = ['accueil', 'competences', 'realisations', 'veille', 'contact'] as const;
@@ -34,6 +35,9 @@ const linkedin = lien('LinkedIn');
 const github = lien('GitHub');
 const adresseSite = new URL(accueil, Astro.site ?? 'https://matheomaleyran.com').href;
 const a = contenu.acces;
+const r = contenu.radio;
+// L'icône du casque (DREAM RADIO), et ses trois ondes qui bougent quand la musique joue.
+const CASQUE = '<svg viewBox="0 0 18 18" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 11.2V9.4a5.8 5.8 0 0 1 11.6 0v1.8"/><rect x="2.4" y="10.4" width="3.5" height="5.2" rx="1.4"/><rect x="12.1" y="10.4" width="3.5" height="5.2" rx="1.4"/></svg><span class="radio-bouton__ondes" aria-hidden="true"><i></i><i></i><i></i></span>';
 const ICONES = {
   linkedin: '<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="1.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.6 7.6v5M5.6 5.3v.1M8.4 12.6V7.6M8.4 9.9c0-1.4.9-2.4 2.1-2.4s2 .8 2 2.3v2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   github: '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1.6a7.4 7.4 0 0 0-2.3 14.4c.4.1.5-.2.5-.4v-1.4c-2 .4-2.5-.9-2.5-.9-.3-.8-.8-1-.8-1-.7-.5 0-.5 0-.5.7.1 1.1.8 1.1.8.7 1.1 1.8.8 2.2.6.1-.5.3-.8.5-1-1.7-.2-3.4-.8-3.4-3.6 0-.8.3-1.5.8-2-.1-.2-.3-1 .1-2 0 0 .6-.2 2 .8a7 7 0 0 1 3.7 0c1.4-1 2-.8 2-.8.4 1 .2 1.8.1 2 .5.5.8 1.2.8 2 0 2.9-1.7 3.4-3.4 3.6.3.2.5.7.5 1.4v2c0 .2.1.5.5.4A7.4 7.4 0 0 0 9 1.6Z" fill="currentColor"/></svg>',
@@ -101,6 +105,7 @@ const ICONES = {
 
     <!-- Sur téléphone, ces deux boutons vivent dans le menu plutôt que dans la barre. -->
     <div class="nav__annexe">
+      <button class="pastille pastille--ronde radio-bouton" type="button" popovertarget="dream-radio" aria-expanded="false" aria-label={r.bouton} title={r.bouton} set:html={CASQUE} />
       <a class="pastille pastille--ronde" href={cheminAutreLangue} hreflang={autre} data-langue data-bloc aria-label={contenu.interface.changerLangue}>
         <Drapeau langue={langue} />
       </a>
@@ -109,6 +114,17 @@ const ICONES = {
   </nav>
 
   <div class="barre__outils etiquette">
+    <!-- DREAM RADIO (16 octobre 2026) : le casque, juste à côté du drapeau de la langue. -->
+    <button
+      class="pastille pastille--ronde barre__secondaire radio-bouton"
+      type="button"
+      popovertarget="dream-radio"
+      aria-expanded="false"
+      aria-label={r.bouton}
+      title={r.bouton}
+      data-intro="barre"
+      set:html={CASQUE}
+    />
     <a
       class="pastille pastille--ronde barre__secondaire"
       href={cheminAutreLangue}
@@ -251,11 +267,11 @@ const ICONES = {
      fermeture (touche Échap, clic à côté) et le focus. Les valeurs sont lues et
      mémorisées par src/scripts/reglages-panneau.ts. -->
 <div class="reglages etiquette" id="reglages" popover data-lenis-prevent aria-label={contenu.reglages.titre}>
-  <!-- Deux pages : l'affichage, et l'atmosphère (ambiance, musique, effets sonores).
+  <!-- Deux pages : l'affichage, et le son (effets sonores, son de l'introduction ; la musique est dans DREAM RADIO).
        Les deux boutons du haut choisissent la page affichée (voir reglages.css). -->
   <div class="reglages__choix reglages__onglets">
     <label><input type="radio" name="onglet" value="affichage" checked /><span>{contenu.reglages.onglets.affichage}</span></label>
-    <label><input type="radio" name="onglet" value="atmosphere" /><span>{contenu.reglages.onglets.atmosphere}</span></label>
+    <label><input type="radio" name="onglet" value="son" /><span>{contenu.reglages.onglets.son}</span></label>
   </div>
 
   <div class="reglages__page" data-page="affichage">
@@ -302,54 +318,8 @@ const ICONES = {
     </div>
   </div>
 
-  <div class="reglages__page" data-page="atmosphere">
-    <!-- Quatre ambiances facultatives : un seul bouton peut être enfoncé, ou aucun (le site d'origine). -->
-    <fieldset class="reglages__groupe">
-      <legend>{contenu.atmosphere.titre}</legend>
-      <div class="ambiances">
-        {
-          (['chill', 'espace', 'focus', 'silence'] as const).map((mode) => (
-            <button type="button" data-ambiance={mode} aria-pressed="false">
-              {contenu.atmosphere.modes[mode].nom}
-            </button>
-          ))
-        }
-      </div>
-      <!-- La description de l'ambiance choisie : une seule de ces phrases est affichée à la fois. -->
-      <p class="ambiances__texte" aria-live="polite">
-        <span data-pour="">{contenu.atmosphere.aide}</span>
-        {(['chill', 'espace', 'focus', 'silence'] as const).map((mode) => <span data-pour={mode}>{contenu.atmosphere.modes[mode].texte}</span>)}
-      </p>
-    </fieldset>
-
-    <!-- Le lecteur : les pistes disponibles, lecture ou pause, volume. -->
-    <fieldset class="reglages__groupe lecteur">
-      <legend>{contenu.reglages.musique} <output data-pour="volumeMusique"></output></legend>
-      <div class="lecteur__pistes">
-        {
-          (['derive', 'heure-bleue', 'trait'] as const).map((piste) => (
-            <label>
-              <input type="radio" name="piste" value={piste} />
-              <span>
-                <b>{contenu.atmosphere.pistes[piste].titre}</b>
-                <small>{contenu.atmosphere.pistes[piste].texte}</small>
-              </span>
-            </label>
-          ))
-        }
-      </div>
-      <div class="lecteur__commandes">
-        <button class="lecteur__lecture" type="button" data-lecture aria-pressed="false">
-          <span class="lecteur__lire">{contenu.atmosphere.lire}</span>
-          <span class="lecteur__pause">{contenu.atmosphere.pause}</span>
-        </button>
-        <input type="range" name="volumeMusique" min="0" max="100" step="1" aria-label={`${contenu.reglages.volume} : ${contenu.reglages.musique}`} />
-      </div>
-      <p class="lecteur__note">{contenu.atmosphere.genere}</p>
-      <p class="lecteur__silence">{contenu.atmosphere.silence}</p>
-    </fieldset>
-
-    <!-- Les effets sonores (portail, changements de section) se règlent à part. -->
+  <div class="reglages__page" data-page="son">
+    <!-- Les effets sonores (portail, carte, changements de destination, Portal Rush) se règlent ici. -->
     <div class="reglages__son">
       <label class="reglages__bascule">
         <input type="checkbox" name="sons" />
@@ -358,12 +328,85 @@ const ICONES = {
       <input type="range" name="volumeSons" min="0" max="100" step="1" aria-label={`${contenu.reglages.volume} : ${contenu.reglages.sons}`} />
     </div>
 
-    <!-- Décochée : le site s'ouvre en silence (ni musique, ni son d'introduction). -->
+    <!-- Décochée : le site s'ouvre en silence (sans le son de l'introduction). -->
     <label class="reglages__bascule reglages__lancement">
       <input type="checkbox" name="sonAuLancement" />
-      <span>{contenu.atmosphere.lancement}<small>{contenu.atmosphere.lancementTexte}</small></span>
+      <span>{contenu.son.introduction}<small>{contenu.son.introductionTexte}</small></span>
     </label>
+
+    <!-- La musique n'est plus ici : elle est dans DREAM RADIO (le casque, à côté de la langue). -->
+    <div class="reglages__musique">
+      <p class="reglages__note"><b>{contenu.son.musique}</b> · {contenu.son.musiqueTexte}</p>
+      <button class="reglages__bouton" type="button" popovertarget="dream-radio">{contenu.son.ouvrirRadio}</button>
+    </div>
   </div>
+</div>
+
+<!-- DREAM RADIO : le lecteur de musique du portfolio (src/scripts/audio/dream.ts). Fermer le lecteur
+     n'arrête pas la musique ; rien ne démarre seul. -->
+<div class="dream etiquette" id="dream-radio" popover data-lenis-prevent aria-label={r.titre} data-textes={JSON.stringify(r)} data-lecture="false">
+  <div class="dream__tete">
+    <p class="dream__marque"><b>DREAM</b> RADIO<small>{r.sousTitre}</small></p>
+    <button class="dream__fermer" type="button" popovertarget="dream-radio" popovertargetaction="hide" aria-label={r.fermer} title={r.fermer}>
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"></path></svg>
+    </button>
+  </div>
+  <div class="dream__scene">
+    <canvas class="dream__spectre" aria-hidden="true"></canvas>
+    <div class="dream__titres" aria-live="polite">
+      <p class="dream__titre" data-dream="titre">{CATALOGUE_DREAM[0].titre}</p>
+      <p class="dream__artiste" data-dream="artiste"></p>
+      <p class="dream__licence" data-dream="licence"></p>
+    </div>
+  </div>
+  <div class="dream__temps">
+    <span data-dream="position">0:00</span>
+    <input class="dream__curseur" type="range" min="0" max="1000" step="1" value="0" data-dream="progression" aria-label={r.progression} />
+    <span data-dream="duree">{minutes(CATALOGUE_DREAM[0].duree)}</span>
+  </div>
+  <div class="dream__commandes">
+    <button class="dream__rond" type="button" data-dream="precedente" aria-label={r.precedente} title={r.precedente}>
+      <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M14.5 3.8v10.4L6.4 9z" fill="currentColor"></path></svg>
+    </button>
+    <button class="dream__lecture" type="button" data-dream="lecture" aria-pressed="false" aria-label={r.lire} title={r.lire}>
+      <svg class="dream__icone-lire" viewBox="0 0 18 18" aria-hidden="true"><path d="M5.5 3.2v11.6L15 9z" fill="currentColor"></path></svg>
+      <svg class="dream__icone-pause" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3.5h2.6v11H5zM10.4 3.5H13v11h-2.6z" fill="currentColor"></path></svg>
+    </button>
+    <button class="dream__rond" type="button" data-dream="suivante" aria-label={r.suivante} title={r.suivante}>
+      <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M14 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M3.5 3.8v10.4L11.6 9z" fill="currentColor"></path></svg>
+    </button>
+  </div>
+  <div class="dream__volume">
+    <button class="dream__muet" type="button" data-dream="muet" aria-pressed="false" aria-label={r.muet} title={r.muet}>
+      <svg viewBox="0 0 18 18" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 7h2.6L9 4v10l-3.6-3H2.8z"></path><path class="dream__onde" d="M11.6 6.6a3.4 3.4 0 0 1 0 4.8M13.6 4.8a6 6 0 0 1 0 8.4"></path><path class="dream__barre" d="m11.5 6.5 5 5M16.5 6.5l-5 5"></path></svg>
+    </button>
+    <input class="dream__curseur" type="range" min="0" max="100" step="1" data-dream="volume" aria-label={r.volume} />
+    <output data-dream="volumeSortie">55 %</output>
+  </div>
+  <p class="dream__etat" data-dream="etat" role="status"></p>
+  <ol class="dream__liste" aria-label={r.liste}>
+    {
+      CATALOGUE_DREAM.map((p, i) => (
+        <li>
+          <button type="button" data-dream-piste={i} aria-current={i === 0 ? 'true' : 'false'}>
+            <span class="dream__numero">{String(i + 1).padStart(2, '0')}</span>
+            <span class="dream__piste">
+              <b>{p.titre}</b>
+              <small>{p.licence === 'original' ? r.original : `${p.artiste} · CC BY-SA 3.0`}</small>
+            </span>
+            <span class="dream__ondes" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="dream__longueur">{minutes(p.duree)}</span>
+          </button>
+        </li>
+      ))
+    }
+  </ol>
+  <p class="dream__note">{r.silence}</p>
+  <details class="dream__credits">
+    <summary>{r.credits}</summary>
+    <p>{r.creditsTexte}</p>
+    <a href="/audio/CREDITS.txt" target="_blank" rel="noopener">{r.creditsLien}</a>
+  </details>
 </div>
 
 <!-- L'éclair de tunnel : une toile par-dessus toute la page. Elle ne sert plus qu'à la fin de

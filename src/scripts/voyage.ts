@@ -34,7 +34,7 @@ import { allerA, lenis } from './defilement';
 import { fermerTunnel, ouvrirTunnel, tunnel } from './gl/tunnel';
 import { reglages } from './reglages';
 import { mouvementReduit } from './outils';
-import { DUREE_SAUT, allureSaut, jouerSaut, type Sens } from './saut';
+import { DUREE_SAUT, jouerSaut, type Sens } from './saut';
 
 /** Le sens d'un changement de destination : vers la fin de la liste, ou vers son début. */
 export type Mode = 'aller' | 'retour';
@@ -252,7 +252,7 @@ export function voyager(id: string, memoriser = true, direct = false): void {
     enCours?.kill();
     enCours = null;
     gsap.set(contenu, { clearProps: 'opacity' });
-    const duree = DUREE_SAUT / allureSaut();
+    const duree = DUREE_SAUT;
     annoncer('saut', saut, duree, arrivee);
     sautVers = arrivee;
     annulerSaut = jouerSaut(

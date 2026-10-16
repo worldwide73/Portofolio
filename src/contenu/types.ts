@@ -269,14 +269,13 @@ export interface Contenu {
   reglages: {
     titre: string;
     /** Les deux pages du panneau. */
-    onglets: { affichage: string; atmosphere: string };
+    onglets: { affichage: string; son: string };
     opacite: string;
     flou: string;
     lueur: string;
     animations: string;
     niveaux: { complet: string; allege: string; coupe: string };
     sons: string;
-    musique: string;
     volume: string;
     /** La densité de l'interface : son titre, les trois modes et une phrase pour chacun. */
     densite: string;
@@ -287,21 +286,40 @@ export interface Contenu {
     restaure: string;
     dejaOrigine: string;
   };
-  /** La page « Atmosphère » du panneau : quatre ambiances facultatives, et le lecteur de musique. */
-  atmosphere: {
+  /** La page « Son » du panneau : les effets sonores, le son de l'introduction, et où trouver la musique. */
+  son: {
+    introduction: string;
+    introductionTexte: string;
+    musique: string;
+    musiqueTexte: string;
+    ouvrirRadio: string;
+  };
+  /** DREAM RADIO : le lecteur de musique du portfolio (icône casque, à côté de la langue). */
+  radio: {
+    bouton: string;
     titre: string;
-    /** Affiché tant qu'aucune ambiance n'est choisie. */
-    aide: string;
-    modes: Record<'chill' | 'espace' | 'focus' | 'silence', { nom: string; texte: string }>;
-    pistes: Record<'derive' | 'heure-bleue' | 'trait', { titre: string; texte: string }>;
+    sousTitre: string;
     lire: string;
     pause: string;
-    /** Dit d'où vient la musique : elle est fabriquée par le code, sans fichier audio. */
-    genere: string;
+    precedente: string;
+    suivante: string;
+    volume: string;
+    muet: string;
+    reactiver: string;
+    liste: string;
+    progression: string;
+    fermer: string;
+    enCours: string;
     silence: string;
-    /** La case « son dès l'ouverture du site », et ce qu'elle fait. */
-    lancement: string;
-    lancementTexte: string;
+    chargement: string;
+    erreur: string;
+    reprise: string;
+    original: string;
+    genere: string;
+    credits: string;
+    creditsTexte: string;
+    creditsLien: string;
+    clavier: string;
   };
   sections: Record<IdSection, string>;
   /** Le fil des chapitres, en bas de l'écran, et le portail qui ouvre la carte. */

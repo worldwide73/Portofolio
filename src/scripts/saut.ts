@@ -37,7 +37,6 @@
 // le visiteur à destination.
 
 import gsap from 'gsap';
-import { reglages } from './reglages';
 import { emprisePortail, etat, onde } from './gl/champ';
 import { fermerTunnel, ouvrirTunnel, tunnel } from './gl/tunnel';
 
@@ -47,8 +46,6 @@ const AVANT = 0.6; //  secondes avant le saut : activation, fragmentation, ouver
 const APRES = 0.55; // secondes après le saut : fin de la traversée, révélation
 /** La durée totale d'un saut, en secondes. */
 export const DUREE_SAUT = AVANT + APRES;
-/** Petit regain de vitesse en Chill, sans accélérer le reste du site. */
-export const allureSaut = () => reglages.atmosphere === 'chill' ? 1.1 : 1;
 
 interface Eclat {
   x: number;
@@ -336,7 +333,6 @@ export function jouerSaut(sens: Sens, surSaut: () => void, surFin: () => void): 
   };
 
   const avance = { t: 0 };
-  const allure = allureSaut();
   const sequence = gsap.timeline({
     onComplete: () => {
       nettoyer();
@@ -345,7 +341,6 @@ export function jouerSaut(sens: Sens, surSaut: () => void, surFin: () => void): 
   });
 
   // ---- Avant le saut : activation, fragmentation, ouverture du passage ----
-  sequence.timeScale(allure);
   if (ctx) sequence.to(avance, { t: 1, duration: AVANT, ease: 'none', onUpdate: () => !saute && dessiner(ctx, avance.t, depart) }, 0);
   sequence.to(contenu, { opacity: 0, duration: AVANT * 0.6, ease: 'power1.in' }, AVANT * 0.3);
   // (aller) Le portail s'illumine et la caméra plonge vers lui.

@@ -1,0 +1,47 @@
+SONS ET MUSIQUES DU PORTFOLIO — SOURCES ET LICENCES
+(Sound and music sources and licences — English summary below.)
+
+Mis à jour le 16 octobre 2026.
+
+1. COMPOSITIONS ORIGINALES (DREAM RADIO : Cordes du soir, Heure bleue, Dérive, Trait fin)
+   Écrites pour ce site et jouées en direct par son code (Web Audio API : oscillateurs, bruit filtré,
+   cordes pincées synthétisées par l'algorithme de Karplus-Strong). Aucun fichier, aucun échantillon
+   extérieur. Elles n'imitent aucun morceau existant.
+
+2. MORCEAUX ENREGISTRÉS — Pioneer Space Sim
+   Source : https://github.com/pioneerspacesim/pioneer (dossier data/music/core, dépôt lu le
+   16 octobre 2026, commit 48376c6d3ae7877b5152701615f0dff3cd297e38).
+   Licence : Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)
+   https://creativecommons.org/licenses/by-sa/3.0/
+   Le fichier AUTHORS.txt du projet indique : « Pioneer's art, music and other assets are licensed
+   under the terms of the Creative Commons Attribution-ShareAlike 3.0 Unported License. »
+   Auteurs, d'après l'historique du dépôt :
+     - « Distant Home » et « Floating » : diduuz (ajoutés le 29 janvier 2024, commit 7982df749).
+     - « Spaced Piano » : contributeurs de Pioneer Space Sim (ajouté en juillet 2011 ; le compositeur
+       n'est pas nommé dans le dépôt).
+     - « Techno Fugue » et « Plazma Steel » : WKFO (Arda Güler) (ajoutés les 25 décembre 2020 et
+       29 janvier 2021, commits bdfe6ef87 et d52690adf).
+   Modifications : réencodés d'Ogg Vorbis en MP3 (VBR, qualité 6) et mis au même volume (-18 LUFS,
+   gain constant et limiteur de crête). Aucune autre modification. Ces fichiers restent sous
+   CC BY-SA 3.0.
+   Fichiers : public/audio/dream/distant-home.mp3, floating.mp3, spaced-piano.mp3 ;
+              public/audio/rush/techno-fugue.mp3, plazma-steel.mp3.
+
+3. EFFETS SONORES — Kenney
+   Sources : https://github.com/KenneyNL/Starter-Kit-Racing (audio/engine.ogg, audio/impact.ogg),
+             https://github.com/KenneyNL/Starter-Kit-3D-Platformer (sounds/break.ogg, sounds/coin.ogg),
+             https://github.com/KenneyNL/Starter-Kit-FPS (sounds/enemy_destroy.ogg).
+   Licence : CC0 1.0 (domaine public) — « Assets included in this package (2D sprites, 3D models and
+   sound effects) are CC0 licensed » (README des kits). Le code des kits est sous licence MIT ; il
+   n'est pas utilisé ici.
+   Modifications : réencodés en MP3 et renommés (moteur.mp3, impact.mp3, bris.mp3, energie.mp3,
+   destruction.mp3). Le jeu les transpose, les filtre et les mêle à des sons fabriqués par le code.
+
+Tous les autres sons du site sont fabriqués par le code (src/scripts/sons.ts).
+
+--- English ---
+Original compositions: written for this site, played live by its code (Web Audio), no samples.
+Recorded tracks: Pioneer Space Sim (github.com/pioneerspacesim/pioneer), CC BY-SA 3.0 —
+"Distant Home" and "Floating" by diduuz; "Spaced Piano" by Pioneer Space Sim contributors;
+"Techno Fugue" and "Plazma Steel" by WKFO (Arda Güler). Re-encoded to MP3 and loudness-matched.
+Sound effects: Kenney starter kits (CC0 1.0).

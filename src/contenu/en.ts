@@ -83,6 +83,11 @@ export const en: Contenu = {
       { nom: 'Work', lignes: [
         [['←', '→'], 'Previous or next project of the gallery'],
       ] },
+      { nom: 'DREAM RADIO (the headphones, top right)', lignes: [
+        [['Space'], 'Play or pause (in the player)'],
+        [['←', '→'], 'Previous or next track (in the player)'],
+        [['Esc'], 'Close the player (the music keeps playing)'],
+      ] },
       { nom: 'Guided tour (Orbital Hub)', lignes: [
         [['←', '→'], 'Previous or next step'],
         [['Esc'], 'Leave the tour'],
@@ -181,7 +186,7 @@ export const en: Contenu = {
             'The cube exploding and the constellation map: a 2D canvas, shard by shard.',
           ],
         },
-        { nom: 'Sound', points: ['Web Audio API: every sound and the three music tracks are made by code, with no audio file at all.'] },
+        { nom: 'Sound', points: ['Web Audio API: one shared engine, two channels (effects and music) and music ducking during the big effects.', 'DREAM RADIO: original compositions played by code, and free tracks (CC BY-SA 3.0) credited in the player.'] },
         {
           nom: 'The rest',
           points: [
@@ -234,7 +239,7 @@ export const en: Contenu = {
         competences: { texte: 'Skills are grouped by area, each linked to the projects that prove it.', action: 'Go to the skills' },
         veille: { texte: 'The watch gathers the topics I follow, with their sources.', action: 'Go to the watch' },
         contact: { texte: 'The simplest: the email address, copied in one click. There are also the phone, LinkedIn and GitHub.', action: 'Go to contact' },
-        reglages: { texte: 'The three-slider icon, top right: display density (Compact, Balanced, Cinematic), panel opacity and blur, glow, animations, sound effects, music and moods. One button restores the original display.', action: 'Open the settings' },
+        reglages: { texte: 'The three-slider icon, top right: display density (Compact, Balanced, Cinematic), panel opacity and blur, glow, animations and sound effects. One button restores the original display. Music lives in DREAM RADIO: the headphone icon, next to the language.', action: 'Open the settings' },
         jeu: { texte: 'Portal Rush: three lanes, obstacles, energy fragments and Overdrive. Eight levels, four difficulties, endless survival and a daily challenge.', action: 'Launch Portal Rush' },
         commandes: { texte: '← → (or A / D) to change lanes, Space for Overdrive, Escape to pause. On touch: tap left or right, swipe up for Overdrive.', action: 'See all the controls' },
         carte: { texte: 'You travel from one destination to another through the portal map: the glass cube of the home page shatters and its shards form that map. The “Cross the portal” passage, at the bottom of each destination, leads there.', action: 'Open the map' },
@@ -487,9 +492,9 @@ export const en: Contenu = {
     reglages: {
       titre: 'Settings',
       effets: 'Game sound effects volume',
-      musique: 'Site music',
-      volumeMusique: 'Music volume',
-      partage: 'Shared with the portfolio.',
+      musique: 'RUSH RADIO',
+      volumeMusique: 'Game music volume',
+      partage: 'The game’s music, from the moment you enter. DREAM RADIO, the portfolio’s music, fades out during play and resumes when you leave if it was playing.',
       effetsReduits: 'Reduced effects',
       effetsReduitsTexte: 'Fewer flashes and particles (the system’s reduced motion is always respected).',
       secousses: 'Screen shake',
@@ -522,14 +527,13 @@ export const en: Contenu = {
 
   reglages: {
     titre: 'Settings',
-    onglets: { affichage: 'Display', atmosphere: 'Atmosphere' },
+    onglets: { affichage: 'Display', son: 'Sound' },
     opacite: 'Panel opacity',
     flou: 'Background blur',
     lueur: 'Glow intensity',
     animations: 'Animations',
     niveaux: { complet: 'Full', allege: 'Reduced', coupe: 'Off' },
     sons: 'Sound effects',
-    musique: 'Music',
     volume: 'Volume',
     densite: 'Density',
     densites: {
@@ -538,31 +542,44 @@ export const en: Contenu = {
       cinematique: { nom: 'Cinematic', texte: 'Larger titles and more room around the content.' },
     },
     restaurer: 'Restore the original display',
-    restaurerAide: 'Density, opacity, blur, glow and animations. Mood, sounds and Portal Rush stay as they are.',
+    restaurerAide: 'Density, opacity, blur, glow and animations. Sounds, music and Portal Rush stay as they are.',
     restaure: 'Original display restored.',
     dejaOrigine: 'This is already the original display.',
   },
 
-  atmosphere: {
-    titre: 'Mood',
-    aide: 'Optional. Pick a mood; click it again to return to the original site.',
-    modes: {
-      chill: { nom: 'Chill', texte: 'Softer light, slower motion, hardly any flashes or tremors. Muted chords.' },
-      espace: { nom: 'Deep Space', texte: 'Blue glow, more mist and stars. Slow pads.' },
-      focus: { nom: 'Focus', texte: 'For reading: an almost still scene, short transitions, nothing distracting. Very quiet music.' },
-      silence: { nom: 'Silent', texte: 'No background music. Everything else works; sound effects are set separately, below.' },
-    },
-    pistes: {
-      derive: { titre: 'Drift', texte: 'Slow, deep pads for deep space.' },
-      'heure-bleue': { titre: 'Blue hour', texte: 'Muted chords over a slow beat, lo-fi style.' },
-      trait: { titre: 'Fine line', texte: 'A few sparse, very quiet notes: for reading.' },
-    },
+  son: {
+    introduction: 'Intro sound',
+    introductionTexte: 'The short sound of the portal opening when you arrive on the site. Untick to open the site in silence.',
+    musique: 'Music',
+    musiqueTexte: 'Music is off when the site opens. Start it from DREAM RADIO, the headphone icon next to the language, top right.',
+    ouvrirRadio: 'Open DREAM RADIO',
+  },
+
+  radio: {
+    bouton: 'DREAM RADIO: the portfolio’s music',
+    titre: 'DREAM RADIO',
+    sousTitre: 'The portfolio’s music',
     lire: 'Play',
     pause: 'Pause',
-    genere: 'These tracks are made by the site’s own code: no audio file.',
-    silence: 'Silent mood: the music is off.',
-    lancement: 'Sound as soon as the site opens',
-    lancementTexte: 'Music and the intro sound start on their own, as soon as the browser allows it. Untick to open the site in silence.',
+    precedente: 'Previous track',
+    suivante: 'Next track',
+    volume: 'Music volume',
+    muet: 'Mute the music',
+    reactiver: 'Unmute the music',
+    liste: 'Tracks',
+    progression: 'Position in the track',
+    fermer: 'Close',
+    enCours: 'Now playing',
+    silence: 'Nothing starts on its own: music only plays when you press Play. It keeps going from one destination to the next.',
+    chargement: 'Loading…',
+    erreur: 'This track can’t be played here. Try the next one.',
+    reprise: 'Resume where the music stopped',
+    original: 'Original composition',
+    genere: 'Played live by the site’s code',
+    credits: 'Credits and licences',
+    creditsTexte: 'The original compositions were written for this site and are played by its code (Web Audio). The recorded tracks come from the free game Pioneer Space Sim, under the CC BY-SA 3.0 licence: re-encoded to MP3 and levelled, with no other change. Some Portal Rush effects come from Kenney’s kits (CC0).',
+    creditsLien: 'Full source details',
+    clavier: 'Space: play or pause · ← →: previous or next track',
   },
 
   trajet: {

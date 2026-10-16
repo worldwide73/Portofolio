@@ -82,7 +82,7 @@ const MOTS: Record<Intention, string[]> = {
   competences: ['competence', 'skill', 'savoir faire', 'domaine', 'referentiel', 'tableau', 'technologie', 'techno', 'langage', 'stack', 'maitrise'],
   veille: ['veille', 'actualite', 'news', 'watch', 'sujet', 'topic', 'article', 'source'],
   contact: ['contact', 'mail', 'courriel', 'ecrire', 'telephone', 'numero', 'linkedin', 'github', 'joindre', 'phone', 'reach', 'email', 'appeler', 'message'],
-  reglages: ['reglage', 'parametre', 'setting', 'son', 'sound', 'volume', 'musique', 'music', 'opacite', 'flou', 'blur', 'animation', 'ambiance', 'atmosphere', 'mute', 'couper', 'bruit', 'lumiere', 'luminosite'],
+  reglages: ['reglage', 'parametre', 'setting', 'son', 'sound', 'volume', 'musique', 'music', 'radio', 'dream radio', 'casque', 'headphone', 'opacite', 'flou', 'blur', 'animation', 'mute', 'couper', 'bruit', 'lumiere', 'luminosite'],
   jeu: ['jeu', 'jouer', 'rush', 'game', 'play', 'niveau', 'level', 'boss', 'arcade', 'score', 'record'],
   commandes: [
     'commande',
@@ -370,6 +370,14 @@ export function initHub(): void {
               faire: () => {
                 masquer();
                 document.querySelector<HTMLElement>('#reglages')?.showPopover();
+              },
+            },
+            // La musique est dans DREAM RADIO (16 octobre 2026), pas dans les réglages.
+            {
+              libelle: 'DREAM RADIO',
+              faire: () => {
+                masquer();
+                document.querySelector<HTMLElement>('#dream-radio')?.showPopover();
               },
             },
           ],

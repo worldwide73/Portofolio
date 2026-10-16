@@ -338,3 +338,34 @@ export const EQUIPEMENT_DEPART: Equipement = { coque: 'coque-givre', trainee: 't
 
 /** Nightmare se débloque en réussissant un niveau en Expert. */
 export const CONDITION_CAUCHEMAR: Condition = { type: 'difficulte', difficulte: 'expert' };
+
+// ==========================================================================
+// LES VAISSEAUX (Portal Rush V4, 16 octobre 2026) : quatre coques, chacune avec de vraies différences
+// de pilotage, toutes équilibrées (un avantage se paie toujours ailleurs). Les pièces du garage, elles,
+// restent purement visuelles. Le moteur lit ces chiffres (moteur.ts) ; le garage les affiche tels quels.
+// ==========================================================================
+export interface Vehicule {
+  id: 'aube' | 'faucon' | 'bastion' | 'spectre';
+  /** La silhouette dessinée par la scène 3D (0 à 3). */
+  modele: 0 | 1 | 2 | 3;
+  /** Durée d'un changement de voie (facteur : < 1 = plus vif). */
+  deplacement: number;
+  /** Boucliers en plus (ou en moins) par rapport à la difficulté (jamais moins d'un). */
+  boucliers: number;
+  /** Fenêtre du Perfect Dodge (facteur). */
+  parfait: number;
+  /** Ce que rapportent les réussites à la jauge d'Overdrive (facteur). */
+  jauge: number;
+  condition: Condition;
+}
+export const VEHICULES: Vehicule[] = [
+  // L'équilibre : la référence, sans bonus ni défaut.
+  { id: 'aube', modele: 0, deplacement: 1, boucliers: 0, parfait: 1, jauge: 1, condition: { type: 'depart' } },
+  // Le plus vif : il change de voie plus vite, mais il encaisse un choc de moins.
+  { id: 'faucon', modele: 1, deplacement: 0.8, boucliers: -1, parfait: 1, jauge: 1, condition: { type: 'niveau', niveau: 3 } },
+  // Le plus solide : un bouclier de plus, mais il est plus lent à changer de voie et charge moins l'Overdrive.
+  { id: 'bastion', modele: 2, deplacement: 1.18, boucliers: 1, parfait: 1, jauge: 0.85, condition: { type: 'niveau', niveau: 5 } },
+  // Le plus fin : une fenêtre de Perfect Dodge plus large, mais une jauge qui monte moins vite.
+  { id: 'spectre', modele: 3, deplacement: 1, boucliers: 0, parfait: 1.3, jauge: 0.8, condition: { type: 'rang', rang: 'S' } },
+];
+export const VEHICULE_DEPART: Vehicule['id'] = 'aube';

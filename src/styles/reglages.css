@@ -210,7 +210,7 @@ body::before {
 }
 
 /* ==========================================================================
-   LES DEUX PAGES DU PANNEAU : « Affichage » et « Atmosphère »
+   LES DEUX PAGES DU PANNEAU : « Affichage » et « Son »
    Les deux boutons du haut sont des boutons radio : la page affichée est celle
    dont le bouton est coché.
    ========================================================================== */
@@ -220,67 +220,8 @@ body::before {
 }
 
 .reglages:has(input[name='onglet'][value='affichage']:checked) [data-page='affichage'],
-.reglages:has(input[name='onglet'][value='atmosphere']:checked) [data-page='atmosphere'] {
+.reglages:has(input[name='onglet'][value='son']:checked) [data-page='son'] {
   display: grid;
-}
-
-/* ---- Les quatre ambiances : un seul bouton enfoncé, ou aucun ---- */
-.ambiances {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.ambiances button {
-  min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid var(--filet);
-  border-radius: 12px;
-  background: none;
-  color: color-mix(in srgb, var(--texte) 84%, transparent);
-  font: inherit;
-  cursor: pointer;
-  transition:
-    background var(--d-micro) var(--c-douce),
-    color var(--d-micro) var(--c-douce),
-    border-color var(--d-micro) var(--c-douce);
-}
-
-.ambiances button:hover {
-  border-color: var(--filet-fort);
-  color: var(--texte);
-}
-
-.ambiances button[aria-pressed='true'] {
-  border-color: transparent;
-  background: var(--texte);
-  color: var(--fond);
-}
-
-/* La description de l'ambiance choisie (le panneau porte data-ambiance, posé par reglages-panneau.ts). */
-.ambiances__texte,
-.lecteur__note,
-.lecteur__silence {
-  font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.38;
-  color: var(--discret);
-}
-
-.ambiances__texte {
-  min-height: 4.2em;
-}
-
-.ambiances__texte span {
-  display: none;
-}
-
-.reglages[data-ambiance=''] .ambiances__texte [data-pour=''],
-.reglages[data-ambiance='chill'] .ambiances__texte [data-pour='chill'],
-.reglages[data-ambiance='espace'] .ambiances__texte [data-pour='espace'],
-.reglages[data-ambiance='focus'] .ambiances__texte [data-pour='focus'],
-.reglages[data-ambiance='silence'] .ambiances__texte [data-pour='silence'] {
-  display: inline;
 }
 
 /* ---- Densité et restauration (16 octobre 2026) ---- */
@@ -348,155 +289,21 @@ body::before {
   opacity: 1;
 }
 
-/* ---- Le lecteur ---- */
-.lecteur legend {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.lecteur__pistes {
-  display: grid;
-  gap: 4px;
-}
-
-.lecteur__pistes label {
-  position: relative;
-  display: block;
-  cursor: pointer;
-}
-
-.lecteur__pistes input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.lecteur__pistes span {
-  display: grid;
-  gap: 2px;
-  padding: 9px 12px 9px 32px;
-  border: 1px solid var(--filet);
-  border-radius: 12px;
-  transition:
-    background var(--d-micro) var(--c-douce),
-    border-color var(--d-micro) var(--c-douce);
-}
-
-/* La pastille de la piste choisie. */
-.lecteur__pistes span::before {
-  content: '';
-  position: absolute;
-  left: 12px;
-  top: 14px;
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--discret);
-  border-radius: 50%;
-}
-
-.lecteur__pistes input:checked + span {
-  border-color: var(--filet-fort);
-  background: color-mix(in srgb, var(--texte) 7%, transparent);
-}
-
-.lecteur__pistes input:checked + span::before {
-  border-color: var(--texte);
-  background: var(--texte);
-  box-shadow: 0 0 calc(var(--lueur, 0.7) * 8px) var(--lampe);
-}
-
-.lecteur__pistes input:focus-visible + span {
-  outline: 1.5px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.lecteur__pistes b {
-  font-weight: 500;
-  color: var(--texte);
-}
-
-.lecteur__pistes small {
-  font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.3;
-  color: var(--discret);
-}
-
-.lecteur__commandes {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 12px;
-}
-
-.lecteur__lecture {
-  min-width: 5.2rem;
-  min-height: 36px;
-  padding: 0 14px;
-  border: 1px solid var(--filet-fort);
-  border-radius: 999px;
-  background: none;
-  color: var(--texte);
-  font: inherit;
-  cursor: pointer;
-  transition:
-    background var(--d-micro) var(--c-douce),
-    color var(--d-micro) var(--c-douce);
-}
-
-/* Enfoncé : la musique joue, le bouton propose « Pause ». */
-.lecteur__lecture[aria-pressed='true'] {
-  border-color: transparent;
-  background: var(--texte);
-  color: var(--fond);
-}
-
-.lecteur__pause,
-.lecteur__lecture[aria-pressed='true'] .lecteur__lire {
-  display: none;
-}
-
-.lecteur__lecture[aria-pressed='true'] .lecteur__pause {
-  display: inline;
-}
-
-/* La case « son dès l'ouverture du site », séparée du reste par un filet. */
+/* La case « son de l'introduction », séparée du reste par un filet. */
 .reglages__lancement {
   padding-top: 14px;
   border-top: 1px solid var(--filet);
 }
 
-/* Ambiance Silence : le lecteur est grisé, et le dit. */
-.lecteur__silence {
-  display: none;
+/* La musique n'est plus dans ce panneau : un renvoi vers DREAM RADIO (16 octobre 2026). */
+.reglages__musique {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--filet);
+}
+
+.reglages__musique b {
+  font-weight: 500;
   color: var(--texte);
 }
-
-.reglages[data-ambiance='silence'] .lecteur__silence {
-  display: block;
-}
-
-.reglages[data-ambiance='silence'] :is(.lecteur__pistes, .lecteur__commandes) {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-/* ==========================================================================
-   AMBIANCES : ce qui change dans l'interface (l'essentiel se joue dans la
-   scène et dans le son : voir ambiances.ts).
-   ========================================================================== */
-/* Chill : l'accent lumineux est un peu moins froid, le blanc un peu moins vif. */
-html[data-atmosphere='chill'] {
-  --lampe: #dfe7f5;
-  --givre: #ecedec;
-}
-
-/* Deep Space : l'accent tire vers le bleu. */
-html[data-atmosphere='espace'] {
-  --lampe: #bfd8ff;
-}
-
-/* Focus allège les animations ; l'accès au Hub reste disponible,
-   car il contient aussi l'assistant et la navigation guidée. */

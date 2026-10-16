@@ -1,21 +1,37 @@
-// PORTAL RUSH — LES SAUVEGARDES (version 2)
+// PORTAL RUSH — LES SAUVEGARDES (version 3, 16 octobre 2026)
 //
-// Tout reste dans le navigateur du joueur (localStorage) : secteurs débloqués,
-// records (par secteur et difficulté, avec la date et la version des règles),
-// records de survie par difficulté, défi du jour, statistiques cumulées (elles
-// débloquent les pièces du garage), équipement, réglages du jeu, dernière partie.
+// Tout reste dans le navigateur du joueur (localStorage) : le tutoriel, les secteurs débloqués et
+// réussis, les étoiles, les records (par secteur et difficulté, avec la date et la version des règles),
+// les records de survie et de distance par difficulté, le défi du jour, les statistiques cumulées (elles
+// débloquent les pièces du garage et les vaisseaux), le vaisseau choisi, l'équipement, les réglages du
+// jeu (commandes, effets, RUSH RADIO) et la dernière partie.
 //
-// Aucun classement en ligne : le projet n'a ni serveur ni comptes. Chaque record
-// garde la version des règles (REGLES_VERSION) : le jour où un classement en
-// ligne existera, seuls les scores obtenus avec les mêmes règles seront comparés.
-// Si le stockage est indisponible, le jeu marche quand même, sans mémoire.
+// SÛRETÉ :
+//   - VERSIONNÉE : chaque sauvegarde porte son numéro de version. Une sauvegarde plus ancienne (v2,
+//     « portal-rush-2 » ; v1, « portal-rush-1 ») est MIGRÉE sans rien perdre, et l'ancienne clé est
+//     laissée telle quelle (elle sert de témoin, jamais effacée) ;
+//   - VALIDÉE : le stockage est une entrée non fiable ; chaque champ est vérifié, un champ invalide
+//     reprend sa valeur par défaut sans faire tomber le reste ;
+//   - DOUBLÉE : chaque écriture réussie garde aussi la précédente dans une copie de secours. Une
+//     sauvegarde illisible (JSON cassé) est mise de côté, telle quelle, et la copie de secours la remplace ;
+//   - SANS ÉCRASEMENT : si un autre onglet a enregistré entre-temps (numéro de révision plus récent),
+//     les deux progressions sont FUSIONNÉES (le meilleur de chacune) au lieu de s'écraser ;
+//   - SANS STOCKAGE (navigation privée stricte, quota plein) : le jeu marche quand même, sans mémoire,
+//     et le dit (« stockageDisponible »).
+//
+// Aucun classement en ligne : le projet n'a ni serveur ni comptes. Chaque record garde la version des
+// règles (REGLES_VERSION) : seuls les scores obtenus avec les mêmes règles sont comparables.
 
-import { EQUIPEMENT_DEPART, NIVEAUX, PIECES, scoreEtoile, type Condition, type Equipement, type Mode, type Piece } from './donnees';
+import { EQUIPEMENT_DEPART, NIVEAUX, PIECES, VEHICULES, VEHICULE_DEPART, scoreEtoile, type Condition, type Equipement, type Mode, type Piece, type Vehicule } from './donnees';
 import { ORDRE_DIFFICULTES, RANGS, REGLES_VERSION, type Difficulte } from './equilibrage';
 import type { Resultat } from './moteur';
 
-const CLE = 'portal-rush-2';
-const ANCIENNE = 'portal-rush-1';
+const CLE = 'portal-rush-3';
+const SECOURS = 'portal-rush-3-secours';
+const CORROMPUE = 'portal-rush-3-illisible';
+const V2 = 'portal-rush-2';
+const V1 = 'portal-rush-1';
+export const VERSION_SAUVEGARDE = 3;
 
 export interface RecordJeu {
   score: number;
@@ -30,9 +46,25 @@ export interface Reglages {
   secousses: boolean;
   aideCommandes: boolean;
   tactile: 'toucher' | 'glisser';
+  /** RUSH RADIO : joue-t-elle en entrant dans le jeu ? Son volume, sa sourdine, sa dernière piste. */
+  musique: boolean;
+  volumeMusique: number;
+  muet: boolean;
+  piste: string;
+  /** La séquence de fin de secteur : complète, ou courte (pour enchaîner). */
+  sequenceFin: 'complete' | 'courte';
+}
+/** Le tutoriel : jamais vu, commencé (la phase atteinte), terminé ou passé. Il ne se relance seul qu'à l'état « nouveau ». */
+export interface Tutoriel {
+  etat: 'nouveau' | 'commence' | 'termine' | 'passe';
+  phase: number;
+  date: string;
 }
 export interface Sauvegarde {
-  version: 2;
+  version: 3;
+  /** Augmente à chaque écriture : sert à détecter qu'un autre onglet a enregistré entre-temps. */
+  revision: number;
+  tutoriel: Tutoriel;
   /** Le dernier secteur débloqué (1 à 8). */
   niveauMax: number;
   /** Les secteurs réussis, par difficulté (clé « 3-expert »). */
@@ -50,14 +82,21 @@ export interface Sauvegarde {
   difficulte: Difficulte;
   debloques: string[];
   equipement: Equipement;
+  /** Les vaisseaux gagnés, et celui qui est choisi. */
+  vehicules: Vehicule['id'][];
+  vehicule: Vehicule['id'];
   reglages: Reglages;
+  /** D'où vient cette sauvegarde (0 : créée en v3 ; 1 ou 2 : migrée de cette version). */
+  origine: number;
 }
 
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 function vide(): Sauvegarde {
   return {
-    version: 2,
+    version: 3,
+    revision: 0,
+    tutoriel: { etat: 'nouveau', phase: 0, date: '' },
     niveauMax: 1,
     reussis: {},
     records: {},
@@ -70,84 +109,222 @@ function vide(): Sauvegarde {
     difficulte: 'as',
     debloques: PIECES.filter((p) => p.condition.type === 'depart').map((p) => p.id),
     equipement: { ...EQUIPEMENT_DEPART },
-    reglages: { volume: 1, effetsReduits: false, secousses: true, aideCommandes: true, tactile: 'toucher' },
+    vehicules: VEHICULES.filter((v) => v.condition.type === 'depart').map((v) => v.id),
+    vehicule: VEHICULE_DEPART,
+    reglages: { volume: 1, effetsReduits: false, secousses: true, aideCommandes: true, tactile: 'toucher', musique: true, volumeMusique: 0.6, muet: false, piste: '', sequenceFin: 'complete' },
+    origine: 0,
   };
 }
 
-export function charger(): Sauvegarde {
+/** Le stockage répond-il ? (Faux en navigation privée stricte, ou si le site n'a pas le droit d'écrire.) */
+export let stockageDisponible = true;
+
+function lireBrut(cle: string): { ok: true; valeur: unknown } | { ok: false; brut: string | null } {
+  let brut: string | null = null;
   try {
-    const lu = JSON.parse(localStorage.getItem(CLE) ?? 'null');
-    if (lu?.version === 2) {
-      const base = vide();
-      const s: Sauvegarde = { ...base, ...lu, totaux: { ...base.totaux, ...lu.totaux }, defi: { ...base.defi, ...lu.defi }, equipement: { ...base.equipement, ...lu.equipement }, reglages: { ...base.reglages, ...lu.reglages }, etoiles: { ...(lu.etoiles ?? {}) } };
-      // Un secteur réussi avant l'arrivée des étoiles garde au moins sa première étoile.
-      for (const cle of Object.keys(s.reussis)) if (!s.etoiles[cle]) s.etoiles[cle] = [true, false, false];
-      return normaliser(s);
-    }
-    // Une sauvegarde de la première version : on garde les secteurs débloqués et les records (règles 1).
-    const ancienne = JSON.parse(localStorage.getItem(ANCIENNE) ?? 'null');
-    const s = vide();
-    if (ancienne) {
-      s.niveauMax = Math.min(NIVEAUX.length, ancienne.niveauMax ?? 1);
-      for (const [cle, r] of Object.entries((ancienne.records ?? {}) as { [c: string]: { score: number; rang: string } })) s.records[cle] = { score: r.score, rang: r.rang, date: '', regles: 1 };
-    }
-    return normaliser(s);
+    brut = localStorage.getItem(cle);
   } catch {
-    return vide();
+    stockageDisponible = false;
+    return { ok: false, brut: null };
   }
+  if (brut === null) return { ok: true, valeur: null };
+  try {
+    return { ok: true, valeur: JSON.parse(brut) };
+  } catch {
+    return { ok: false, brut };
+  }
+}
+const objet = (v: unknown): Record<string, any> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, any>) : {});
+
+/** Une sauvegarde v2 (ou v3 lue telle quelle) : les champs communs sont repris, les nouveaux prennent leur valeur par défaut. */
+function depuisV2(lu: Record<string, any>): Sauvegarde {
+  const s = vide();
+  const base = { ...s, ...lu };
+  // Un secteur réussi avant l'arrivée des étoiles garde au moins sa première étoile.
+  const etoiles = { ...objet(lu.etoiles) };
+  for (const cle of Object.keys(objet(lu.reussis))) if (!etoiles[cle]) etoiles[cle] = [true, false, false];
+  return { ...base, etoiles, version: 3, origine: 2 } as Sauvegarde;
+}
+
+/** Une sauvegarde de la première version : on garde les secteurs débloqués et les records (règles 1). */
+function depuisV1(ancienne: Record<string, any>): Sauvegarde {
+  const s = vide();
+  s.niveauMax = Math.min(NIVEAUX.length, Number(ancienne.niveauMax) || 1);
+  for (const [cle, r] of Object.entries(objet(ancienne.records))) {
+    const v = objet(r);
+    if (typeof v.score === 'number') s.records[cle] = { score: v.score, rang: String(v.rang ?? 'C'), date: '', regles: 1 };
+  }
+  s.origine = 1;
+  return s;
+}
+
+/** Une sauvegarde tirée d'une valeur lue (n'importe quelle version), ou null si elle n'en est pas une. */
+function interpreter(valeur: unknown): Sauvegarde | null {
+  const lu = objet(valeur);
+  if (lu.version === 3) return normaliser({ ...depuisV2(lu), origine: Number(lu.origine) || 0, tutoriel: lu.tutoriel, vehicules: lu.vehicules, vehicule: lu.vehicule, revision: lu.revision } as Sauvegarde);
+  if (lu.version === 2) return normaliser(depuisV2(lu));
+  return null;
+}
+
+/**
+ * Charge la sauvegarde : la v3 ; sinon sa copie de secours (si la v3 est illisible, elle est mise de côté) ;
+ * sinon une v2 ou une v1 migrée ; sinon une sauvegarde neuve. Ne réinitialise jamais une progression lisible.
+ */
+export function charger(): Sauvegarde {
+  const principale = lireBrut(CLE);
+  if (!stockageDisponible) return vide();
+  if (principale.ok) {
+    const s = interpreter(principale.valeur);
+    if (s) return s;
+  } else if (principale.brut !== null) {
+    // Illisible : on la garde de côté (on ne détruit rien), puis on essaie la copie de secours.
+    try {
+      localStorage.setItem(CORROMPUE, principale.brut);
+    } catch {
+      // tant pis
+    }
+  }
+  const secours = lireBrut(SECOURS);
+  if (secours.ok) {
+    const s = interpreter(secours.valeur);
+    if (s) return s;
+  }
+  const v2 = lireBrut(V2);
+  if (v2.ok && objet(v2.valeur).version === 2) return interpreter(v2.valeur) ?? vide();
+  const v1 = lireBrut(V1);
+  if (v1.ok && v1.valeur) return normaliser(depuisV1(objet(v1.valeur)));
+  return vide();
 }
 
 /** Le stockage est une entrée non fiable : préserver les champs valides sans propager les types corrompus. */
 function normaliser(lu: Sauvegarde): Sauvegarde {
   const s = vide();
-  const objet = (v: unknown): Record<string, any> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, any> : {};
-  const nombre = (v: unknown, def = 0, max = Number.MAX_SAFE_INTEGER) => typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(max, v)) : def;
+  const nombre = (v: unknown, def = 0, max = Number.MAX_SAFE_INTEGER) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(max, v)) : def);
   const difficulte = (v: unknown): v is Difficulte => ORDRE_DIFFICULTES.includes(v as Difficulte);
-  const cleValide = (cle: string) => /^[1-8]-(pilote|as|expert|cauchemar)$/.test(cle);
-  const date = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
+  const cleValide = (cle: string) => {
+    const [n, d] = cle.split('-');
+    return /^[1-8]$/.test(n) && difficulte(d) && cle === `${n}-${d}`;
+  };
+  const date = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '');
+  s.revision = Math.floor(nombre(lu.revision));
+  s.origine = Math.floor(nombre(lu.origine, 0, 3));
+  const tu = objet(lu.tutoriel);
+  if (['nouveau', 'commence', 'termine', 'passe'].includes(tu.etat)) s.tutoriel = { etat: tu.etat, phase: Math.floor(nombre(tu.phase, 0, 9)), date: date(tu.date) };
+  // Un joueur qui a déjà joué (migration) n'a pas besoin du tutoriel automatique : il reste rejouable.
+  if (s.tutoriel.etat === 'nouveau' && (nombre(objet(lu.totaux).parties) > 0 || Object.keys(objet(lu.reussis)).length > 0)) s.tutoriel = { etat: 'passe', phase: 0, date: '' };
   s.niveauMax = Math.max(1, Math.floor(nombre(lu.niveauMax, 1, NIVEAUX.length)));
   if (difficulte(lu.difficulte)) s.difficulte = lu.difficulte;
-  for (const [cle,v] of Object.entries(objet(lu.reussis))) if (cleValide(cle) && v === true) s.reussis[cle] = true;
-  for (const [cle,v] of Object.entries(objet(lu.etoiles))) if (cleValide(cle) && Array.isArray(v)) s.etoiles[cle] = [v[0] === true,v[1] === true,v[2] === true];
+  for (const [cle, v] of Object.entries(objet(lu.reussis))) if (cleValide(cle) && v === true) s.reussis[cle] = true;
+  for (const [cle, v] of Object.entries(objet(lu.etoiles))) if (cleValide(cle) && Array.isArray(v)) s.etoiles[cle] = [v[0] === true, v[1] === true, v[2] === true];
   for (const cle of Object.keys(s.reussis)) {
-    s.etoiles[cle] ??= [true,false,false];
+    s.etoiles[cle] ??= [true, false, false];
     s.etoiles[cle][0] = true;
   }
-  for (const [cle,val] of Object.entries(objet(lu.records))) {
+  for (const [cle, val] of Object.entries(objet(lu.records))) {
     const v = objet(val);
-    if (cleValide(cle) && typeof v.score === 'number' && Number.isFinite(v.score) && v.score >= 0) s.records[cle] = {score:nombre(v.score),rang:RANGS.some(([r]) => r === v.rang) ? v.rang : 'C',date:date(v.date),regles:nombre(v.regles,1)};
+    if (cleValide(cle) && typeof v.score === 'number' && Number.isFinite(v.score) && v.score >= 0) s.records[cle] = { score: nombre(v.score), rang: RANGS.some(([r]) => r === v.rang) ? v.rang : 'C', date: date(v.date), regles: nombre(v.regles, 1) };
   }
-  for (const [cle,val] of Object.entries(objet(lu.infini))) {
+  for (const [cle, val] of Object.entries(objet(lu.infini))) {
     const v = objet(val);
-    if (difficulte(cle)) s.infini[cle] = {score:nombre(v.score),distance:nombre(v.distance),date:date(v.date),regles:nombre(v.regles,1)};
+    if (difficulte(cle)) s.infini[cle] = { score: nombre(v.score), distance: nombre(v.distance), date: date(v.date), regles: nombre(v.regles, 1) };
   }
-  for (const cle of Object.keys(s.defi) as (keyof Sauvegarde['defi'])[]) s.defi[cle] = nombre(objet(lu.defi)[cle],s.defi[cle]);
+  for (const cle of Object.keys(s.defi) as (keyof Sauvegarde['defi'])[]) s.defi[cle] = nombre(objet(lu.defi)[cle], s.defi[cle]);
   for (const cle of Object.keys(s.totaux)) {
     const v = objet(lu.totaux)[cle];
     if (cle === 'rangS') s.totaux.rangS = v === true;
-    else (s.totaux as unknown as Record<string,number>)[cle] = nombre(v,(s.totaux as unknown as Record<string,number>)[cle]);
+    else (s.totaux as unknown as Record<string, number>)[cle] = nombre(v, (s.totaux as unknown as Record<string, number>)[cle]);
   }
-  s.defisReussis = Array.isArray(lu.defisReussis) ? [...new Set(lu.defisReussis.filter(v => Number.isInteger(v) && v >= 20000101 && v <= 99991231))] : [];
-  s.debloques = [...new Set([...s.debloques,...(Array.isArray(lu.debloques) ? lu.debloques.filter(id => PIECES.some(p => p.id === id)) : [])])];
+  s.defisReussis = Array.isArray(lu.defisReussis) ? [...new Set(lu.defisReussis.filter((v) => Number.isInteger(v) && v >= 20000101 && v <= 99991231))] : [];
+  s.debloques = [...new Set([...s.debloques, ...(Array.isArray(lu.debloques) ? lu.debloques.filter((id) => PIECES.some((p) => p.id === id)) : [])])];
   for (const cle of Object.keys(s.equipement) as (keyof Equipement)[]) {
     const id = objet(lu.equipement)[cle];
-    if (s.debloques.includes(id) && PIECES.some(p => p.id === id && p.emplacement === cle)) s.equipement[cle] = id;
+    if (s.debloques.includes(id) && PIECES.some((p) => p.id === id && p.emplacement === cle)) s.equipement[cle] = id;
   }
+  s.vehicules = [...new Set([...s.vehicules, ...(Array.isArray(lu.vehicules) ? lu.vehicules.filter((id) => VEHICULES.some((v) => v.id === id)) : [])])];
+  if (s.vehicules.includes(lu.vehicule)) s.vehicule = lu.vehicule;
   const r = objet(lu.reglages);
-  s.reglages.volume = nombre(r.volume,1,1);
-  for (const cle of ['effetsReduits','secousses','aideCommandes'] as const) if (typeof r[cle] === 'boolean') s.reglages[cle] = r[cle];
+  s.reglages.volume = nombre(r.volume, 1, 1);
+  s.reglages.volumeMusique = nombre(r.volumeMusique, s.reglages.volumeMusique, 1);
+  for (const cle of ['effetsReduits', 'secousses', 'aideCommandes', 'musique', 'muet'] as const) if (typeof r[cle] === 'boolean') s.reglages[cle] = r[cle];
   if (r.tactile === 'glisser') s.reglages.tactile = r.tactile;
+  if (r.sequenceFin === 'courte') s.reglages.sequenceFin = 'courte';
+  if (typeof r.piste === 'string' && r.piste.length < 40) s.reglages.piste = r.piste;
   const d = objet(lu.derniere);
-  if (['campagne','infini','defi'].includes(d.mode) && difficulte(d.difficulte)) s.derniere = {mode:d.mode,difficulte:d.difficulte,niveau:Math.max(1,Math.floor(nombre(d.niveau,1,NIVEAUX.length)))};
+  if (['campagne', 'infini', 'defi'].includes(d.mode) && difficulte(d.difficulte)) s.derniere = { mode: d.mode, difficulte: d.difficulte, niveau: Math.max(1, Math.floor(nombre(d.niveau, 1, NIVEAUX.length))) };
+  // (Les vaisseaux dont la condition est déjà remplie — une progression migrée — sont gagnés tout de suite.)
+  for (const v of VEHICULES) if (!s.vehicules.includes(v.id) && avancement(s, v.condition).faite) s.vehicules.push(v.id);
   return s;
 }
 
-export function enregistrer(s: Sauvegarde): void {
-  try {
-    localStorage.setItem(CLE, JSON.stringify(s));
-  } catch {
-    // stockage indisponible : la partie n'est pas mémorisée
+const RANG_ORDRE = (r: string) => {
+  const i = RANGS.findIndex(([x]) => x === r);
+  return i < 0 ? RANGS.length : i;
+};
+
+/**
+ * Fusionne deux progressions (deux onglets ont joué en même temps) : le meilleur de chacune. Rien ne
+ * recule : secteurs, étoiles, records, pièces et vaisseaux s'additionnent ; les cumuls prennent le plus grand.
+ */
+export function fusionner(a: Sauvegarde, b: Sauvegarde): Sauvegarde {
+  // La plus récente sert de base (réglages, équipement, vaisseau choisi) ; l'autre y apporte ses progrès.
+  const [recente, o] = a.revision >= b.revision ? [a, b] : [b, a];
+  const s: Sauvegarde = structuredClone(recente);
+  s.niveauMax = Math.max(a.niveauMax, b.niveauMax);
+  for (const cle of Object.keys(o.reussis)) s.reussis[cle] = true;
+  for (const [cle, e] of Object.entries(o.etoiles)) s.etoiles[cle] = (s.etoiles[cle] ?? [false, false, false]).map((x, i) => x || e[i]) as [boolean, boolean, boolean];
+  for (const [cle, r] of Object.entries(o.records)) {
+    const m = s.records[cle];
+    if (!m || r.score > m.score) s.records[cle] = { ...r, rang: m && RANG_ORDRE(m.rang) < RANG_ORDRE(r.rang) ? m.rang : r.rang };
   }
+  for (const [d, r] of Object.entries(o.infini)) if (!s.infini[d] || r.score > s.infini[d].score) s.infini[d] = { ...r, distance: Math.max(r.distance, s.infini[d]?.distance ?? 0) };
+  if (o.defi.date > s.defi.date) s.defi = { ...o.defi };
+  else if (o.defi.date === s.defi.date) s.defi.meilleur = Math.max(s.defi.meilleur, o.defi.meilleur);
+  s.defisReussis = [...new Set([...s.defisReussis, ...o.defisReussis])];
+  for (const cle of Object.keys(s.totaux) as (keyof Sauvegarde['totaux'])[]) {
+    if (cle === 'rangS') s.totaux.rangS = a.totaux.rangS || b.totaux.rangS;
+    else (s.totaux as unknown as Record<string, number>)[cle] = Math.max(a.totaux[cle] as number, b.totaux[cle] as number);
+  }
+  s.debloques = [...new Set([...s.debloques, ...o.debloques])];
+  s.vehicules = [...new Set([...s.vehicules, ...o.vehicules])];
+  const fini = (t: Tutoriel) => t.etat === 'termine' || t.etat === 'passe';
+  if (!fini(s.tutoriel) && fini(o.tutoriel)) s.tutoriel = { ...o.tutoriel };
+  s.revision = Math.max(a.revision, b.revision);
+  return s;
+}
+
+/**
+ * Enregistre la sauvegarde. Si un autre onglet a écrit une révision plus récente entre-temps, les deux
+ * progressions sont fusionnées (et la sauvegarde en mémoire est mise à jour). La version précédente est
+ * gardée en copie de secours.
+ */
+export function enregistrer(s: Sauvegarde): void {
+  if (!stockageDisponible) return;
+  try {
+    const actuel = lireBrut(CLE);
+    let aEcrire = s;
+    if (actuel.ok && actuel.valeur) {
+      const disque = interpreter(actuel.valeur);
+      if (disque && disque.revision > s.revision) {
+        aEcrire = fusionner(s, disque);
+        Object.assign(s, aEcrire);
+      }
+      // La version qui était sur le disque devient la copie de secours.
+      if (disque) localStorage.setItem(SECOURS, JSON.stringify(disque));
+    }
+    s.revision = aEcrire.revision + 1;
+    aEcrire.revision = s.revision;
+    localStorage.setItem(CLE, JSON.stringify(aEcrire));
+  } catch {
+    // stockage indisponible ou plein : la partie n'est pas mémorisée cette fois
+    stockageDisponible = false;
+  }
+}
+
+/** Le tutoriel doit-il se lancer seul ? Une seule fois par profil : ni terminé ni passé. */
+export const tutorielAFaire = (s: Sauvegarde) => s.tutoriel.etat === 'nouveau' || s.tutoriel.etat === 'commence';
+export function noterTutoriel(s: Sauvegarde, etat: Tutoriel['etat'], phase = s.tutoriel.phase): void {
+  s.tutoriel = { etat, phase, date: aujourdhui() };
+  enregistrer(s);
 }
 
 /** Vrai si le rang « a » est meilleur que « b ». */
@@ -216,11 +393,12 @@ export interface Bilan {
   niveauDebloque: number | null;
   cauchemarDebloque: boolean;
   pieces: string[];
+  vehicules: string[];
 }
 
 /** Range le résultat d'une partie : records, secteurs, statistiques, pièces. Renvoie ce qui est nouveau. */
 export function ranger(s: Sauvegarde, mode: Mode, difficulte: Difficulte, niveauId: number, r: Resultat, graine: number): Bilan {
-  const bilan: Bilan = { etoiles: null, nouvellesEtoiles: [], record: false, ancienRecord: 0, niveauDebloque: null, cauchemarDebloque: false, pieces: [] };
+  const bilan: Bilan = { etoiles: null, nouvellesEtoiles: [], record: false, ancienRecord: 0, niveauDebloque: null, cauchemarDebloque: false, pieces: [], vehicules: [] };
   const cauchemarAvant = cauchemarOuvert(s);
   const t = s.totaux;
   t.parties++;
@@ -285,6 +463,14 @@ export function ranger(s: Sauvegarde, mode: Mode, difficulte: Difficulte, niveau
     if (avancement(s, piece.condition).faite) {
       s.debloques.push(piece.id);
       bilan.pieces.push(piece.id);
+    }
+  }
+  // Les vaisseaux dont la condition vient d'être remplie.
+  for (const v of VEHICULES) {
+    if (s.vehicules.includes(v.id)) continue;
+    if (avancement(s, v.condition).faite) {
+      s.vehicules.push(v.id);
+      bilan.vehicules.push(v.id);
     }
   }
   bilan.cauchemarDebloque = !cauchemarAvant && cauchemarOuvert(s);

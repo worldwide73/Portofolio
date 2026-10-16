@@ -1,3 +1,20 @@
+## Portal Rush V4 et le son (16 octobre 2026, en cours)
+
+| Demande | État | Preuve |
+|---|---|---|
+| Icône casque juste à côté du drapeau (bureau et téléphone), même style, boutons inchangés | V | recette `portal-rush-v4.mjs` (positions, tailles, écarts) + captures |
+| Lecteur DREAM RADIO complet (titre, artiste, liste, lecture, précédente/suivante, volume, progression, sourdine) | V | recette + captures |
+| Musique coupée au lancement, jamais de lecture automatique | V | recette (au chargement, après 3 s, anciens réglages « musique activée ») |
+| Fermer le lecteur n'arrête pas la musique ; elle continue entre destinations | V | recette |
+| Atténuation 10–25 % sur de vrais effets, seulement effets activés, sans pompage | V (mesurée, pas écoutée) | recette (carte : −18 %, remontée ; effets coupés : 0) |
+| Ambiances et musique retirées des réglages ; effets activés par défaut | V | recette (page Son) |
+| Morceaux légaux, crédités, licences vérifiées | V | `public/audio/CREDITS.txt`, `docs/AUDIO.md` (AUTHORS.txt de Pioneer, historique git, README Kenney) |
+| Une seule bande-son (DREAM suspendue dans Rush, reprise seulement si elle jouait) | V | recette (deux cas) |
+| Sauvegarde versionnée, migration sans perte, corruption, secours, fusion, sans stockage | V | recette (5 contrôles) |
+| RUSH RADIO : lecteur du menu, musique adaptative | À faire | — |
+| Entrée cinématique, tunnel 3D, tutoriel | À faire | — |
+| Gameplay V4, interface AAA | À faire | — |
+
 ## Retours du 16 octobre 2026 (4ᵉ lot) — remplacent la ligne « Animation du portail = celle de l'accueil » du 2ᵉ lot
 
 | Demande | État | Preuve |

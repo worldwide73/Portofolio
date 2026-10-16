@@ -1,0 +1,581 @@
+/* ==========================================================================
+   DREAM RADIO (16 octobre 2026) : l'icône casque de la barre, et le lecteur
+   en verre qu'elle ouvre (src/scripts/audio/dream.ts).
+   ========================================================================== */
+
+/* ---- L'icône : la même pastille ronde que le drapeau, juste à côté ---- */
+.radio-bouton {
+  position: relative;
+}
+
+/* (Le casque ne tourne pas au survol, comme les autres icônes : il s'incline à peine.) */
+.pastille--ronde.radio-bouton:hover svg {
+  transform: translateY(-1px) scale(1.06);
+}
+
+/* Trois ondes, en bas à droite de l'icône, quand la musique joue. */
+.radio-bouton__ondes {
+  position: absolute;
+  right: 5px;
+  bottom: 6px;
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 8px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.3s var(--c-douce),
+    transform 0.4s var(--c-ressort);
+  pointer-events: none;
+}
+
+.radio-bouton__ondes i,
+.dream__ondes i {
+  display: block;
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--lampe);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 6px) rgba(98, 217, 255, 0.8);
+  transform-origin: bottom;
+  animation: dream-onde 0.9s ease-in-out infinite;
+}
+
+.radio-bouton__ondes i:nth-child(2),
+.dream__ondes i:nth-child(2) {
+  animation-delay: -0.3s;
+  animation-duration: 0.75s;
+}
+
+.radio-bouton__ondes i:nth-child(3),
+.dream__ondes i:nth-child(3) {
+  animation-delay: -0.55s;
+  animation-duration: 1.05s;
+}
+
+@keyframes dream-onde {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.radio-bouton[data-lecture='true'] .radio-bouton__ondes {
+  opacity: 1;
+  transform: none;
+}
+
+.radio-bouton[data-lecture='true'] svg {
+  color: var(--lampe);
+}
+
+/* Venu d'une page où la musique jouait : un point lumineux propose de reprendre. */
+.radio-bouton[data-reprise='true']::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lampe);
+  box-shadow: 0 0 8px rgba(98, 217, 255, 0.9);
+}
+
+/* ---- Le lecteur ---- */
+.dream {
+  position: fixed;
+  inset: auto;
+  top: calc(var(--marge-cadre) + var(--barre-h) + 2px);
+  right: calc(var(--marge-cadre) + clamp(12px, 1.9vw, 30px));
+  width: min(23.5rem, calc(100vw - 16px));
+  max-height: calc(100svh - var(--barre-h) - 3 * var(--marge-cadre));
+  margin: 0;
+  padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--filet-fort);
+  border-radius: calc(var(--rayon-carte) * 1.25);
+  background:
+    radial-gradient(120% 70% at 100% 0%, rgba(140, 110, 255, 0.12), transparent 60%),
+    radial-gradient(100% 60% at 0% 100%, rgba(98, 217, 255, 0.1), transparent 65%),
+    color-mix(in srgb, var(--fond) 80%, transparent);
+  -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  backdrop-filter: blur(30px) saturate(1.4);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 calc(var(--lueur, 0.7) * 50px) rgba(98, 217, 255, calc(var(--lueur, 0.7) * 0.08));
+  color: var(--texte);
+  scrollbar-width: thin;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.985);
+  transform-origin: top right;
+  transition:
+    opacity 0.28s var(--c-douce),
+    transform 0.5s var(--c-masque),
+    display 0.28s allow-discrete,
+    overlay 0.28s allow-discrete;
+}
+
+.dream:popover-open {
+  display: grid;
+  gap: 12px;
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .dream:popover-open {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+
+.dream__tete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dream__marque {
+  display: grid;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  color: var(--discret);
+}
+
+.dream__marque b {
+  display: contents;
+  font-weight: 600;
+  color: var(--texte);
+}
+
+.dream__marque small {
+  margin-top: 3px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: var(--discret);
+}
+
+.dream__fermer {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--filet);
+  border-radius: 50%;
+  background: none;
+  color: var(--discret);
+  cursor: pointer;
+  transition:
+    color var(--d-micro) var(--c-douce),
+    border-color var(--d-micro) var(--c-douce);
+}
+
+.dream__fermer svg {
+  width: 13px;
+  height: 13px;
+}
+
+.dream__fermer:hover {
+  border-color: var(--filet-fort);
+  color: var(--texte);
+}
+
+/* La scène : le spectre de la musique derrière le titre en cours. */
+.dream__scene {
+  position: relative;
+  display: grid;
+  align-items: end;
+  min-height: 96px;
+  padding: 12px 14px;
+  overflow: hidden;
+  border: 1px solid var(--filet);
+  border-radius: 14px;
+  background:
+    radial-gradient(90% 120% at 15% 110%, rgba(98, 217, 255, 0.16), transparent 60%),
+    radial-gradient(80% 120% at 95% -10%, rgba(170, 130, 255, 0.16), transparent 62%),
+    rgba(5, 8, 16, 0.35);
+}
+
+.dream__spectre {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.55;
+}
+
+.dream__titres {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dream__titres p {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dream__titre {
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.dream__artiste {
+  font-size: 0.8125rem;
+  color: color-mix(in srgb, var(--texte) 82%, transparent);
+}
+
+.dream__licence {
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--discret);
+}
+
+/* La position dans le morceau, et le volume. */
+.dream__temps,
+.dream__volume {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--discret);
+}
+
+.dream__temps span {
+  min-width: 2.6em;
+}
+
+.dream__temps span:last-child,
+.dream__volume output {
+  text-align: right;
+}
+
+.dream__volume output {
+  min-width: 3em;
+  color: var(--texte);
+}
+
+.dream__curseur {
+  --v: 0%;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  background: none;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.dream__curseur::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #62d9ff, #b4a0ff var(--v), rgba(200, 222, 255, 0.18) var(--v));
+}
+
+.dream__curseur::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #62d9ff, #b4a0ff var(--v), rgba(200, 222, 255, 0.18) var(--v));
+}
+
+.dream__curseur::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(98, 217, 255, 0.8);
+  appearance: none;
+  -webkit-appearance: none;
+  transition: transform var(--d-micro) var(--c-ressort);
+}
+
+.dream__curseur::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(98, 217, 255, 0.8);
+}
+
+.dream__curseur:hover::-webkit-slider-thumb,
+.dream__curseur:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+
+.dream__curseur:focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Les commandes : précédente, lecture, suivante. */
+.dream__commandes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.dream__rond,
+.dream__lecture,
+.dream__muet {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    transform var(--d-micro) var(--c-ressort),
+    background var(--d-micro) var(--c-douce),
+    border-color var(--d-micro) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce);
+}
+
+.dream__rond {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--filet);
+  background: color-mix(in srgb, var(--texte) 5%, transparent);
+  color: var(--texte);
+}
+
+.dream__rond svg {
+  width: 15px;
+  height: 15px;
+}
+
+.dream__rond:hover {
+  border-color: var(--filet-fort);
+  background: color-mix(in srgb, var(--texte) 10%, transparent);
+}
+
+.dream__lecture {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  background: var(--texte);
+  color: var(--fond);
+  box-shadow: 0 0 0 0 rgba(98, 217, 255, 0);
+}
+
+.dream__lecture svg {
+  width: 20px;
+  height: 20px;
+}
+
+.dream__lecture:hover {
+  transform: scale(1.05);
+}
+
+.dream__rond:active,
+.dream__lecture:active {
+  transform: scale(0.94);
+}
+
+.dream__icone-pause,
+.dream__lecture[aria-pressed='true'] .dream__icone-lire {
+  display: none;
+}
+
+.dream__lecture[aria-pressed='true'] .dream__icone-pause {
+  display: block;
+}
+
+.dream__lecture[aria-pressed='true'] {
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 26px) rgba(98, 217, 255, 0.45);
+}
+
+.dream__muet {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: none;
+  color: var(--texte);
+}
+
+.dream__muet svg {
+  width: 17px;
+  height: 17px;
+}
+
+.dream__barre,
+.dream[data-muet='true'] .dream__onde {
+  display: none;
+}
+
+.dream[data-muet='true'] .dream__barre {
+  display: inline;
+}
+
+.dream :is(button, summary, a):focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.dream__etat {
+  min-height: 0;
+  margin: -4px 0 0;
+  font-size: 0.75rem;
+  color: var(--lampe);
+}
+
+.dream__etat:empty {
+  display: none;
+}
+
+/* La liste des pistes. */
+.dream__liste {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 6px 0 0;
+  border-top: 1px solid var(--filet);
+  list-style: none;
+}
+
+.dream__liste button {
+  display: grid;
+  grid-template-columns: 1.7rem 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: var(--texte);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--d-micro) var(--c-douce),
+    border-color var(--d-micro) var(--c-douce);
+}
+
+.dream__liste button:hover {
+  background: color-mix(in srgb, var(--texte) 6%, transparent);
+}
+
+.dream__liste .est-courante button {
+  border-color: var(--filet);
+  background: color-mix(in srgb, var(--texte) 8%, transparent);
+}
+
+.dream__numero,
+.dream__longueur {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--discret);
+}
+
+.dream__piste {
+  display: grid;
+  min-width: 0;
+}
+
+.dream__piste b,
+.dream__piste small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dream__piste b {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dream__piste small {
+  font-size: 0.6875rem;
+  color: var(--discret);
+}
+
+.dream__ondes {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 10px;
+  opacity: 0;
+}
+
+.dream__liste .est-jouee .dream__ondes {
+  opacity: 1;
+}
+
+.dream__liste .est-courante .dream__numero {
+  color: var(--lampe);
+}
+
+.dream__note,
+.dream__credits {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--discret);
+}
+
+.dream__credits summary {
+  cursor: pointer;
+  color: color-mix(in srgb, var(--texte) 80%, transparent);
+}
+
+.dream__credits p {
+  margin: 6px 0;
+}
+
+.dream__credits a {
+  color: var(--lampe);
+}
+
+/* ---- Téléphone : le lecteur monte du bas de l'écran ---- */
+@media (max-width: 860px) {
+  .dream {
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    max-height: min(82svh, 640px);
+    transform-origin: bottom center;
+  }
+
+  .dream:popover-open {
+    transform: none;
+  }
+
+  @starting-style {
+    .dream:popover-open {
+      transform: translateY(16px);
+    }
+  }
+}
+
+/* ---- Mouvement réduit : rien ne bouge ---- */
+@media (prefers-reduced-motion: reduce) {
+  .radio-bouton__ondes i,
+  .dream__ondes i {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+}
+
+html.animations-coupees :is(.radio-bouton__ondes, .dream__ondes) i {
+  animation: none;
+  transform: scaleY(0.7);
+}

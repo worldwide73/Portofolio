@@ -25,6 +25,8 @@ import { revenirAccueil } from '../voyage';
 import { mouvementReduit } from '../outils';
 import { regler, reglages as reglagesSite } from '../reglages';
 import { reglerVolumeRush, sonRush } from '../sons';
+import { dreamRadio } from '../audio/dream';
+import { creerRushRadio } from '../audio/rush-radio';
 import { NIVEAUX, PIECES, graineDuJour, scoreEtoile, type Condition, type Difficulte, type Mode, type Objectif, type Theme } from './donnees';
 import { ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from './equilibrage';
 import { Partie, type ObjectifAtteint } from './moteur';
@@ -74,6 +76,16 @@ export function initRush(): void {
   const rendu = new Proxy({} as RenduJeu, { get: (_, cle: keyof RenduJeu) => (scene ?? attente)[cle] });
 
   let s: Sauvegarde = charger();
+  // RUSH RADIO : ses préférences (piste, volume, sourdine) vivent dans la sauvegarde du jeu.
+  const rushRadio = creerRushRadio({
+    lire: () => ({ piste: s.reglages.piste, volume: s.reglages.volumeMusique, muet: s.reglages.muet }),
+    ecrire: (p) => {
+      s.reglages.piste = p.piste;
+      s.reglages.volumeMusique = p.volume;
+      s.reglages.muet = p.muet;
+      enregistrer(s);
+    },
+  });
   let partie: Partie | null = null;
   let enPause = false;
   let compte = 0; // le compte à rebours avant le départ, ou avant la reprise (s)
@@ -518,9 +530,9 @@ export function initRush(): void {
     v('volume').value = String(Math.round(s.reglages.volume * 100));
     $('[data-sortie="volume"]').textContent = `${Math.round(s.reglages.volume * 100)} %`;
     v('sons').checked = reglagesSite.sons;
-    v('musique').checked = reglagesSite.musique;
-    v('volumeMusique').value = String(Math.round(reglagesSite.volumeMusique * 100));
-    $('[data-sortie="volumeMusique"]').textContent = `${Math.round(reglagesSite.volumeMusique * 100)} %`;
+    v('musique').checked = s.reglages.musique;
+    v('volumeMusique').value = String(Math.round(s.reglages.volumeMusique * 100));
+    $('[data-sortie="volumeMusique"]').textContent = `${Math.round(s.reglages.volumeMusique * 100)} %`;
     $$<HTMLInputElement>('[data-reglage="animations"]').forEach((r) => (r.checked = Number(r.value) === reglagesSite.animations));
     v('effetsReduits').checked = s.reglages.effetsReduits;
     v('secousses').checked = s.reglages.secousses;
@@ -1122,6 +1134,11 @@ export function initRush(): void {
       return;
     }
     void chargerScene();
+    // La musique : DREAM RADIO s'efface (sa position est gardée), RUSH RADIO prend le relais si le joueur la veut.
+    dreamRadio.suspendre();
+    s = charger();
+    rushRadio.relirePreferences();
+    if (s.reglages.musique) window.setTimeout(() => fenetre.open && rushRadio.jouer(), animationsCoupees() ? 100 : 700);
     const icone = document.querySelector<HTMLElement>('.jeu-bouton');
     icone?.classList.add('est-lance');
     window.setTimeout(() => icone?.classList.remove('est-lance'), 700);
@@ -1328,6 +1345,9 @@ export function initRush(): void {
     echap();
   });
   fenetre.addEventListener('close', () => {
+    // Le son du jeu s'arrête ; DREAM RADIO reprend seulement si elle jouait avant l'entrée.
+    rushRadio.arreter();
+    dreamRadio.reprendreSiSuspendue();
     cancelAnimationFrame(boucle);
     boucle = 0;
     partie = null;
@@ -1501,8 +1521,12 @@ export function initRush(): void {
     }
     const cle = champ.dataset.reglage;
     if (!cle) return;
-    if (cle === 'musique') regler('musique', champ.checked);
-    else if (cle === 'sons') regler('sons', champ.checked);
+    if (cle === 'musique') {
+      // RUSH RADIO : la coupe ou la relance tout de suite, et s'en souvient pour les prochaines entrées.
+      s.reglages.musique = champ.checked;
+      if (champ.checked) rushRadio.jouer();
+      else rushRadio.pauser();
+    } else if (cle === 'sons') regler('sons', champ.checked);
     else if (cle === 'animations') regler('animations', Number(champ.value));
     else if (cle === 'tactile') s.reglages.tactile = champ.value as 'toucher' | 'glisser';
     else if (cle === 'effetsReduits' || cle === 'secousses' || cle === 'aideCommandes') s.reglages[cle] = champ.checked;
@@ -1521,10 +1545,18 @@ export function initRush(): void {
       peindreCurseur(champ);
       sonRush('fragment');
     } else if (champ.dataset.reglage === 'volumeMusique') {
-      regler('volumeMusique', Number(champ.value) / 100);
+      rushRadio.reglerVolume(Number(champ.value) / 100);
       $('[data-sortie="volumeMusique"]').textContent = `${champ.value} %`;
       peindreCurseur(champ);
     }
+  });
+
+  // Un autre onglet a enregistré : hors partie, on relit la sauvegarde (rien n'est écrasé : voir sauvegarde.ts).
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'portal-rush-3' || partie) return;
+    s = charger();
+    rushRadio.relirePreferences();
+    rafraichir();
   });
 
   // Onglet masqué, fenêtre quittée : pause.

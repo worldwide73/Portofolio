@@ -1,67 +1,24 @@
-// LES SONS : tout est fabriqué ici, à la volée, avec la Web Audio API.
-// Aucun fichier audio : chaque son est construit à partir de briques simples.
+// LES EFFETS SONORES : tout est fabriqué ici, à la volée, avec la Web Audio API.
+// Chaque son est construit à partir de briques simples :
 //   - un « oscillateur » produit une note pure (onde sinus, en dents de scie…) ;
 //   - un « bruit » est un souffle, comme le vent ou une radio entre deux stations ;
 //   - un « filtre » ne laisse passer que les graves ou que les aigus ;
 //   - un « gain » règle le volume, et son évolution dans le temps s'appelle une « enveloppe ».
 //
 // Règles :
-//   - le son est actif d'office, à faible volume (effets 8 %, musique 2 %) ; le visiteur
-//     règle ou coupe tout dans le panneau. Un navigateur ne laisse rien jouer avant le
-//     premier clic ou la première touche : le son part à ce moment-là au plus tard ;
+//   - les effets sont actifs d'office, à faible volume (8 %) ; le visiteur les règle ou les coupe dans le
+//     panneau (page Son). Un navigateur ne laisse rien jouer avant le premier clic ou la première touche ;
 //   - les sons suivent les changements de section (voyage.ts), le portail (champ.ts) et sa carte (explorateur.ts) ;
 //   - un son en cours est coupé en fondu si l'animation est annulée ;
-//   - la musique d'ambiance est générée elle aussi : trois pistes, au choix du visiteur.
+//   - le moteur et ses canaux sont communs (audio/moteur.ts). La musique n'est plus ici : elle est dans
+//     DREAM RADIO (audio/dream.ts) et RUSH RADIO. Les grands effets (le portail qui se brise, la carte
+//     qui s'ouvre, une traversée) baissent la musique un instant, s'ils jouent vraiment.
 
-import { AMBIANCES, type Piste } from './ambiances';
+import { attenuerMusique, bruitBlanc, canalEffets, canalIntro, contexte, contexteExistant } from './audio/moteur';
 import { reglages, surReglage } from './reglages';
 import { surEtape, type Mode } from './voyage';
 
-let ctx: AudioContext | null = null;
-let sortieEffets: GainNode | null = null;
-let sortieMusique: GainNode | null = null;
-/** La sortie des sons de la première introduction : 5 %, quels que soient les réglages (voir sonIntro). */
-let sortieIntro: GainNode | null = null;
 let forcerIntro = false;
-const VOLUME_INTRO = 0.05;
-let bruitBlanc: AudioBuffer | null = null;
-
-// Les volumes : celui choisi par le visiteur, modulé par l'ambiance (les effets
-// sont plus discrets en Chill et en Focus, par exemple).
-const volumeEffets = () => reglages.volumeSons * AMBIANCES[reglages.atmosphere].effets;
-const volumeMusique = () => reglages.volumeMusique * 0.5 * AMBIANCES[reglages.atmosphere].musique;
-
-/** Crée le moteur audio au premier besoin. Les navigateurs exigent un geste du visiteur avant. */
-function moteur(): AudioContext | null {
-  if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume();
-    return ctx;
-  }
-  const Classe = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Classe) return null;
-  ctx = new Classe();
-  // Dès que le navigateur autorise le son (ou le suspend), la musique s'accorde.
-  ctx.addEventListener('statechange', accorderMusique);
-  // Un limiteur en bout de chaîne : aucun son ne peut saturer, même superposé à un autre.
-  const limiteur = ctx.createDynamicsCompressor();
-  limiteur.threshold.value = -14;
-  limiteur.ratio.value = 6;
-  limiteur.connect(ctx.destination);
-  sortieEffets = ctx.createGain();
-  sortieEffets.gain.value = volumeEffets();
-  sortieEffets.connect(limiteur);
-  sortieMusique = ctx.createGain();
-  sortieMusique.gain.value = volumeMusique();
-  sortieMusique.connect(limiteur);
-  sortieIntro = ctx.createGain();
-  sortieIntro.gain.value = VOLUME_INTRO;
-  sortieIntro.connect(limiteur);
-  // Deux secondes de bruit blanc, réutilisées par tous les souffles.
-  bruitBlanc = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-  const donnees = bruitBlanc.getChannelData(0);
-  for (let i = 0; i < donnees.length; i++) donnees[i] = Math.random() * 2 - 1;
-  return ctx;
-}
 
 // ---- Les sons en cours, pour pouvoir les couper proprement ----
 const enCours = new Set<GainNode>();
@@ -69,10 +26,10 @@ const enCours = new Set<GainNode>();
 /** Ouvre une « piste » : un gain relié à la sortie, qui se retire tout seul à la fin. */
 function piste(duree: number): { c: AudioContext; g: GainNode; t: number } | null {
   if (!reglages.sons && !forcerIntro) return null;
-  const c = moteur();
+  const c = contexte();
   // Tant que le navigateur n'a pas autorisé le son (aucun geste du visiteur), on
   // ne programme rien : les sons s'entasseraient et partiraient tous au premier clic.
-  const sortie = forcerIntro ? sortieIntro : sortieEffets;
+  const sortie = forcerIntro ? canalIntro() : canalEffets();
   if (!c || !sortie || c.state !== 'running') return null;
   const g = c.createGain();
   g.gain.value = 0;
@@ -87,6 +44,7 @@ function piste(duree: number): { c: AudioContext; g: GainNode; t: number } | nul
 
 /** Coupe en fondu tous les effets en cours (animation annulée, sons désactivés). */
 export function couperEffets(): void {
+  const ctx = contexte();
   if (!ctx) return;
   const t = ctx.currentTime;
   enCours.forEach((g) => {
@@ -106,7 +64,7 @@ function oscillateur(c: AudioContext, type: OscillatorType, vers: AudioNode, deb
 
 function souffle(c: AudioContext, vers: AudioNode, debut: number, fin: number): { filtre: BiquadFilterNode; source: AudioBufferSourceNode } {
   const source = c.createBufferSource();
-  source.buffer = bruitBlanc;
+  source.buffer = bruitBlanc();
   source.loop = true;
   const filtre = c.createBiquadFilter();
   filtre.type = 'bandpass';
@@ -125,6 +83,7 @@ function sonVoyage(mode: Mode | 'origine', duree: number): void {
   const p = piste(duree);
   if (!p) return;
   const { c, g, t } = p;
+  if (!forcerIntro) attenuerMusique(0.2, duree * 0.9);
   const fin = t + duree;
   const retour = mode === 'retour';
   const origine = mode === 'origine';
@@ -227,6 +186,7 @@ function sonRupture(): void {
   const p = piste(0.9);
   if (!p) return;
   const { c, g, t } = p;
+  attenuerMusique(0.24, 1.1);
   g.gain.setValueAtTime(0.9, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
   const coup = oscillateur(c, 'sine', g, t, t + 0.5);
@@ -320,6 +280,7 @@ function sonCarte(): void {
   const p = piste(0.8);
   if (!p) return;
   const { c, g, t } = p;
+  attenuerMusique(0.18, 0.9);
   g.gain.setValueAtTime(1, t);
   [660, 990, 1320].forEach((frequence, i) => note(c, g, frequence, t + i * 0.06, 0.5, 0.08));
   const vol = c.createGain();
@@ -532,7 +493,9 @@ export function sonEntree(): void {
  */
 let enAttente: 'eveil' | 'entree' | null = null;
 export function sonIntro(quoi: 'eveil' | 'entree'): void {
-  const c = moteur();
+  // (La case « Son de l'introduction » du panneau, décochée : le site s'ouvre en silence.)
+  if (!reglages.sonAuLancement) return;
+  const c = contexte();
   if (!c) return;
   if (c.state !== 'running') {
     enAttente = quoi;
@@ -549,7 +512,7 @@ export function sonIntro(quoi: 'eveil' | 'entree'): void {
 }
 /** Pendant l'introduction, le premier geste réveille le son (même si les effets sont coupés). */
 export function preparerSonIntro(): () => void {
-  moteur();
+  const ctx = contexte();
   const debloquer = () => {
     if (!ctx || ctx.state === 'running') return;
     void ctx.resume().then(() => {
@@ -573,216 +536,6 @@ export function bip(frequence: number, duree = 0.2): void {
   g.gain.linearRampToValueAtTime(0.22, t + 0.012);
   g.gain.exponentialRampToValueAtTime(0.001, t + duree);
   oscillateur(c, 'triangle', g, t, t + duree).frequency.setValueAtTime(frequence, t);
-}
-
-// ---- La musique d'ambiance : trois pistes, toutes fabriquées ici ----
-// Aucun fichier audio : chaque piste est une petite partition jouée par des
-// oscillateurs. Une piste reçoit le moteur et sa sortie ; elle renvoie la
-// fonction qui l'arrête. Pour ajouter un vrai morceau enregistré, il faudrait
-// un fichier (dans public/audio/) dont la licence autorise la diffusion, et
-// une quatrième entrée dans PISTES qui le lit avec un élément <audio>.
-type Arret = () => void;
-
-/** La fréquence d'une note, d'après son numéro (69 = le la du diapason, 440 Hz). */
-const hauteur = (numero: number) => 440 * 2 ** ((numero - 69) / 12);
-
-/**
- * Appelle « jouer » en boucle, un peu en avance sur l'horloge audio : c'est
- * ainsi qu'on tient un rythme régulier, même si la page est occupée ailleurs.
- * « pas » donne le temps (en secondes) jusqu'à l'appel suivant.
- */
-function programmer(c: AudioContext, pas: () => number, jouer: (quand: number, numero: number) => void): Arret {
-  let prochain = c.currentTime + 0.15;
-  let numero = 0;
-  const avancer = () => {
-    while (prochain < c.currentTime + 1.4) {
-      jouer(prochain, numero++);
-      prochain += pas();
-    }
-  };
-  avancer();
-  const minuterie = window.setInterval(avancer, 400);
-  return () => window.clearInterval(minuterie);
-}
-
-/** « Dérive » : cinq notes tenues (un accord ouvert), chacune légèrement mouvante, derrière un filtre qui respire. */
-function pisteDerive(c: AudioContext, vers: AudioNode): Arret {
-  const filtre = c.createBiquadFilter();
-  filtre.type = 'lowpass';
-  filtre.frequency.value = 520;
-  filtre.Q.value = 0.6;
-  filtre.connect(vers);
-  const sources: OscillatorNode[] = [];
-  /** Une oscillation très lente, qui fait varier une valeur (volume, couleur du filtre). */
-  const onduler = (frequence: number, profondeur: number, cible: AudioParam) => {
-    const o = c.createOscillator();
-    const ampleur = c.createGain();
-    o.frequency.value = frequence;
-    ampleur.gain.value = profondeur;
-    o.connect(ampleur).connect(cible);
-    o.start();
-    sources.push(o);
-  };
-  onduler(0.045, 260, filtre.frequency);
-  // La2, Mi3, La3, Do#4, Mi4 : un accord de la majeur étalé, calme et ouvert.
-  [110, 164.81, 220, 277.18, 329.63].forEach((frequence, i) => {
-    const vol = c.createGain();
-    vol.gain.value = i === 0 ? 0.2 : 0.085;
-    vol.connect(filtre);
-    [-4, 4].forEach((cents) => {
-      const o = c.createOscillator();
-      o.type = i < 2 ? 'sine' : 'triangle';
-      o.frequency.value = frequence;
-      o.detune.value = cents + i;
-      o.connect(vol);
-      o.start();
-      sources.push(o);
-    });
-    onduler(0.03 + i * 0.011, vol.gain.value * 0.6, vol.gain);
-  });
-  return () => sources.forEach((source) => source.stop(c.currentTime + 2));
-}
-
-/** « Heure bleue » : quatre accords feutrés sur un rythme lent, avec le souffle d'un vieux disque. */
-function pisteHeureBleue(c: AudioContext, vers: AudioNode): Arret {
-  const TEMPS = 60 / 72; // un temps, à 72 battements par minute
-  // Un accord par mesure : ré mineur 9, sol 7, do majeur 9, la mineur 9.
-  const ACCORDS = [
-    [50, 57, 60, 64, 65],
-    [43, 53, 59, 62, 65],
-    [48, 55, 59, 62, 64],
-    [45, 55, 60, 64, 67],
-  ];
-  const voix = c.createBiquadFilter(); // un filtre qui arrondit toutes les notes
-  voix.type = 'lowpass';
-  voix.frequency.value = 1500;
-  voix.Q.value = 0.4;
-  voix.connect(vers);
-
-  const disque = c.createGain();
-  disque.gain.value = 0.014;
-  disque.connect(vers);
-  const fond = souffle(c, disque, c.currentTime, c.currentTime + 86400);
-  fond.filtre.frequency.value = 2400;
-  fond.filtre.Q.value = 0.3;
-
-  const touche = (numero: number, quand: number, volume: number, duree = 3.2) => {
-    note(c, voix, hauteur(numero), quand, duree, volume);
-    note(c, voix, hauteur(numero + 12), quand, duree * 0.45, volume * 0.22, 'triangle'); // un peu de brillant
-  };
-  const coup = (quand: number) => {
-    const vol = c.createGain();
-    vol.connect(vers);
-    vol.gain.setValueAtTime(0.0001, quand);
-    vol.gain.exponentialRampToValueAtTime(0.16, quand + 0.008);
-    vol.gain.exponentialRampToValueAtTime(0.0001, quand + 0.26);
-    const o = oscillateur(c, 'sine', vol, quand, quand + 0.3);
-    o.frequency.setValueAtTime(92, quand);
-    o.frequency.exponentialRampToValueAtTime(44, quand + 0.2);
-  };
-  const frottement = (quand: number, volume: number) => {
-    const vol = c.createGain();
-    vol.connect(vers);
-    vol.gain.setValueAtTime(0.0001, quand);
-    vol.gain.exponentialRampToValueAtTime(volume, quand + 0.004);
-    vol.gain.exponentialRampToValueAtTime(0.0001, quand + 0.06);
-    const { filtre } = souffle(c, vol, quand, quand + 0.08);
-    filtre.type = 'highpass';
-    filtre.frequency.value = 5200;
-  };
-
-  const arreter = programmer(
-    c,
-    () => TEMPS * 4,
-    (quand, mesure) => {
-      const accord = ACCORDS[mesure % ACCORDS.length];
-      accord.forEach((numero, i) => touche(numero, quand + i * 0.028, i === 0 ? 0.11 : 0.06)); // l'accord, légèrement égrené
-      touche(accord[3], quand + TEMPS * 2.5, 0.05, 1.8); // deux notes qui lui répondent
-      touche(accord[2] + 12, quand + TEMPS * 3.25, 0.035, 1.4);
-      // Le rythme : un coup sourd sur les temps 1 et 3, un frottement léger entre les deux.
-      coup(quand);
-      coup(quand + TEMPS * 2);
-      [1, 3].forEach((t) => frottement(quand + TEMPS * t, 0.03));
-      [0.5, 1.5, 2.5, 3.5].forEach((t) => frottement(quand + TEMPS * t, 0.014));
-    },
-  );
-  return () => {
-    arreter();
-    fond.source.stop(c.currentTime + 2);
-  };
-}
-
-/** « Trait fin » : deux notes tenues à peine audibles, et de temps en temps une note seule qui s'éteint lentement. */
-function pisteTrait(c: AudioContext, vers: AudioNode): Arret {
-  const GAMME = [57, 60, 62, 64, 67, 69, 72]; // la mineur pentatonique
-  const fond = c.createGain();
-  fond.gain.value = 0.05;
-  fond.connect(vers);
-  const tenues = [45, 52].map((numero) => {
-    const o = c.createOscillator();
-    o.frequency.value = hauteur(numero);
-    o.connect(fond);
-    o.start();
-    return o;
-  });
-  let degre = 3;
-  const arreter = programmer(
-    c,
-    () => 4.5 + Math.random() * 4.5,
-    (quand) => {
-      // On avance d'un ou deux degrés dans la gamme, vers le haut ou le bas : jamais de grand saut.
-      degre = Math.min(GAMME.length - 1, Math.max(0, degre + (Math.random() < 0.5 ? -1 : 1) * (1 + ((Math.random() * 2) | 0))));
-      note(c, vers, hauteur(GAMME[degre]), quand, 5, 0.1);
-      if (Math.random() < 0.4) note(c, vers, hauteur(GAMME[degre] + 7), quand + 0.35, 4, 0.04);
-    },
-  );
-  return () => {
-    arreter();
-    tenues.forEach((o) => o.stop(c.currentTime + 2));
-  };
-}
-
-const PISTES: Record<Piste, (c: AudioContext, vers: AudioNode) => Arret> = {
-  derive: pisteDerive,
-  'heure-bleue': pisteHeureBleue,
-  trait: pisteTrait,
-};
-
-// Les pistes n'ont pas la même force : celles-ci les mettent au même niveau à l'oreille.
-const NIVEAUX: Record<Piste, number> = { derive: 1, 'heure-bleue': 4, trait: 5 };
-
-let lecture: { piste: Piste; volume: GainNode; arret: Arret } | null = null;
-
-/** La musique doit-elle jouer ? Oui si le visiteur ne l'a pas mise en pause, sauf dans l'ambiance Silence. */
-const musiqueVoulue = () => reglages.musique && reglages.atmosphere !== 'silence';
-
-/** Arrête la piste en cours, en fondu. */
-function arreterMusique(): void {
-  if (!lecture || !ctx) return;
-  const { volume, arret } = lecture;
-  lecture = null;
-  volume.gain.cancelScheduledValues(ctx.currentTime);
-  volume.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
-  arret();
-  window.setTimeout(() => volume.disconnect(), 2600);
-}
-
-/** Joue une piste. Si une autre est en cours, elle s'efface pendant que la nouvelle monte. */
-function jouerPiste(piste: Piste): void {
-  const c = moteur();
-  if (!c || !sortieMusique || c.state !== 'running' || lecture?.piste === piste) return;
-  arreterMusique();
-  const volume = c.createGain();
-  volume.gain.setValueAtTime(0, c.currentTime);
-  volume.gain.linearRampToValueAtTime(NIVEAUX[piste], c.currentTime + 1.4);
-  volume.connect(sortieMusique);
-  lecture = { piste, volume, arret: PISTES[piste](c, volume) };
-}
-
-/** Met la musique en accord avec les réglages : la bonne piste si elle est voulue, le silence sinon. */
-function accorderMusique(): void {
-  if (musiqueVoulue()) jouerPiste(reglages.piste);
-  else arreterMusique();
 }
 
 export function initSons(): void {
@@ -809,33 +562,29 @@ export function initSons(): void {
     else if (moment === 'ouvre' || moment === 'charge') pisteFermeture?.arret(); // (rouverte aussitôt : le son de fermeture s'efface)
   });
 
-  // Les réglages : activer, couper, changer un volume, une piste ou une ambiance.
+  // Les réglages : couper les effets les arrête aussitôt (le volume est suivi par le moteur commun).
   surReglage((cle) => {
     if (cle === 'sons' && !reglages.sons) couperEffets();
-    if (cle === 'sons' || cle === 'musique') moteur();
-    if ((cle === 'volumeSons' || cle === 'atmosphere') && sortieEffets && ctx) sortieEffets.gain.setTargetAtTime(volumeEffets(), ctx.currentTime, 0.05);
-    if ((cle === 'volumeMusique' || cle === 'atmosphere') && sortieMusique && ctx) sortieMusique.gain.setTargetAtTime(volumeMusique(), ctx.currentTime, 0.1);
-    if (cle === 'musique' || cle === 'piste' || cle === 'atmosphere') accorderMusique();
+    if (cle === 'sons' && reglages.sons) contexte();
   });
 
   // ---- Démarrage ----
-  // Le moteur est préparé tout de suite. Si le navigateur autorise déjà le son
-  // (cela arrive quand on revient sur le site), l'introduction et la musique
-  // s'entendent dès le chargement. Sinon, le premier geste du visiteur (clic,
-  // touche) le débloque : c'est une règle des navigateurs, on ne peut pas la contourner.
-  if (reglages.sons || musiqueVoulue()) {
-    moteur();
-    accorderMusique();
-  }
+  // Le moteur est préparé tout de suite si les effets sont actifs. Si le navigateur autorise déjà le son
+  // (cela arrive quand on revient sur le site), les effets s'entendent dès le chargement. Sinon, le
+  // premier geste du visiteur (clic, touche) le débloque : c'est une règle des navigateurs. La musique,
+  // elle, ne démarre jamais seule (DREAM RADIO).
+  if (reglages.sons) contexte();
   const reveiller = () => {
-    if (ctx?.state === 'suspended' && !document.hidden && (reglages.sons || musiqueVoulue())) void ctx.resume();
+    const ctx = contexte();
+    if (ctx?.state === 'suspended' && !document.hidden) void ctx.resume().catch(() => undefined);
   };
   (['pointerdown', 'pointerup', 'keydown', 'touchend'] as const).forEach((type) => window.addEventListener(type, reveiller, { capture: true, passive: true }));
 
-  // Onglet masqué : on met le moteur en pause pour ne rien jouer en arrière-plan.
+  // Onglet masqué : on met le moteur en pause pour ne rien jouer en arrière-plan (les radios se taisent aussi).
   document.addEventListener('visibilitychange', () => {
+    const ctx = contexteExistant();
     if (!ctx) return;
     if (document.hidden) void ctx.suspend();
-    else if (reglages.sons || musiqueVoulue()) void ctx.resume();
+    else void ctx.resume().catch(() => undefined);
   });
 }

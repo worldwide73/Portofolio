@@ -88,6 +88,11 @@ export const fr: Contenu = {
       { nom: 'Réalisations', lignes: [
         [['←', '→'], 'Projet précédent ou suivant de la galerie'],
       ] },
+      { nom: 'DREAM RADIO (le casque, en haut à droite)', lignes: [
+        [['Espace'], 'Lecture ou pause (dans le lecteur)'],
+        [['←', '→'], 'Piste précédente ou suivante (dans le lecteur)'],
+        [['Échap'], 'Fermer le lecteur (la musique continue)'],
+      ] },
       { nom: 'Visite guidée (Orbital Hub)', lignes: [
         [['←', '→'], 'Étape précédente ou suivante'],
         [['Échap'], 'Quitter la visite'],
@@ -186,7 +191,7 @@ export const fr: Contenu = {
             'L’explosion du cube et la carte en constellation : une toile 2D, éclat par éclat.',
           ],
         },
-        { nom: 'Le son', points: ['Web Audio API : chaque son et les trois musiques sont fabriqués par le code, sans aucun fichier audio.'] },
+        { nom: 'Le son', points: ['Web Audio API : un moteur commun, deux canaux (effets et musique) et une atténuation de la musique pendant les grands effets.', 'DREAM RADIO : des compositions originales jouées par le code, et des morceaux libres (CC BY-SA 3.0) crédités dans le lecteur.'] },
         {
           nom: 'Le reste',
           points: [
@@ -239,7 +244,7 @@ export const fr: Contenu = {
         competences: { texte: 'Les compétences sont regroupées par domaine, chacune reliée aux projets qui la prouvent.', action: 'Aller aux compétences' },
         veille: { texte: 'La veille rassemble les sujets suivis, avec leurs sources.', action: 'Aller à la veille' },
         contact: { texte: 'Le plus simple : l’adresse e-mail, à copier en un clic. Il y a aussi le téléphone, LinkedIn et GitHub.', action: 'Aller au contact' },
-        reglages: { texte: 'L’icône à trois curseurs, en haut à droite : densité de l’affichage (Compact, Équilibré, Cinématique), opacité et flou des panneaux, intensité lumineuse, animations, effets sonores, musique et ambiances. Un bouton y rétablit l’affichage d’origine.', action: 'Ouvrir les réglages' },
+        reglages: { texte: 'L’icône à trois curseurs, en haut à droite : densité de l’affichage (Compact, Équilibré, Cinématique), opacité et flou des panneaux, intensité lumineuse, animations, et effets sonores. Un bouton y rétablit l’affichage d’origine. La musique, elle, est dans DREAM RADIO : l’icône casque, à côté de la langue.', action: 'Ouvrir les réglages' },
         jeu: { texte: 'Portal Rush : trois voies, des obstacles, des fragments d’énergie et l’Overdrive. Huit niveaux, quatre difficultés, une survie infinie et un défi du jour.', action: 'Lancer Portal Rush' },
         commandes: { texte: '← → (ou A / D) pour changer de voie, Espace pour l’Overdrive, Échap pour la pause. Au doigt : touchez à gauche ou à droite, glissez vers le haut pour l’Overdrive.', action: 'Voir toutes les commandes' },
         carte: { texte: 'On voyage d’une destination à l’autre par la carte du portail : le cube de verre de l’accueil se brise et ses éclats forment cette carte. Le passage « Traverser le portail », en bas de chaque destination, y mène.', action: 'Ouvrir la carte' },
@@ -492,9 +497,9 @@ export const fr: Contenu = {
     reglages: {
       titre: 'Réglages',
       effets: 'Volume des effets du jeu',
-      musique: 'Musique du site',
-      volumeMusique: 'Volume de la musique',
-      partage: 'Réglage partagé avec le portfolio.',
+      musique: 'RUSH RADIO',
+      volumeMusique: 'Volume de la musique du jeu',
+      partage: 'La musique du jeu, dès l’entrée. DREAM RADIO, celle du portfolio, s’efface pendant la partie et reprend à la sortie si elle jouait.',
       effetsReduits: 'Effets réduits',
       effetsReduitsTexte: 'Moins d’éclairs et de particules (le mouvement réduit du système est toujours respecté).',
       secousses: 'Secousses de l’écran',
@@ -527,14 +532,13 @@ export const fr: Contenu = {
 
   reglages: {
     titre: 'Réglages',
-    onglets: { affichage: 'Affichage', atmosphere: 'Atmosphère' },
+    onglets: { affichage: 'Affichage', son: 'Son' },
     opacite: 'Opacité des panneaux',
     flou: "Flou d'arrière-plan",
     lueur: 'Intensité lumineuse',
     animations: 'Animations',
     niveaux: { complet: 'Complètes', allege: 'Allégées', coupe: 'Coupées' },
     sons: 'Effets sonores',
-    musique: 'Musique',
     volume: 'Volume',
     densite: 'Densité',
     densites: {
@@ -543,31 +547,44 @@ export const fr: Contenu = {
       cinematique: { nom: 'Cinématique', texte: 'Titres plus grands et plus d’air autour du contenu.' },
     },
     restaurer: 'Restaurer l’affichage d’origine',
-    restaurerAide: 'Densité, opacité, flou, lueur et animations. L’ambiance, les sons et Portal Rush ne changent pas.',
+    restaurerAide: 'Densité, opacité, flou, lueur et animations. Les sons, la musique et Portal Rush ne changent pas.',
     restaure: 'Affichage d’origine rétabli.',
     dejaOrigine: 'C’est déjà l’affichage d’origine.',
   },
 
-  atmosphere: {
-    titre: 'Ambiance',
-    aide: 'Facultatif. Choisissez une ambiance ; recliquez dessus pour revenir au site d’origine.',
-    modes: {
-      chill: { nom: 'Chill', texte: 'Lumière adoucie, mouvements ralentis, presque plus d’éclairs ni de tremblements. Accords feutrés.' },
-      espace: { nom: 'Deep Space', texte: 'Lueur bleue, brume et étoiles plus présentes. Nappes lentes.' },
-      focus: { nom: 'Focus', texte: 'Pour lire : scène presque immobile, transitions courtes, rien qui distrait. Musique très discrète.' },
-      silence: { nom: 'Silence', texte: 'Aucune musique de fond. Tout le reste fonctionne ; les effets sonores se règlent à part, plus bas.' },
-    },
-    pistes: {
-      derive: { titre: 'Dérive', texte: 'Nappes lentes et graves, pour l’espace profond.' },
-      'heure-bleue': { titre: 'Heure bleue', texte: 'Accords feutrés sur un rythme lent, façon lo-fi.' },
-      trait: { titre: 'Trait fin', texte: 'Quelques notes espacées, très discrètes : pour lire.' },
-    },
-    lire: 'Lire',
+  son: {
+    introduction: 'Son de l’introduction',
+    introductionTexte: 'Le court son de l’ouverture du portail, à l’arrivée sur le site. Décochez pour ouvrir le site en silence.',
+    musique: 'Musique',
+    musiqueTexte: 'La musique est coupée à l’ouverture du site. Elle se lance dans DREAM RADIO, l’icône casque à côté de la langue, en haut à droite.',
+    ouvrirRadio: 'Ouvrir DREAM RADIO',
+  },
+
+  radio: {
+    bouton: 'DREAM RADIO : la musique du portfolio',
+    titre: 'DREAM RADIO',
+    sousTitre: 'La musique du portfolio',
+    lire: 'Lecture',
     pause: 'Pause',
-    genere: 'Ces pistes sont fabriquées par le code du site : aucun fichier audio.',
-    silence: 'Ambiance Silence : la musique est coupée.',
-    lancement: 'Son dès l’ouverture du site',
-    lancementTexte: 'La musique et le son de l’introduction démarrent seuls, dès que le navigateur le permet. Décochez pour ouvrir le site en silence.',
+    precedente: 'Piste précédente',
+    suivante: 'Piste suivante',
+    volume: 'Volume de la musique',
+    muet: 'Couper la musique',
+    reactiver: 'Rétablir la musique',
+    liste: 'Pistes',
+    progression: 'Position dans le morceau',
+    fermer: 'Fermer',
+    enCours: 'En cours',
+    silence: 'Rien ne démarre seul : la musique ne joue que si vous appuyez sur Lecture. Elle continue d’une destination à l’autre.',
+    chargement: 'Chargement…',
+    erreur: 'Cette piste ne peut pas être lue ici. Essayez la suivante.',
+    reprise: 'Reprendre là où la musique s’était arrêtée',
+    original: 'Composition originale',
+    genere: 'Jouée en direct par le code du site',
+    credits: 'Crédits et licences',
+    creditsTexte: 'Les compositions originales sont écrites pour ce site et jouées par le code (Web Audio). Les morceaux enregistrés viennent du jeu libre Pioneer Space Sim, sous licence CC BY-SA 3.0 : réencodés en MP3 et mis au même volume, sans autre modification. Les effets de Portal Rush viennent en partie des kits de Kenney (CC0).',
+    creditsLien: 'Le détail des sources',
+    clavier: 'Espace : lecture ou pause · ← → : piste précédente ou suivante',
   },
 
   trajet: {
