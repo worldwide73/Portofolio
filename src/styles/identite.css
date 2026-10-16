@@ -230,6 +230,39 @@
   color: #9fe6ff;
 }
 
+/* Une ligne à deux gestes (16 octobre 2026) : l'action principale à gauche (ouvrir le CV,
+   copier l'e-mail), un petit bouton à droite (télécharger, écrire). */
+.acces__contact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0 6px 0 0;
+}
+
+.acces__lien {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  align-self: stretch;
+  gap: 10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--d-micro) var(--c-douce),
+    color var(--d-micro) var(--c-douce);
+}
+
+.acces__lien:hover,
+.acces__lien:focus-visible {
+  background: rgba(150, 192, 255, 0.12);
+  color: var(--texte);
+}
+
 /* Le contact rapide : copier l'e-mail, ou écrire (mailto). */
 .acces__boutons {
   display: flex;

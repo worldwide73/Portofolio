@@ -1,12 +1,14 @@
 ---
 // L'interface fixe : barre du haut (marque, menu des 5 catégories, outils),
 // curseur personnalisé, et le terminal caché.
-import { SECTIONS, cheminAccueil, cheminFiche } from '../contenu';
+import { cheminAccueil, cheminFiche } from '../contenu';
 import type { Contenu } from '../contenu/types';
 import Drapeau from './Drapeau.astro';
 import OrbitalHub from './OrbitalHub.astro';
 import PortalRush from './PortalRush.astro';
+import Recherche from './Recherche.astro';
 import Symbole from './Symbole.astro';
+import VisiteRapide from './VisiteRapide.astro';
 
 interface Props {
   contenu: Contenu;
@@ -18,9 +20,7 @@ const { contenu, page, cheminAutreLangue } = Astro.props;
 const langue = contenu.langue;
 const autre = langue === 'fr' ? 'en' : 'fr';
 const accueil = cheminAccueil(langue);
-// Sur l'accueil, les liens du menu sont des ancres (#contact) : le défilement
-// est animé. Depuis une fiche, ils ramènent à l'accueil, à la bonne section.
-const ancre = (id: string) => (page === 'accueil' ? `#${id}` : `${accueil}#${id}`);
+const n = contenu.navigation;
 // Ce que le terminal caché doit connaître : ses textes et la liste des réalisations.
 const projetsDuTerminal = contenu.realisations.projets.map((p) => ({ nom: p.nom, href: cheminFiche(langue, p.slug) }));
 // Le panneau d'actions rapides réutilise les vraies adresses du projet (bloc contact, adresse du site).
@@ -72,16 +72,21 @@ const ICONES = {
     </button>
   </div>
 
-  <nav class="nav etiquette" id="menu" aria-label={contenu.interface.navigation}>
+  <!-- Le centre de commandes : trois outils, dans la pastille de verre d'origine. Les cinq destinations
+       ne s'y répètent plus : on voyage par le portail (voir src/scripts/portail.ts et nav.ts). -->
+  <nav class="nav etiquette" id="menu" aria-label={n.outils.titre}>
     <div class="nav__liste" data-intro="barre">
       <span class="nav__actif" aria-hidden="true"></span>
-      {
-        SECTIONS.map((id) => (
-          <a href={ancre(id)} data-section-lien={id}>
-            {contenu.sections[id]}
-          </a>
-        ))
-      }
+      <button class="nav__outil nav__outil--portail" type="button" data-outil="portail" aria-haspopup="dialog" aria-keyshortcuts="P" title={n.outils.portailAide} data-accueil={accueil}>
+        <span class="nav__verre" aria-hidden="true"></span>
+        <span class="nav__libelle">{n.outils.portail}</span>
+      </button>
+      <button class="nav__outil" type="button" data-outil="recherche" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" title={n.outils.rechercherAide}>
+        <span class="nav__libelle">{n.outils.rechercher}</span>
+      </button>
+      <button class="nav__outil" type="button" data-outil="rapide" aria-haspopup="dialog" aria-pressed="false" title={n.outils.rapideAide}>
+        <span class="nav__libelle">{n.outils.rapide}</span>
+      </button>
     </div>
 
     <!-- Sur téléphone, ces deux boutons vivent dans le menu plutôt que dans la barre. -->
@@ -142,6 +147,15 @@ const ICONES = {
      la touche Échap, le clic à côté et le retour du focus (attribut « popover »). -->
 <div class="acces etiquette" id="acces" popover aria-label={a.titre} data-adresse={adresseSite}>
   <p class="acces__titre">{a.titre}</p>
+  <div class="acces__contact">
+    <a class="acces__lien" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener">
+      <span class="acces__icone" set:html={ICONES.cv} />
+      <span class="acces__texte">{a.cv}</span>
+    </a>
+    <span class="acces__boutons">
+      <a class="acces__mini" href="/cv-matheo-maleyran.pdf" download="cv-matheo-maleyran.pdf">{a.telecharger}</a>
+    </span>
+  </div>
   {
     linkedin && (
       <a class="acces__action" href={linkedin} target="_blank" rel="noopener noreferrer">
@@ -160,24 +174,20 @@ const ICONES = {
       </a>
     )
   }
-  <a class="acces__action" href="/cv-matheo-maleyran.pdf" download="cv-matheo-maleyran.pdf">
-    <span class="acces__icone" set:html={ICONES.cv} />
-    <span class="acces__texte">{a.cv}</span>
-    <span class="acces__suite" aria-hidden="true">PDF</span>
-  </a>
+  <div class="acces__contact">
+    <button class="acces__lien" type="button" data-action="email" data-fait={a.emailCopie} data-email={contenu.contact.email}>
+      <span class="acces__icone" set:html={ICONES.email} />
+      <span class="acces__texte">{a.contact}</span>
+    </button>
+    <span class="acces__boutons">
+      <a class="acces__mini" href={`mailto:${contenu.contact.email}`}>{a.ecrire}</a>
+    </span>
+  </div>
   <button class="acces__action" type="button" data-action="partager" data-fait={a.copie}>
     <span class="acces__icone" set:html={ICONES.partager} />
     <span class="acces__texte">{a.partager}</span>
     <span class="acces__suite" aria-hidden="true"></span>
   </button>
-  <div class="acces__contact">
-    <span class="acces__icone" set:html={ICONES.email} />
-    <span class="acces__texte">{a.contact}</span>
-    <span class="acces__boutons">
-      <button class="acces__mini" type="button" data-action="email" data-fait={a.emailCopie} data-email={contenu.contact.email}>{a.copierEmail}</button>
-      <a class="acces__mini" href={`mailto:${contenu.contact.email}`}>{a.ecrire}</a>
-    </span>
-  </div>
   <button class="acces__action" type="button" data-action="raccourcis">
     <span class="acces__icone" set:html={ICONES.clavier} />
     <span class="acces__texte">{a.raccourcis}</span>
@@ -320,29 +330,19 @@ const ICONES = {
      l'introduction et quand le portail éclate (voir src/scripts/voyage.ts). -->
 <div class="voyage" aria-hidden="true"><canvas></canvas></div>
 
-<!-- Le fil de navigation : une ligne fine en bas de l'écran, un point par section.
-     Sa partie allumée suit le défilement ; un faisceau la parcourt quand on change
-     de section. Les deux flèches font le tour du site, en boucle. -->
+<!-- Le fil des chapitres : une ligne fine en bas de l'écran, un point par chapitre de la destination
+     affichée (src/scripts/fil.ts les pose d'après les blocs marqués data-chapitre). Sa partie allumée
+     suit la lecture ; les deux flèches passent au chapitre précédent ou suivant. -->
 {
   page === 'accueil' && (
-    <nav class="trajet" aria-label={contenu.trajet.titre}>
+    <nav class="trajet" aria-label={contenu.trajet.titre} data-etat={n.etat}>
+      <p class="trajet__etat" aria-live="polite"></p>
       <button class="trajet__bouton" type="button" data-trajet="precedent" aria-label={contenu.trajet.precedent} title={contenu.trajet.precedent}>
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
       </button>
       <div class="trajet__fil">
         <span class="trajet__faisceau" aria-hidden="true"></span>
-        <ol>
-          {
-            SECTIONS.map((id) => (
-              <li>
-                <a class="trajet__point" href={`#${id}`}>
-                  <i aria-hidden="true" />
-                  <span>{contenu.sections[id]}</span>
-                </a>
-              </li>
-            ))
-          }
-        </ol>
+        <ol></ol>
       </div>
       <button class="trajet__bouton" type="button" data-trajet="suivant" aria-label={contenu.trajet.suivant} title={contenu.trajet.suivant}>
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -354,9 +354,13 @@ const ICONES = {
 <!-- L'Orbital Hub : l'icône flottante en bas à droite, son panneau (l'assistant, la visite
      guidée, les coulisses), et le jeu Portal Rush qu'il lance. -->
 <OrbitalHub contenu={contenu} page={page} cheminAutreLangue={cheminAutreLangue} />
+
+<!-- Les deux outils de la barre : la recherche (Ctrl + K) et la visite rapide. -->
+<Recherche contenu={contenu} page={page} />
+<VisiteRapide contenu={contenu} />
 <PortalRush contenu={contenu} cheminAutreLangue={cheminAutreLangue} />
 
-<!-- La palette de commandes : Ctrl + K, touche ², ou le mot « trace » (voir src/scripts/terminal.ts).
+<!-- Le terminal caché : touche ², ou le mot « trace » (voir src/scripts/terminal.ts). Ctrl + K ouvre désormais la recherche.
      Ses textes et la liste des réalisations lui sont transmis par les attributs data-. -->
 <div
   class="terminal"
@@ -370,7 +374,7 @@ const ICONES = {
   data-langue={cheminAutreLangue}
 >
   <div class="terminal__tete">
-    <span>{contenu.terminal.titre} <kbd>Ctrl K</kbd></span>
+    <span>{contenu.terminal.titre} <kbd>²</kbd></span>
     <button class="terminal__fermer" type="button">{contenu.interface.fermer}</button>
   </div>
   <div class="terminal__sortie" aria-live="polite" data-lenis-prevent></div>

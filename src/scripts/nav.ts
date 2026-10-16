@@ -1,55 +1,53 @@
-// LE MENU : cinq catégories dans une pastille, en haut de l'écran.
-//   - la catégorie de la section affichée est mise en avant, et son fond clair
-//     glisse de l'une à l'autre quand on défile ;
-//   - sur téléphone, le bouton « Menu » ouvre les catégories en plein écran ;
-//   - la barre change de ton quand elle passe au-dessus du panneau clair.
+// LA BARRE DU HAUT : le centre de commandes (16 octobre 2026).
+// La même pastille de verre qu'avant, mais elle ne répète plus les cinq destinations
+// (on voyage par le portail). Elle porte trois outils :
+//   - Portail : rejoint la carte du portail en une seule action (portail.ts) ;
+//   - Rechercher : la recherche dans le portfolio (recherche.ts, aussi Ctrl + K) ;
+//   - Visite rapide : le profil en un coup d'œil (rapide.ts).
+// Le fond clair glisse sous l'outil « actif » : Portail au repos, Rechercher ou Visite rapide
+// tant que leur fenêtre est ouverte. Sur téléphone, le bouton « Menu » ouvre ces outils en plein écran.
 
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { decoder } from './decode';
 import { lenis } from './defilement';
 import { apresPause } from './outils';
-import { rangCourant } from './voyage';
+import { ouvrirPortail } from './portail';
+import { ouvrirRecherche } from './recherche';
+import { basculerRapide } from './rapide';
 
 export function initNav(): void {
   const barre = document.querySelector<HTMLElement>('.barre');
   const nav = document.querySelector<HTMLElement>('.nav');
   if (!barre || !nav) return;
 
-  const liens = [...nav.querySelectorAll<HTMLAnchorElement>('[data-section-lien]')];
+  const outils = [...nav.querySelectorAll<HTMLButtonElement>('[data-outil]')];
   const fond = nav.querySelector<HTMLElement>('.nav__actif');
-  const sections = liens.map((lien) => document.getElementById(lien.dataset.sectionLien ?? ''));
-  const surAccueil = sections.every(Boolean);
-  let active = -1;
+  let actif = '';
 
-  /** Glisse le fond clair sous le lien actif. */
+  /** Glisse le fond clair sous l'outil actif. */
   const placer = () => {
-    const lien = liens[active];
-    if (!fond || !lien) return;
-    fond.style.transform = `translateX(${lien.offsetLeft}px)`;
-    fond.style.width = `${lien.offsetWidth}px`;
+    const bouton = outils.find((b) => b.dataset.outil === actif);
+    if (!fond || !bouton) return;
+    fond.style.transform = `translateX(${bouton.offsetLeft}px)`;
+    fond.style.width = `${bouton.offsetWidth}px`;
   };
-
-  const activer = (i: number) => {
-    if (i === active) return;
-    active = i;
-    liens.forEach((lien, k) => {
-      if (k === i) lien.setAttribute('aria-current', 'true');
-      else lien.removeAttribute('aria-current');
-    });
+  const activer = (id: string) => {
+    if (id === actif) return;
+    actif = id;
+    outils.forEach((b) => b.toggleAttribute('data-actif', b.dataset.outil === id));
     placer();
   };
-
-  // ---- Suivi de la section affichée ----
+  /** L'outil actif d'après ce qui est ouvert : la recherche, la visite rapide, sinon le portail. */
   const suivre = () => {
-    // La section courante : la même règle que le fil du bas (voir voyage.ts).
-    if (surAccueil) activer(rangCourant());
-
+    const rapide = !!document.querySelector('.rapide[open]');
+    const recherche = !!document.querySelector('.recherche[open]');
+    outils.find((b) => b.dataset.outil === 'rapide')?.setAttribute('aria-pressed', String(rapide));
+    activer(recherche ? 'recherche' : rapide ? 'rapide' : 'portail');
   };
-  gsap.ticker.add(suivre);
-  ScrollTrigger.addEventListener('refresh', placer);
+  window.addEventListener('outil', suivre);
   window.addEventListener('resize', apresPause(placer, 150));
+  window.addEventListener('langue', () => requestAnimationFrame(placer));
   document.fonts.ready.then(placer);
+  suivre();
 
   // ---- Menu plein écran (téléphone) ----
   const bouton = barre.querySelector<HTMLButtonElement>('.barre__menu');
@@ -62,11 +60,26 @@ export function initNav(): void {
     decoder(libelle, ouvert ? bouton?.dataset.fermer : bouton?.dataset.ouvrir);
     if (ouvert) {
       lenis?.stop();
-      liens[Math.max(active, 0)]?.focus({ preventScroll: true });
+      outils[0]?.focus({ preventScroll: true });
     } else {
       lenis?.start();
     }
   };
+
+  // ---- Les trois outils ----
+  outils.forEach((outil) =>
+    outil.addEventListener('click', (e) => {
+      const point = e.detail > 0 ? { x: e.clientX, y: e.clientY } : null;
+      const dansLeMenu = html.classList.contains('menu-ouvert');
+      if (dansLeMenu) basculer(false);
+      const id = outil.dataset.outil;
+      if (id === 'portail') {
+        // Dans le menu du téléphone, c'est le bouton « Menu » (resté à l'écran) qui se brise.
+        ouvrirPortail({ source: dansLeMenu ? bouton : outil, point: dansLeMenu ? null : point });
+      } else if (id === 'recherche') ouvrirRecherche(outil);
+      else if (id === 'rapide') basculerRapide(outil);
+    }),
+  );
 
   bouton?.addEventListener('click', () => basculer(!html.classList.contains('menu-ouvert')));
   nav.addEventListener('click', (e) => {

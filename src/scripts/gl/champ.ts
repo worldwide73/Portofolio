@@ -282,8 +282,9 @@ export function initChamp(): boolean {
       horsChamp = true;
       return;
     }
-    // Pendant le jeu (Portal Rush, en plein écran), la carte graphique est à lui.
-    if (jeu?.open) {
+    // Pendant le jeu (Portal Rush, en plein écran), la carte graphique est à lui ; pendant la
+    // visite rapide, la scène est cachée derrière elle.
+    if (jeu?.open || document.documentElement.classList.contains('visite-rapide')) {
       horsChamp = true;
       return;
     }

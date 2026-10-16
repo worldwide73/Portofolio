@@ -99,6 +99,8 @@ export interface Contenu {
     linkedin: string;
     github: string;
     cv: string;
+    /** Le petit bouton qui télécharge le CV, à côté de « Mon CV » (qui l'ouvre). */
+    telecharger: string;
     partager: string;
     copie: string;
     copieManuelle: string;
@@ -290,7 +292,7 @@ export interface Contenu {
     lancementTexte: string;
   };
   sections: Record<IdSection, string>;
-  /** Le fil de navigation, en bas de l'écran, et le portail qui ouvre la carte. */
+  /** Le fil des chapitres, en bas de l'écran, et le portail qui ouvre la carte. */
   trajet: {
     titre: string;
     precedent: string;
@@ -300,6 +302,45 @@ export interface Contenu {
     portailAide: string;
     /** La courte indication affichée sous le portail (le CSS la met en capitales et ajoute la flèche). */
     invite: string;
+  };
+  /**
+   * La navigation par destinations (16 octobre 2026) : chaque section est une destination
+   * indépendante ; on voyage de l'une à l'autre par le portail. La barre du haut porte trois
+   * outils (Portail, Rechercher, Visite rapide), le fil du bas les chapitres de la destination.
+   */
+  navigation: {
+    outils: { titre: string; portail: string; portailAide: string; rechercher: string; rechercherAide: string; rapide: string; rapideAide: string };
+    /** Les chapitres internes qui n'ont pas de titre propre dans la page. */
+    chapitres: { intro: string; methode: string; parcours: string; explorer: string; tableau: string; presentation: string; coordonnees: string; credits: string };
+    /** Au-dessus du fil : « {destination} · {k} / {n} ». */
+    etat: string;
+    /** La conclusion de chaque destination : une invitation à rejoindre le portail. */
+    suites: Record<IdSection, { repere: string; titre: string; texte: string; action: string }>;
+    recherche: {
+      titre: string;
+      invite: string;
+      aide: string;
+      vide: string;
+      suggestions: string;
+      resultats: string;
+      types: Record<'destination' | 'projet' | 'competence' | 'parcours' | 'methode' | 'veille' | 'contact' | 'document' | 'jeu', string>;
+      fiche: string;
+    };
+    rapide: {
+      titre: string;
+      intro: string;
+      quitter: string;
+      profil: string;
+      competences: string;
+      realisations: string;
+      parcours: string;
+      contact: string;
+      cv: string;
+      telecharger: string;
+      fiche: string;
+      site: string;
+      ecrire: string;
+    };
   };
   /** La carte du portail : les destinations du site, en constellation (voir Explorateur.astro). */
   explorateur: {

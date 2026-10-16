@@ -77,7 +77,18 @@ export function initGalerie(): void {
     courant = i;
     cartes.forEach((c, k) => c.carte.classList.toggle('est-centre', k === i));
     rouler(String(i + 1).padStart(2, '0'), sens);
+    // Le fil du bas (fil.ts) suit la réalisation de face : c'est l'état de la galerie qui fait foi.
+    window.dispatchEvent(new CustomEvent('galerie', { detail: { courant: i } }));
   };
+  /** La réalisation active, pour le fil du bas (-1 tant que la galerie n'est pas prête). */
+  (section as HTMLElement & { courant?: () => number }).courant = () => courant;
+  // Une demande venue d'ailleurs (le fil du bas, la recherche) : amener la carte i de face.
+  // Elle est confiée à la présentation en place (anneau ou ruban), qui fait le geste elle-même.
+  let allerA: ((i: number) => void) | null = null;
+  window.addEventListener('galerie-aller', (e) => {
+    const i = (e as CustomEvent<number>).detail;
+    if (Number.isInteger(i) && i >= 0 && i < n) allerA?.(i);
+  });
 
   // ==========================================================================
   // LA ROTATION AUTOMATIQUE : ce qui l'autorise, commun aux deux présentations
@@ -94,7 +105,21 @@ export function initGalerie(): void {
   const laisserLire = (secondes = APRES_GESTE) => {
     auto.repit = Math.max(auto.repit, performance.now() + secondes * 1000);
   };
-  const observateur = new IntersectionObserver(([entree]) => (auto.visible = entree.isIntersecting), { threshold: 0.35 });
+  // L'entrée en balayage part la première fois que la galerie est vraiment à l'écran. (Depuis le
+  // 16 octobre 2026, les réalisations sont une destination à part, souvent masquée au chargement :
+  // un déclencheur de défilement partirait trop tôt, pendant qu'elle est invisible.)
+  let entreeEnAttente: (() => void) | null = null;
+  const observateur = new IntersectionObserver(
+    ([entree]) => {
+      auto.visible = entree.isIntersecting;
+      if (auto.visible && entreeEnAttente) {
+        const lancer = entreeEnAttente;
+        entreeEnAttente = null;
+        lancer();
+      }
+    },
+    { threshold: 0.35 },
+  );
   observateur.observe(scene);
   const pied = section.querySelector<HTMLElement>('.galerie__pied');
   const quitter = () => (auto.survol = false); // elle retrouve sa vitesse, progressivement
@@ -170,12 +195,9 @@ export function initGalerie(): void {
     // loin sur l'anneau, et d'autant plus qu'elle est loin dans la liste :
     // elles arrivent donc de la droite en éventail, la première en tête.
     const entree = { balayage: 1 };
-    gsap.to(entree, {
-      balayage: 0,
-      duration: 1.9,
-      ease: 'expo.out',
-      scrollTrigger: { trigger: section, start: 'top 60%', once: true },
-    });
+    const balayer = () => gsap.to(entree, { balayage: 0, duration: 1.9, ease: 'expo.out' });
+    if (auto.visible) balayer();
+    else entreeEnAttente = balayer;
 
     // ---- Une image ----
     const image = (_temps: number, delta = 16.7) => {
@@ -338,6 +360,10 @@ export function initGalerie(): void {
       laisserLire();
     };
     fleches.forEach((b) => b.addEventListener('click', fleche));
+    allerA = (i) => {
+      allerCarte(i);
+      laisserLire();
+    };
 
     // ---- Survol de la carte centrale : inclinaison, reflet, séparation des couleurs ----
     const rouge = document.querySelector('#spectre [data-canal="rouge"]');
@@ -404,6 +430,8 @@ export function initGalerie(): void {
       piste.removeEventListener('dragstart', pasDeDrag);
       window.removeEventListener('keydown', touche);
       fleches.forEach((b) => b.removeEventListener('click', fleche));
+      allerA = null;
+      entreeEnAttente = null;
       nettoyages.forEach((fn) => fn());
       section.classList.remove('galerie--anneau');
       [piste, barre].forEach((el) => el.removeAttribute('style'));
@@ -453,6 +481,10 @@ export function initGalerie(): void {
       laisserLire();
     };
     fleches.forEach((b) => b.addEventListener('click', fleche));
+    allerA = (i) => {
+      montrer(i);
+      laisserLire();
+    };
 
     // Un doigt posé sur le ruban : le visiteur regarde ou fait glisser, le ruban attend.
     const touche = () => laisserLire();
@@ -492,20 +524,18 @@ export function initGalerie(): void {
     // l'autre. (gsap.matchMedia défait cette animation tout seul si l'écran
     // repasse en grand format.)
     if (!mouvementReduit) {
-      gsap.from(
-        cartes.map((c) => c.carte),
-        {
-          x: 120,
-          autoAlpha: 0,
-          duration: 1.2,
-          ease: 'expo.out',
-          stagger: 0.1,
-          scrollTrigger: { trigger: piste, start: 'top 82%', once: true },
-        },
-      );
+      const balayer = () =>
+        gsap.from(
+          cartes.map((c) => c.carte),
+          { x: 120, autoAlpha: 0, duration: 1.2, ease: 'expo.out', stagger: 0.1 },
+        );
+      if (auto.visible) balayer();
+      else entreeEnAttente = balayer;
     }
 
     return () => {
+      allerA = null;
+      entreeEnAttente = null;
       gsap.ticker.remove(battre);
       piste.style.scrollSnapType = '';
       fleches.forEach((b) => b.removeEventListener('click', fleche));

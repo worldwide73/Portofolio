@@ -6,7 +6,7 @@
 //   - refermer le panneau après une action qui mène ailleurs (lien, CV, e-mail) ;
 //   - copier l'adresse du site ou l'e-mail, avec une confirmation, et un secours si le
 //     presse-papiers est indisponible (le texte s'affiche, sélectionné, pour une copie à la main) ;
-//   - ouvrir la fenêtre des raccourcis (aussi avec la touche « ? »).
+//   - ouvrir la fenêtre des commandes clavier (aussi avec la touche « ? »).
 
 /** Copie un texte. Renvoie false si ni le presse-papiers ni l'ancienne commande « copier » ne marchent. */
 async function copier(texte: string): Promise<boolean> {
@@ -89,7 +89,8 @@ export function initAcces(): void {
     const cible = (e.target as Element).closest<HTMLElement>('a, button');
     if (!cible) return;
     const action = cible.dataset.action;
-    if (action === 'partager') void confirmer(cible, menu.dataset.adresse ?? window.location.origin);
+    // Partager : l'adresse publique du portfolio, à l'endroit où l'on se trouve (page et destination).
+    if (action === 'partager') void confirmer(cible, new URL(window.location.pathname + window.location.hash, menu.dataset.adresse ?? window.location.origin).href);
     else if (action === 'email') void confirmer(cible, cible.dataset.email ?? '');
     else if (action === 'raccourcis') ouvrirRaccourcis();
     // Un lien (LinkedIn, GitHub, CV, e-mail) : le panneau se referme.

@@ -22,10 +22,10 @@
 // l'aide ouvre l'assistant par-dessus le jeu.
 
 import type { Contenu, IdSection, Intention } from '../contenu/types';
-import { ouvrirCarte } from './explorateur';
 import { changerLangue } from './langue';
+import { ouvrirPortail } from './portail';
 import { ouvrirRush } from './rush/rush';
-import { rangCourant, voyager } from './voyage';
+import { voyager } from './voyage';
 
 type Textes = Contenu['hub'];
 interface Savoir {
@@ -384,12 +384,10 @@ export function initHub(): void {
           actions: [
             {
               libelle: rep.action,
+              // Le même portail que le bouton de la barre : une seule action, d'où que l'on soit.
               faire: () => {
-                if (savoir.page !== 'accueil') return void (window.location.href = savoir.accueil);
                 masquer();
-                const ici = rangCourant() === 0;
-                if (!ici) voyager('accueil');
-                window.setTimeout(() => ouvrirCarte(), ici ? 60 : 750);
+                ouvrirPortail({ source: document.querySelector<HTMLElement>('[data-outil="portail"]') });
               },
             },
           ],
@@ -615,9 +613,7 @@ export function initHub(): void {
       if (savoir.page !== 'accueil') return void (window.location.href = `${savoir.accueil}?visite=${id}`);
       masquer();
       if (id === 'libre') {
-        const ici = rangCourant() === 0;
-        if (!ici) voyager('accueil');
-        window.setTimeout(() => ouvrirCarte(), ici ? 60 : 750);
+        ouvrirPortail({ source: document.querySelector<HTMLElement>('[data-outil="portail"]') });
         return;
       }
       visite = { id, k: 0 };

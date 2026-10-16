@@ -1,0 +1,42 @@
+---
+// LA SUITE DU VOYAGE : la conclusion légère de chaque destination.
+// Un petit repère orbital (le symbole du site, ceint d'une orbite qui tourne doucement),
+// une phrase, et une action qui ouvre la carte du portail (voir src/scripts/portail.ts).
+// Sur l'accueil, elle est plus grande : c'est son quatrième chapitre, « Explorer ».
+import { typo } from '../contenu';
+import type { Contenu, IdSection } from '../contenu/types';
+import Symbole from './Symbole.astro';
+
+interface Props {
+  contenu: Contenu;
+  destination: IdSection;
+}
+
+const { contenu: c, destination } = Astro.props;
+const s = c.navigation.suites[destination];
+const grande = destination === 'accueil';
+const t = (texte: string) => typo(texte, c.langue);
+const id = `suite-${destination}`;
+---
+
+<aside
+  class:list={['suite', { 'suite--grande': grande }]}
+  aria-labelledby={id}
+  data-chapitre-de={grande ? 'accueil' : undefined}
+  data-chapitre={grande ? 'explorer' : undefined}
+  data-chapitre-nom={grande ? c.navigation.chapitres.explorer : undefined}
+>
+  <div class="suite__orbite" aria-hidden="true">
+    <span class="suite__anneau"></span>
+    <span class="suite__voyageur"></span>
+    <Symbole taille={grande ? 30 : 22} />
+  </div>
+  <p class="suite__repere etiquette" id={grande ? undefined : id}>{t(s.repere)}</p>
+  {s.titre && <h2 class="titre suite__titre" id={id} data-titre>{t(s.titre)}</h2>}
+  <p class="suite__texte">{grande ? t(c.langue === 'fr' ? `« ${s.texte} »` : `“${s.texte}”`) : t(s.texte)}</p>
+  <button class="suite__action etiquette" type="button" data-portail-ouvrir={grande ? 'grand' : 'bouton'}>
+    <span class="suite__verre" aria-hidden="true"></span>
+    <span>{t(s.action)}</span>
+    <span aria-hidden="true">↗</span>
+  </button>
+</aside>

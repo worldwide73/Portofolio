@@ -21,7 +21,7 @@
 // coupées. À la fermeture, tout s'arrête : boucle, moteur, touches.
 
 import type { Contenu } from '../../contenu/types';
-import { allerA } from '../defilement';
+import { revenirAccueil } from '../voyage';
 import { mouvementReduit } from '../outils';
 import { regler, reglages as reglagesSite } from '../reglages';
 import { reglerVolumeRush, sonRush } from '../sons';
@@ -1175,7 +1175,8 @@ export function initRush(): void {
       return;
     }
     if (window.location.hash) history.replaceState(history.state, '', window.location.pathname + window.location.search);
-    allerA(0, true);
+    // (Depuis le 16 octobre 2026, l'accueil est une destination : on y revient, en haut, sous le jeu.)
+    revenirAccueil();
     const finir = () => {
       fenetre.classList.remove('est-sortie', 'est-sortie-douce', 'est-entree');
       transition = null;
