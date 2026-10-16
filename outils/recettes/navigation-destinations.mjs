@@ -240,7 +240,7 @@ try {
     assert.equal(await p.locator('#acces a[download]').getAttribute('href'), '/cv-matheo-maleyran.pdf');
     await p.locator('[data-action="raccourcis"]').click();
     await p.waitForSelector('.raccourcis[open]');
-    assert.ok((await p.locator('.raccourcis').textContent()).includes('Rechercher dans le portfolio'));
+    assert.ok((await p.locator('.raccourcis').textContent()).includes('Ouvrir ou fermer la recherche'));
     await p.keyboard.press('Escape');
   });
   await controle('Changement de langue sans rechargement : destination et outils traduits', async () => {

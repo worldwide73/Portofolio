@@ -183,7 +183,8 @@ body::before {
 
 :is(.apropos, .competences, .veille) {
   margin-inline: var(--marge-cadre);
-  padding: clamp(22px, 2.8vw, 46px);
+  /* (--k-panneau : la densité, voir densites.css ; elle vaut 1 dans l'affichage d'origine.) */
+  padding: calc(clamp(22px, 2.8vw, 46px) * var(--k-panneau, 1));
   border: 1px solid var(--filet);
   border-radius: var(--rayon-cadre);
   background: var(--panneau);
@@ -280,6 +281,71 @@ body::before {
 .reglages[data-ambiance='focus'] .ambiances__texte [data-pour='focus'],
 .reglages[data-ambiance='silence'] .ambiances__texte [data-pour='silence'] {
   display: inline;
+}
+
+/* ---- Densité et restauration (16 octobre 2026) ---- */
+.reglages__note {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.38;
+  color: var(--discret);
+}
+
+/* La phrase du mode choisi, seule. */
+.densites__texte span {
+  display: none;
+}
+
+.reglages[data-densite='compact'] .densites__texte [data-pour='compact'],
+.reglages[data-densite='equilibre'] .densites__texte [data-pour='equilibre'],
+.reglages[data-densite='cinematique'] .densites__texte [data-pour='cinematique'] {
+  display: inline;
+}
+
+.reglages__restaurer {
+  display: grid;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--filet);
+}
+
+.reglages__bouton {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 999px;
+  background: none;
+  color: var(--texte);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background var(--d-micro) var(--c-douce),
+    border-color var(--d-micro) var(--c-douce);
+}
+
+.reglages__bouton:hover {
+  background: var(--surface);
+}
+
+.reglages__bouton:focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* La confirmation : une ligne discrète, qui s'efface d'elle-même (reglages-panneau.ts). */
+.reglages__confirmation {
+  min-height: 1.2em;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--lampe);
+  opacity: 0;
+  transition: opacity 0.35s var(--c-douce);
+}
+
+.reglages__confirmation.est-visible {
+  opacity: 1;
 }
 
 /* ---- Le lecteur ---- */

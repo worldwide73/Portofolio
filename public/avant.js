@@ -20,6 +20,14 @@
     document.addEventListener('DOMContentLoaded', debut, { once: true });
     window.addEventListener('load', debut, { once: true });
   }
+  // La densité choisie dans les réglages (16 octobre 2026), posée avant le premier affichage pour
+  // éviter un saut de mise en page ; reglages.ts la tient ensuite. L'affichage d'origine n'écrit rien.
+  try {
+    var densite = JSON.parse(localStorage.getItem('reglages-5') || '{}').densite;
+    if (densite === 'compact' || densite === 'cinematique') h.setAttribute('data-densite', densite);
+  } catch (e) {
+    // stockage indisponible : l'affichage d'origine
+  }
   if (surAccueil) {
     var id = location.hash.slice(1);
     h.setAttribute('data-lieu', ['competences', 'realisations', 'veille', 'contact'].indexOf(id) >= 0 ? id : 'accueil');

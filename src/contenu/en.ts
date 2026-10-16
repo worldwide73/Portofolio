@@ -62,26 +62,40 @@ export const en: Contenu = {
     ecrire: 'Write',
     raccourcis: 'Keyboard commands',
     fermer: 'Close',
+    // (Each key is drawn on its own; “+” reads “together”, “/” reads “or”.)
     groupes: [
-      { nom: 'On the site', lignes: [
-        [['Ctrl', 'K'], 'Search the portfolio (⌘ K on Mac)'],
-        [['←', '→'], 'Previous or next chapter of the destination (the bottom trail)'],
-        [['Esc'], 'Close the open window: map, search, quick view, settings, menu'],
-        [['?'], 'Show these commands'],
+      { nom: 'Anywhere', lignes: [
+        [['Ctrl', '+', 'K'], 'Open or close the search (⌘ + K on Mac)'],
+        [['Esc'], 'Close the active window or map'],
+        [['←', '→'], 'Previous or next chapter of the destination'],
+        [['?'], 'Show this help'],
         [['²'], 'Open the hidden terminal (or type “trace”)'],
       ] },
-      { nom: 'Portal map and work', lignes: [
-        [['←', '→', '↑', '↓'], 'Portal map: from one destination to the next, Enter to go'],
-        [['←', '→'], 'Work: previous or next project of the gallery'],
+      { nom: 'Search', lignes: [
+        [['↑', '↓'], 'Choose a result'],
+        [['Enter'], 'Open the chosen result'],
+      ] },
+      { nom: 'Portal map', lignes: [
+        [['←', '→', '↑', '↓'], 'Move from one destination to the next'],
+        [['Enter'], 'Travel to the chosen destination'],
+      ] },
+      { nom: 'Work', lignes: [
+        [['←', '→'], 'Previous or next project of the gallery'],
+      ] },
+      { nom: 'Guided tour (Orbital Hub)', lignes: [
+        [['←', '→'], 'Previous or next step'],
+        [['Esc'], 'Leave the tour'],
       ] },
       { nom: 'Portal Rush', lignes: [
         [['←', '→'], 'Change lane (also A / D or Q / D)'],
         [['Space'], 'Overdrive (also ↑, W or Z)'],
-        [['Esc', 'P'], 'Pause'],
+        [['Esc', '/', 'P'], 'Pause'],
         [['R'], 'Play again (pause, end or victory)'],
         [['Enter'], 'Confirm the selected command'],
       ] },
     ],
+    aideTouches: 'Key — action',
+    aideSaisie: 'While typing, in a panel or during a game, each window keeps its own keys.',
   },
 
   initialisation: {
@@ -219,7 +233,7 @@ export const en: Contenu = {
         competences: { texte: 'Skills are grouped by area, each linked to the projects that prove it.', action: 'Go to the skills' },
         veille: { texte: 'The watch gathers the topics I follow, with their sources.', action: 'Go to the watch' },
         contact: { texte: 'The simplest: the email address, copied in one click. There are also the phone, LinkedIn and GitHub.', action: 'Go to contact' },
-        reglages: { texte: 'The three-slider icon, top right: panel opacity and blur, glow, animations, sound effects, music and moods.', action: 'Open the settings' },
+        reglages: { texte: 'The three-slider icon, top right: display density (Compact, Balanced, Cinematic), panel opacity and blur, glow, animations, sound effects, music and moods. One button restores the original display.', action: 'Open the settings' },
         jeu: { texte: 'Portal Rush: three lanes, obstacles, energy fragments and Overdrive. Eight levels, four difficulties, endless survival and a daily challenge.', action: 'Launch Portal Rush' },
         commandes: { texte: '← → (or A / D) to change lanes, Space for Overdrive, Escape to pause. On touch: tap left or right, swipe up for Overdrive.', action: 'See all the controls' },
         carte: { texte: 'You travel from one destination to another through the portal map: the glass cube of the home page shatters and its shards form that map. The “Cross the portal” passage, at the bottom of each destination, leads there.', action: 'Open the map' },
@@ -516,6 +530,16 @@ export const en: Contenu = {
     sons: 'Sound effects',
     musique: 'Music',
     volume: 'Volume',
+    densite: 'Density',
+    densites: {
+      compact: { nom: 'Compact', texte: 'Tighter titles and margins: more content on screen.' },
+      equilibre: { nom: 'Balanced', texte: 'The portfolio’s original display.' },
+      cinematique: { nom: 'Cinematic', texte: 'Larger titles and more room around the content.' },
+    },
+    restaurer: 'Restore the original display',
+    restaurerAide: 'Density, opacity, blur, glow and animations. Mood, sounds and Portal Rush stay as they are.',
+    restaure: 'Original display restored.',
+    dejaOrigine: 'This is already the original display.',
   },
 
   atmosphere: {
@@ -547,6 +571,13 @@ export const en: Contenu = {
     portail: 'Open the portal map',
     portailAide: 'The portal shatters, and its shards form the map of the site.',
     invite: 'Explore the portfolio',
+  },
+  guidage: {
+    titre: 'Your journey starts here.',
+    explorer: { souris: 'Scroll', doigt: 'Swipe', texte: 'explores the destination on screen.' },
+    voyager: { geste: 'Portal', texte: 'cross it to travel to the other worlds.' },
+    fermer: 'Got it',
+    revoir: 'Show the navigation tips again',
   },
   navigation: {
     outils: {
@@ -622,6 +653,7 @@ export const en: Contenu = {
     titre: 'Portal map',
     aide: 'Choose a destination.',
     ici: 'You are here',
+    visitee: '(already explored)',
     refermer: 'Close the map',
     destinations: {
       accueil: 'The portal, the method, the journey',

@@ -209,6 +209,32 @@
   justify-items: end;
 }
 
+/* Une destination déjà explorée (souvenirs.ts) : un minuscule point cyan, posé sur le halo de sa
+   planète, en haut à droite. Rien d'autre ne change : ni la planète, ni son orbite, ni ses effets. */
+.astre i {
+  position: relative;
+}
+
+.astre[data-visitee] i::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #9fe6ff;
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 7px) rgba(159, 230, 255, 0.85);
+}
+
+.astre__vue {
+  display: none;
+}
+
+.astre[data-visitee] .astre__vue {
+  display: inline;
+}
+
 /* L'endroit où l'on se trouve : un anneau autour du point. */
 .astre[aria-current] i {
   outline: 1px solid color-mix(in srgb, var(--lampe) 80%, transparent);

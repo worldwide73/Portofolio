@@ -5,6 +5,12 @@
 //
 // Comprendre une recherche : en minuscules, sans accents ; chaque mot tapé doit se trouver
 // dans le résultat (au début d'un mot, ou dedans). Le titre compte plus que le texte.
+// Depuis le 16 octobre 2026, un mot peut aussi être trouvé par :
+//   - son singulier (« projets » → « projet ») ;
+//   - un synonyme, en français ou en anglais (synonymes.ts : « gaming » → Portal Rush,
+//     « alternance » → CV, parcours, contact) ; il compte un peu moins que le mot lui-même ;
+//   - une petite faute de frappe (une lettre de plus, de moins ou changée, sur un mot assez long) ;
+// et les mots vides sont ignorés (« me joindre » → « joindre »).
 //
 // Ouvrir un résultat :
 //   - une destination, ou un chapitre (une compétence, une note de veille, la méthode…) :
@@ -19,6 +25,7 @@ import { allerChapitre } from './fil';
 import { ouvrirRush } from './rush/rush';
 import { reglages } from './reglages';
 import { mouvementReduit } from './outils';
+import { MOTS_VIDES, SYNONYMES } from './synonymes';
 import type { Destination } from './voyage';
 
 interface Entree {
@@ -50,6 +57,52 @@ const simplifier = (texte: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+// ---- Les synonymes, simplifiés une fois : à chaque mot, les groupes qui le contiennent ----
+const GROUPES = SYNONYMES.map((groupe) => groupe.map(simplifier));
+const PAR_MOT = new Map<string, number[]>();
+GROUPES.forEach((groupe, k) => groupe.forEach((mot) => PAR_MOT.set(mot, [...(PAR_MOT.get(mot) ?? []), k])));
+
+/** Le mot lui-même, et son singulier ; puis ses synonymes. */
+function formes(mot: string): { propres: string[]; synonymes: string[] } {
+  const propres = [mot];
+  if (mot.length > 3 && /[sx]$/.test(mot)) propres.push(mot.slice(0, -1));
+  const synonymes = new Set<string>();
+  for (const forme of propres) for (const k of PAR_MOT.get(forme) ?? []) GROUPES[k].forEach((autre) => !propres.includes(autre) && synonymes.add(autre));
+  return { propres, synonymes: [...synonymes] };
+}
+
+/** Deux mots à une faute près (une lettre ajoutée, retirée ou changée) ? */
+function presque(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1 || a === b) return false;
+  let i = 0;
+  let j = 0;
+  let fautes = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    if (++fautes > 1) return false;
+    // Deux lettres inversées (« pyhton ») comptent pour une seule faute.
+    if (a[i] === b[j + 1] && a[i + 1] === b[j]) {
+      i += 2;
+      j += 2;
+    } else if (a.length > b.length) i++;
+    else if (b.length > a.length) j++;
+    else {
+      i++;
+      j++;
+    }
+  }
+  return fautes + (a.length - i) + (b.length - j) <= 1;
+}
+
+/** Un petit avantage par genre de résultat, pour départager deux résultats aussi pertinents. */
+const BONUS: Record<string, number> = { destination: 0.5, document: 0.3, contact: 0.25, jeu: 0.2, projet: 0.15, competence: 0.1, parcours: 0.05 };
+
+const echapper = (mot: string) => mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 let ouvrir: ((depuis?: HTMLElement | null) => void) | null = null;
 /** Ouvre la recherche (le bouton de la barre, Ctrl + K). */
 export function ouvrirRecherche(depuis?: HTMLElement | null): void {
@@ -67,34 +120,57 @@ export function initRecherche(): void {
   let index: Entree[] = [];
   let suggestions: number[] = [];
   let textes: Textes = { vide: '', suggestions: '', resultats: '', types: {} };
-  /** Ce qu'on compare : le titre et le reste, simplifiés une fois pour toutes. */
-  let prepare: { titre: string; tout: string }[] = [];
+  /** Ce qu'on compare : le titre et le reste, simplifiés une fois pour toutes, les mots du titre, et le genre. */
+  let prepare: { titre: string; tout: string; motsTitre: string[]; genre: string }[] = [];
   const lire = () => {
     index = JSON.parse(fenetre.dataset.index ?? '[]');
     suggestions = JSON.parse(fenetre.dataset.suggestions ?? '[]');
     textes = JSON.parse(fenetre.dataset.textes ?? '{}');
-    prepare = index.map((e) => ({ titre: simplifier(e.titre), tout: simplifier(`${e.titre} ${e.texte} ${e.mots ?? ''} ${textes.types[e.t] ?? ''}`) }));
+    prepare = index.map((e) => {
+      const titre = simplifier(e.titre);
+      return { titre, tout: simplifier(`${e.titre} ${e.texte} ${e.mots ?? ''} ${textes.types[e.t] ?? ''}`), motsTitre: titre.split(' '), genre: simplifier(textes.types[e.t] ?? '') };
+    });
   };
   lire();
 
   let affiches: number[] = [];
   let choisi = 0;
 
+  /** La note d'une forme dans une entrée : au début du titre, au début d'un mot du titre, dans le titre, puis ailleurs. 0 : absente. */
+  const noter = (p: (typeof prepare)[number], forme: string): number => {
+    const debutMot = new RegExp(`(^| )${echapper(forme)}`);
+    if (p.titre.startsWith(forme)) return 6;
+    if (debutMot.test(p.titre)) return 4;
+    if (p.titre.includes(forme)) return 2;
+    if (debutMot.test(p.tout)) return 1.5;
+    if (forme.length > 2 && p.tout.includes(forme)) return 0.6;
+    return 0;
+  };
+
   /** Les résultats d'une recherche, du plus pertinent au moins pertinent. */
   const chercher = (requete: string): number[] => {
-    const mots = simplifier(requete).split(' ').filter(Boolean);
-    if (!mots.length) return suggestions;
+    const tapes = simplifier(requete).split(' ').filter(Boolean);
+    if (!tapes.length) return suggestions;
+    // Les mots vides ne comptent pas, sauf si la recherche n'a rien d'autre.
+    const pleins = tapes.filter((mot) => !MOTS_VIDES.has(mot));
+    const mots = (pleins.length ? pleins : tapes).map((mot) => ({ mot, ...formes(mot) }));
     const notes: { i: number; note: number }[] = [];
     prepare.forEach((p, i) => {
       let note = 0;
-      for (const mot of mots) {
-        const debutTitre = p.titre.startsWith(mot) ? 6 : new RegExp(`(^| )${mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(p.titre) ? 4 : p.titre.includes(mot) ? 2 : 0;
-        const ailleurs = debutTitre ? 0 : new RegExp(`(^| )${mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(p.tout) ? 1.5 : p.tout.includes(mot) ? 0.6 : -1;
-        if (!debutTitre && ailleurs < 0) return; // un mot absent : ce résultat ne convient pas
-        note += debutTitre || ailleurs;
+      for (const { mot, propres, synonymes } of mots) {
+        // Le mot lui-même (ou son singulier) ; sinon un synonyme, qui compte un peu moins ; sinon une petite faute dans le titre.
+        let meilleure = Math.max(...propres.map((forme) => noter(p, forme)));
+        // (Un synonyme trouvé dans un titre ne vaut pas le mot lui-même : il est plafonné.)
+        if (!meilleure && synonymes.length) meilleure = Math.min(1.5, Math.max(...synonymes.map((forme) => noter(p, forme)))) * 0.7;
+        if (!meilleure && mot.length >= 5 && p.motsTitre.some((m) => presque(mot, m))) meilleure = 1.8;
+        if (!meilleure) return; // un mot introuvable : ce résultat ne convient pas
+        note += meilleure;
+        // Le mot nomme le genre du résultat (« projets », « compétence », « contact ») : c'en est un.
+        if (p.genre && (propres.includes(p.genre) || synonymes.includes(p.genre))) note += propres.includes(p.genre) ? 3 : 2;
       }
-      if (p.titre === mots.join(' ')) note += 5; // le titre exact
-      if (index[i].t === 'destination') note += 0.5;
+      if (p.titre === tapes.join(' ')) note += 5; // le titre exact
+      // À égalité, l'ordre des genres départage : une destination, un document (le CV), un moyen de contact…
+      note += BONUS[index[i].t] ?? 0;
       notes.push({ i, note });
     });
     // Un même titre peut revenir (une compétence dans deux domaines) : on garde le meilleur.
@@ -194,7 +270,8 @@ export function initRecherche(): void {
       if (e.fiche && e.t === 'projet') return void (window.location.href = e.fiche);
       return void (window.location.href = `${fenetre.dataset.accueil ?? '/'}${e.d === 'accueil' ? '' : `#${e.d}`}`);
     }
-    allerChapitre(e.d, e.ch, { ouvrir: e.t === 'veille' || e.ch === 'tableau' });
+    // (Un résultat choisi est un accès direct : le court fondu, pas le long saut dans le temps.)
+    allerChapitre(e.d, e.ch, { ouvrir: e.t === 'veille' || e.ch === 'tableau', direct: true });
   };
 
   let retour: HTMLElement | null = null;

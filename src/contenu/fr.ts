@@ -67,26 +67,40 @@ export const fr: Contenu = {
     ecrire: 'Écrire',
     raccourcis: 'Commandes clavier',
     fermer: 'Fermer',
+    // (Chaque touche est dessinée à part ; « + » se lit « en même temps », « / » se lit « ou ».)
     groupes: [
-      { nom: 'Sur le site', lignes: [
-        [['Ctrl', 'K'], 'Rechercher dans le portfolio (⌘ K sur Mac)'],
-        [['←', '→'], 'Chapitre précédent ou suivant de la destination (le fil du bas)'],
-        [['Échap'], 'Fermer la fenêtre ouverte : carte, recherche, visite rapide, réglages, menu'],
-        [['?'], 'Afficher ces commandes'],
+      { nom: 'Partout', lignes: [
+        [['Ctrl', '+', 'K'], 'Ouvrir ou fermer la recherche (⌘ + K sur Mac)'],
+        [['Échap'], 'Fermer la fenêtre ou la carte active'],
+        [['←', '→'], 'Chapitre précédent ou suivant de la destination'],
+        [['?'], 'Afficher cette aide'],
         [['²'], 'Ouvrir le terminal caché (ou taper « trace »)'],
       ] },
-      { nom: 'Carte du portail et réalisations', lignes: [
-        [['←', '→', '↑', '↓'], 'Carte du portail : d\'une destination à l\'autre, Entrée pour y aller'],
-        [['←', '→'], 'Réalisations : projet précédent ou suivant de la galerie'],
+      { nom: 'Recherche', lignes: [
+        [['↑', '↓'], 'Choisir un résultat'],
+        [['Entrée'], 'Ouvrir le résultat choisi'],
+      ] },
+      { nom: 'Carte du portail', lignes: [
+        [['←', '→', '↑', '↓'], 'Passer d’une destination à l’autre'],
+        [['Entrée'], 'Voyager vers la destination choisie'],
+      ] },
+      { nom: 'Réalisations', lignes: [
+        [['←', '→'], 'Projet précédent ou suivant de la galerie'],
+      ] },
+      { nom: 'Visite guidée (Orbital Hub)', lignes: [
+        [['←', '→'], 'Étape précédente ou suivante'],
+        [['Échap'], 'Quitter la visite'],
       ] },
       { nom: 'Portal Rush', lignes: [
         [['←', '→'], 'Changer de voie (aussi A / D ou Q / D)'],
         [['Espace'], 'Overdrive (aussi ↑, W ou Z)'],
-        [['Échap', 'P'], 'Pause'],
+        [['Échap', '/', 'P'], 'Pause'],
         [['R'], 'Rejouer (pause, fin ou victoire)'],
         [['Entrée'], 'Valider la commande choisie'],
       ] },
     ],
+    aideTouches: 'Touche — action',
+    aideSaisie: 'Pendant une saisie, dans un panneau ou une partie, chaque fenêtre garde ses propres touches.',
   },
 
   initialisation: {
@@ -224,7 +238,7 @@ export const fr: Contenu = {
         competences: { texte: 'Les compétences sont regroupées par domaine, chacune reliée aux projets qui la prouvent.', action: 'Aller aux compétences' },
         veille: { texte: 'La veille rassemble les sujets suivis, avec leurs sources.', action: 'Aller à la veille' },
         contact: { texte: 'Le plus simple : l’adresse e-mail, à copier en un clic. Il y a aussi le téléphone, LinkedIn et GitHub.', action: 'Aller au contact' },
-        reglages: { texte: 'L’icône à trois curseurs, en haut à droite : opacité et flou des panneaux, intensité lumineuse, animations, effets sonores, musique et ambiances.', action: 'Ouvrir les réglages' },
+        reglages: { texte: 'L’icône à trois curseurs, en haut à droite : densité de l’affichage (Compact, Équilibré, Cinématique), opacité et flou des panneaux, intensité lumineuse, animations, effets sonores, musique et ambiances. Un bouton y rétablit l’affichage d’origine.', action: 'Ouvrir les réglages' },
         jeu: { texte: 'Portal Rush : trois voies, des obstacles, des fragments d’énergie et l’Overdrive. Huit niveaux, quatre difficultés, une survie infinie et un défi du jour.', action: 'Lancer Portal Rush' },
         commandes: { texte: '← → (ou A / D) pour changer de voie, Espace pour l’Overdrive, Échap pour la pause. Au doigt : touchez à gauche ou à droite, glissez vers le haut pour l’Overdrive.', action: 'Voir toutes les commandes' },
         carte: { texte: 'On voyage d’une destination à l’autre par la carte du portail : le cube de verre de l’accueil se brise et ses éclats forment cette carte. Le passage « Traverser le portail », en bas de chaque destination, y mène.', action: 'Ouvrir la carte' },
@@ -521,6 +535,16 @@ export const fr: Contenu = {
     sons: 'Effets sonores',
     musique: 'Musique',
     volume: 'Volume',
+    densite: 'Densité',
+    densites: {
+      compact: { nom: 'Compact', texte: 'Titres et marges resserrés : plus de contenu à l’écran.' },
+      equilibre: { nom: 'Équilibré', texte: 'L’affichage d’origine du portfolio.' },
+      cinematique: { nom: 'Cinématique', texte: 'Titres plus grands et plus d’air autour du contenu.' },
+    },
+    restaurer: 'Restaurer l’affichage d’origine',
+    restaurerAide: 'Densité, opacité, flou, lueur et animations. L’ambiance, les sons et Portal Rush ne changent pas.',
+    restaure: 'Affichage d’origine rétabli.',
+    dejaOrigine: 'C’est déjà l’affichage d’origine.',
   },
 
   atmosphere: {
@@ -552,6 +576,13 @@ export const fr: Contenu = {
     portail: 'Ouvrir la carte du portail',
     portailAide: 'Le portail se brise, et ses éclats forment la carte du site.',
     invite: 'Explorer le portfolio',
+  },
+  guidage: {
+    titre: 'Votre voyage commence ici.',
+    explorer: { souris: 'Molette', doigt: 'Défiler', texte: 'explore la destination affichée.' },
+    voyager: { geste: 'Portail', texte: 'traversez-le pour voyager vers les autres univers.' },
+    fermer: 'Compris',
+    revoir: 'Revoir les indications de navigation',
   },
   navigation: {
     outils: {
@@ -627,6 +658,7 @@ export const fr: Contenu = {
     titre: 'Carte du portail',
     aide: 'Choisissez une destination.',
     ici: 'Vous êtes ici',
+    visitee: '(déjà explorée)',
     refermer: 'Refermer la carte',
     destinations: {
       accueil: 'Le portail, la méthode, le parcours',

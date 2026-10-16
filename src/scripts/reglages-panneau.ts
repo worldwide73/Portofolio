@@ -6,8 +6,10 @@
 //   - faire varier un instant l'opacité des surfaces en verre quand le portail s'ouvre.
 
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import type { Ambiance, Piste } from './ambiances';
-import { reglages, regler, surReglage, type Reglages } from './reglages';
+import { lenis } from './defilement';
+import { reglages, regler, restaurerAffichage, surReglage, type Densite, type Reglages } from './reglages';
 
 /** Les curseurs : nom du champ, et facteur entre la valeur affichée (0 à 100) et la valeur gardée (0 à 1). */
 const CURSEURS: (keyof Reglages)[] = ['opacite', 'flou', 'lueur', 'volumeSons', 'volumeMusique'];
@@ -19,13 +21,19 @@ export function initReglages(): void {
   const champ = <T extends HTMLInputElement>(selecteur: string) => [...panneau.querySelectorAll<T>(selecteur)];
 
   // ---- Curseurs ----
+  // (« caler » remet chaque commande sur la valeur gardée : à l'ouverture, et après une restauration.)
+  const calages: (() => void)[] = [];
   CURSEURS.forEach((cle) => {
     const curseur = panneau.querySelector<HTMLInputElement>(`input[name="${cle}"]`);
     const affichage = panneau.querySelector<HTMLOutputElement>(`output[data-pour="${cle}"]`);
     if (!curseur) return;
     const montrer = () => affichage && (affichage.textContent = `${curseur.value} %`);
-    curseur.value = String(Math.round((reglages[cle] as number) * 100));
-    montrer();
+    const caler = () => {
+      curseur.value = String(Math.round((reglages[cle] as number) * 100));
+      montrer();
+    };
+    caler();
+    calages.push(caler);
     curseur.addEventListener('input', () => {
       regler(cle, (Number(curseur.value) / 100) as never);
       montrer();
@@ -33,9 +41,50 @@ export function initReglages(): void {
   });
 
   // ---- Niveau d'animation ----
-  champ('input[name="animations"]').forEach((radio) => {
-    radio.checked = Number(radio.value) === reglages.animations;
-    radio.addEventListener('change', () => regler('animations', Number(radio.value)));
+  const niveaux = champ('input[name="animations"]');
+  const calerNiveaux = () => niveaux.forEach((radio) => (radio.checked = Number(radio.value) === reglages.animations));
+  calerNiveaux();
+  calages.push(calerNiveaux);
+  niveaux.forEach((radio) => radio.addEventListener('change', () => regler('animations', Number(radio.value))));
+
+  // ---- Densité (16 octobre 2026) : instantanée, sans rechargement ----
+  const densites = champ('input[name="densite"]');
+  const calerDensite = () => {
+    densites.forEach((radio) => (radio.checked = radio.value === reglages.densite));
+    panneau.dataset.densite = reglages.densite; // (la phrase du mode choisi : voir reglages.css)
+  };
+  calerDensite();
+  calages.push(calerDensite);
+  densites.forEach((radio) => radio.addEventListener('change', () => regler('densite', radio.value as Densite)));
+  surReglage((cle) => {
+    if (cle !== 'densite') return;
+    calerDensite();
+    // Les hauteurs changent : on garde la même part de la destination à l'écran, puis tout se remesure
+    // (défilement amorti, déclencheurs, fil des chapitres, fonds glissants).
+    const fin = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const part = window.scrollY / fin;
+    requestAnimationFrame(() => {
+      lenis?.resize();
+      ScrollTrigger.refresh();
+      const y = Math.round(part * Math.max(0, document.documentElement.scrollHeight - window.innerHeight));
+      if (lenis) lenis.scrollTo(y, { immediate: true, force: true });
+      else window.scrollTo(0, y);
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+
+  // ---- Restaurer l'affichage d'origine ----
+  const restaurer = panneau.querySelector<HTMLButtonElement>('[data-restaurer]');
+  const confirmation = panneau.querySelector<HTMLElement>('[data-confirmation]');
+  let effacer = 0;
+  restaurer?.addEventListener('click', () => {
+    const changes = restaurerAffichage();
+    calages.forEach((caler) => caler());
+    if (!confirmation) return;
+    confirmation.textContent = (changes ? confirmation.dataset.fait : confirmation.dataset.deja) ?? '';
+    confirmation.classList.add('est-visible');
+    window.clearTimeout(effacer);
+    effacer = window.setTimeout(() => confirmation.classList.remove('est-visible'), 3200);
   });
 
   // ---- Cases à cocher : les effets sonores, le son dès l'ouverture du site ----

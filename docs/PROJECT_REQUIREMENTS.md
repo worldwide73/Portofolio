@@ -1,3 +1,18 @@
+## Huit améliorations du 16 octobre 2026 (3ᵉ lot)
+
+| Demande | État | Preuve |
+|---|---|---|
+| Densités Compact / Équilibré / Cinématique ; l'actuel = Équilibré, par défaut, inchangé | V | relevé des boîtes avant/après identique ; recette (titres, hero, portail, débordement) ; captures 1440/390/320 |
+| Densité instantanée et mémorisée | V | recette (changement sans rechargement, rechargement) |
+| Restaurer l'affichage d'origine, sans toucher au reste | V | recette (5 réglages rétablis, stockage et sons intacts, confirmation) |
+| Mémoire des destinations visitées sur la carte | V | recette (marques, stockage, passage par l'accueil exclu) + capture |
+| Mini-guidage de première visite, fermable, mémorisé, revoir | V | recette bureau, téléphone, réduit + captures |
+| Reflets de verre au curseur (quelques surfaces) | V (souris émulée) | recette (suivi, extinction, aucune surface en réduit) ; rendu examiné sur capture |
+| Fin de chapitre sur le fil, sans répétition | V | recette (molette, saut exclu, aller-retour sans nouvelle animation) + capture |
+| Recherche : synonymes, variantes, accents, FR/EN, état vide | V | recette (18 requêtes FR) + 11 requêtes EN |
+| Aide clavier : raccourcis réels, Échap, clavier | V | recette + captures FR/EN |
+| Non-régression (portail, carte, galerie, Hub, Rush, navigation) | V | recettes navigation 24/24, corrections 21/21, portail, finitions, icone-orbit, saut-ambiances |
+
 ## Retours du 16 octobre 2026 (2ᵉ lot) — remplacent les lignes « Barre », « cassure du bouton Portail » et « raccourci P » du lot ci-dessous
 
 | Demande | État | Preuve |

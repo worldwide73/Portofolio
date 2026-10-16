@@ -115,7 +115,7 @@ const lectures = new Map<Destination, number>();
  * remesurée, et l'on se place en haut (ou à « y »). Prévient les autres modules
  * par l'évènement « destination ».
  */
-function montrer(id: Destination, y = 0): void {
+function montrer(id: Destination, y = 0, detour = false): void {
   const avant = destinationActive();
   if (avant !== id) lectures.set(avant, window.scrollY);
   html.dataset.lieu = id;
@@ -123,7 +123,8 @@ function montrer(id: Destination, y = 0): void {
   ScrollTrigger.refresh();
   allerA(y, true);
   ScrollTrigger.update();
-  window.dispatchEvent(new CustomEvent('destination', { detail: { id, avant } }));
+  // (« detour » : l'accueil n'est affiché que le temps que le grand portail s'y brise ; ce n'est pas une visite.)
+  window.dispatchEvent(new CustomEvent('destination', { detail: { id, avant, detour } }));
 }
 
 /**
@@ -202,10 +203,12 @@ function glisser(section: HTMLElement, sens: 1 | -1): void {
 
 /**
  * Va à une destination. « memoriser » : ajoute l'étape à l'historique du navigateur.
+ * « direct » : un accès explicite (un résultat de recherche) ; on prend le court fondu, jamais le
+ * saut dans le temps d'une seconde entre l'accueil et Contact.
  * Si un changement est déjà en route, sa destination est simplement remplacée.
  * Déjà sur place : on remonte en haut de la destination.
  */
-export function voyager(id: string, memoriser = true): void {
+export function voyager(id: string, memoriser = true, direct = false): void {
   if (!estDestination(id)) return;
   const cible = document.getElementById(id);
   const contenu = document.querySelector<HTMLElement>('main');
@@ -265,7 +268,7 @@ export function voyager(id: string, memoriser = true): void {
   // Seul le choix explicite d'animations allégées/coupées (ou système) la simplifie.
   const dernier = TRAJET.length - 1;
   const saut: Sens | null = arrivee === 0 && depart === dernier ? 'retour' : arrivee === dernier && depart === 0 ? 'aller' : null;
-  if (saut && !visee && reglages.animations === 1) {
+  if (saut && !visee && !direct && reglages.animations === 1) {
     enCours?.kill();
     enCours = null;
     gsap.set(contenu, { clearProps: 'opacity' });
@@ -332,7 +335,7 @@ export function rejoindrePortail(pret: () => void): void {
   visee = null;
   detour = { id, y: window.scrollY };
   if (estCalme()) {
-    montrer('accueil');
+    montrer('accueil', 0, true);
     pret();
     return;
   }
@@ -346,7 +349,7 @@ export function rejoindrePortail(pret: () => void): void {
     },
   });
   enCours.to(contenu, { opacity: 0, duration: 0.16, ease: 'power1.in' });
-  enCours.call(() => montrer('accueil'));
+  enCours.call(() => montrer('accueil', 0, true));
   enCours.to(contenu, { opacity: 1, duration: ENTREE, ease: 'power2.out' });
 }
 

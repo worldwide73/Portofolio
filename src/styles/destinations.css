@@ -335,6 +335,155 @@ html[data-lieu='contact'] .nav__lieu [data-lieu-nom='contact'] {
   100% { background-position: -30% 0; }
 }
 
+/* ---- Le mini-guidage de la première visite (guidage.ts) ----
+   Une petite lame de verre à côté du grand portail (au-dessus de lui sur téléphone). Elle est posée
+   dans .hero, hors du cadre de la scène : la toucher ne touche jamais le portail. */
+.guidage {
+  position: absolute;
+  z-index: 3;
+  left: calc(50% + min(10.5%, 20svh) + 34px);
+  top: 31%;
+  width: min(18.5rem, calc(50% - min(10.5%, 20svh) - 70px));
+  display: grid;
+  gap: 0.8rem;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  background: rgba(12, 16, 26, 0.56);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 40px) rgba(120, 175, 255, calc(var(--lueur, 0.7) * 0.14));
+  color: var(--texte);
+  opacity: 0;
+  translate: 0 8px;
+  transition:
+    opacity 0.45s var(--c-douce),
+    translate 0.6s var(--c-masque);
+}
+
+.guidage[hidden] {
+  display: none;
+}
+
+.guidage.est-visible {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* Un filet de lumière en haut de la lame, qui s'éteint vers les bords. */
+.guidage::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 14%;
+  right: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(159, 230, 255, 0.85), transparent);
+}
+
+.guidage__titre {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.guidage__gestes {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.guidage__gestes div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+/* Le geste : une petite touche de verre. */
+.guidage__gestes dt {
+  padding: 2px 8px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 6px;
+  background: rgba(150, 182, 235, 0.08);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.guidage__gestes dd {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--discret);
+}
+
+.guidage__doigt {
+  display: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .guidage__souris {
+    display: none;
+  }
+
+  .guidage__doigt {
+    display: inline;
+  }
+}
+
+.guidage__fermer {
+  justify-self: end;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 999px;
+  background: none;
+  color: var(--texte);
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--d-micro) var(--c-douce);
+}
+
+.guidage__fermer:hover {
+  background: var(--surface);
+}
+
+.guidage__fermer:focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+  .guidage {
+    left: 50%;
+    top: calc(var(--barre-h) + var(--marge-cadre) + 10px);
+    width: min(22rem, calc(100% - 40px));
+    translate: -50% -6px;
+    padding: 14px 14px 12px;
+    gap: 0.6rem;
+  }
+
+  .guidage.est-visible {
+    translate: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guidage {
+    transition: opacity 0.2s linear;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 860px) {
+  .guidage {
+    translate: -50% 0;
+  }
+}
+
 /* ---- La recherche ---- */
 .recherche {
   width: min(40rem, calc(100vw - 24px));
@@ -745,4 +894,126 @@ html.curseur-actif :is(.recherche, .rapide) :is(a, button, [role='option']) {
 
 html.animations-coupees :is(.suite__voyageur, .suite__verre) {
   animation: none;
+}
+
+/* ---- Les reflets de verre au curseur (reflets.ts) ----
+   Trois surfaces seulement : la pastille de la barre, le passage vers le portail, la carte LinkedIn.
+   Un dégradé bleu glacier très doux, peint dans le fond de la surface (donc sous le texte), centré
+   sous le curseur (--rx, --ry) ; --reflet le fait paraître et s'éteindre en douceur. */
+@property --reflet {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+.reflet:is(.nav__liste, .suite__action, .contact__linkedin) {
+  background-image: radial-gradient(
+    circle var(--reflet-r, 120px) at var(--rx, 50%) var(--ry, 50%),
+    rgba(226, 242, 255, calc(var(--reflet) * 0.13)),
+    rgba(170, 215, 255, calc(var(--reflet) * 0.05)) 45%,
+    transparent 72%
+  );
+}
+
+.reflet.a-reflet {
+  --reflet: 1;
+}
+
+.reflet.nav__liste {
+  --reflet-r: 90px;
+  transition:
+    background-color var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce),
+    --reflet 0.45s var(--c-douce);
+}
+
+.reflet.suite__action {
+  --reflet-r: 70px;
+  transition:
+    border-color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce),
+    background-color var(--d-interface) var(--c-douce),
+    --reflet 0.45s var(--c-douce);
+}
+
+.reflet.contact__linkedin {
+  --reflet-r: 160px;
+  transition:
+    border-color var(--d-interface) var(--c-douce),
+    background-color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce),
+    --reflet 0.45s var(--c-douce);
+}
+
+/* Dans le menu plein écran (téléphone, ou fenêtre étroite), la pastille n'a plus de fond : pas de reflet. */
+@media (max-width: 860px) {
+  .reflet.nav__liste {
+    background-image: none;
+  }
+}
+
+/* ---- Les chapitres parcourus, sur le fil (fil.ts) ----
+   Un mince trait cyan sur le segment qui suit un chapitre lu ; à l'instant où il est lu, une lumière
+   parcourt ce segment une fois, et le point du chapitre s'éclaire à peine. */
+.trajet__fil li {
+  position: relative;
+}
+
+.trajet__fil li.est-lu:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  z-index: 1; /* (au-dessus de la partie allumée du fil, qu'il teinte de cyan ; sous les points) */
+  left: 50%;
+  top: 50%;
+  width: var(--pas);
+  height: 1px;
+  margin-top: -0.5px;
+  background: linear-gradient(90deg, rgba(159, 230, 255, 0.8), rgba(159, 230, 255, 0.45));
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 6px) rgba(159, 230, 255, 0.4);
+  pointer-events: none;
+}
+
+.trajet__fil li.vient-d-etre-lu:not(:last-child)::after {
+  background:
+    linear-gradient(90deg, transparent, rgba(236, 250, 255, 1), transparent) no-repeat,
+    linear-gradient(90deg, rgba(159, 230, 255, 0.8), rgba(159, 230, 255, 0.45));
+  background-size: 40% 100%, 100% 100%;
+  animation: fil-lumiere 0.95s var(--c-douce) both;
+}
+
+/* (Le point du chapitre affiché garde son propre éclat : « affiché » et « parcouru » restent distincts.) */
+.trajet__fil li.est-lu .trajet__point:not([aria-current]) i {
+  box-shadow: inset 0 0 0 1px rgba(159, 230, 255, 0.7);
+}
+
+.trajet__fil li.est-lu .trajet__point.est-passe:not([aria-current]) i {
+  box-shadow:
+    0 0 0 3px rgba(159, 230, 255, calc(var(--lueur, 0.7) * 0.22)),
+    0 0 calc(var(--lueur, 0.7) * 8px) rgba(159, 230, 255, 0.6);
+}
+
+.trajet__fil li.vient-d-etre-lu .trajet__point i {
+  animation: point-lu 0.9s var(--c-douce);
+}
+
+@keyframes fil-lumiere {
+  from {
+    background-position: -60% 0, 0 0;
+  }
+  to {
+    background-position: 160% 0, 0 0;
+  }
+}
+
+@keyframes point-lu {
+  40% {
+    box-shadow: 0 0 0 6px rgba(159, 230, 255, 0.28), 0 0 14px rgba(159, 230, 255, 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trajet__fil li.vient-d-etre-lu:not(:last-child)::after,
+  .trajet__fil li.vient-d-etre-lu .trajet__point i {
+    animation: none;
+  }
 }

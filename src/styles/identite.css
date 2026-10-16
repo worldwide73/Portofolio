@@ -210,8 +210,7 @@
   color: var(--discret);
 }
 
-.acces__suite kbd,
-.raccourcis kbd {
+.acces__suite kbd {
   display: inline-grid;
   place-items: center;
   min-width: 1.7em;
@@ -318,20 +317,42 @@
   font-size: 0.75rem;
 }
 
-/* ---- La fenêtre des raccourcis clavier ---- */
+/* ---- L'aide clavier (refaite le 16 octobre 2026) ----
+   Une petite lame de verre : un titre, « Touche — action », puis les raccourcis par contexte. Chaque
+   touche est une petite touche de verre en relief ; « + » et « / » sont de simples liaisons. */
 .raccourcis {
-  width: min(30rem, calc(100vw - 32px));
-  max-height: min(80svh, 40rem);
+  width: min(36rem, calc(100vw - 32px));
+  max-height: min(84svh, 44rem);
   margin: auto;
-  padding: 18px 20px 20px;
-  overflow-y: auto;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid var(--filet-fort);
   border-radius: var(--rayon-carte);
   background: rgba(14, 20, 34, 0.86);
   -webkit-backdrop-filter: blur(28px) saturate(1.3);
   backdrop-filter: blur(28px) saturate(1.3);
-  box-shadow: 0 0 calc(var(--lueur, 0.7) * 60px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.16));
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 60px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.16)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
   color: var(--texte);
+  font-size: var(--t-etiquette);
+}
+
+.raccourcis[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+/* Un filet de lumière en haut de la lame. */
+.raccourcis::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(159, 230, 255, 0.8), transparent);
+  pointer-events: none;
 }
 
 .raccourcis::backdrop {
@@ -351,63 +372,167 @@
 
 .raccourcis__tete {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid var(--filet);
 }
 
 .raccourcis h2 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
-.raccourcis .pastille {
+.raccourcis__sous-titre {
+  margin: 4px 0 0;
+  color: var(--discret);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.625rem;
+}
+
+.raccourcis .raccourcis__fermer {
   min-height: 32px;
-  padding: 0 12px;
+  gap: 8px;
+  padding: 0 8px 0 13px;
   font-size: 0.75rem;
 }
 
-.raccourcis__groupe + .raccourcis__groupe {
-  margin-top: 14px;
+.raccourcis__groupes {
+  display: grid;
+  gap: 16px;
+  padding: 16px 22px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .raccourcis h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 6px;
   font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--discret);
 }
 
+/* Le petit point lumineux devant chaque contexte. */
+.raccourcis h3::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #9fe6ff;
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 7px) rgba(159, 230, 255, 0.8);
+}
+
 .raccourcis dl {
   display: grid;
-  gap: 2px;
   margin: 0;
 }
 
 .raccourcis dl > div {
   display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr);
+  grid-template-columns: 9.5rem minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
-  padding: 6px 0;
+  gap: 12px;
+  padding: 7px 0;
   border-top: 1px solid var(--filet);
+}
+
+.raccourcis dl > div:first-child {
+  border-top-color: transparent;
 }
 
 .raccourcis dt {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
 }
 
 .raccourcis dd {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   line-height: 1.4;
-  color: color-mix(in srgb, var(--texte) 86%, transparent);
+  color: color-mix(in srgb, var(--texte) 88%, transparent);
+}
+
+/* Une touche de verre : un léger relief (le bas plus marqué), un reflet en haut. */
+.raccourcis kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.9rem;
+  height: 1.7rem;
+  padding: 0 0.5em;
+  border: 1px solid var(--filet-fort);
+  border-bottom-width: 2px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgba(190, 215, 255, 0.16), rgba(150, 182, 235, 0.05));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--texte);
+}
+
+.raccourcis__fermer kbd {
+  min-width: 0;
+  height: 1.35rem;
+  font-size: 0.625rem;
+}
+
+.raccourcis__lien {
+  color: var(--discret);
+  font-size: 0.75rem;
+}
+
+.raccourcis__pied {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--filet);
+}
+
+.raccourcis__pied p {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--discret);
+}
+
+.raccourcis__guidage {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(159, 230, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(150, 182, 235, 0.08);
+  color: var(--texte);
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--d-micro) var(--c-douce);
+}
+
+.raccourcis__guidage:hover {
+  background: rgba(150, 182, 235, 0.16);
+}
+
+.raccourcis :is(button, .pastille):focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .raccourcis dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
 }
 
 html.curseur-actif .raccourcis {

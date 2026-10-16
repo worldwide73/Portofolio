@@ -49,6 +49,22 @@ const ch = c.navigation.chapitres;
          glisse par-dessus, et pas plus longtemps. C'est ce bloc qui fixe cette limite. -->
     <div class="ouverture">
     <div class="hero" data-chapitre-de="accueil" data-chapitre="intro" data-chapitre-nom={ch.intro}>
+      <!-- Le mini-guidage de la première visite (src/scripts/guidage.ts) : près du grand portail, mais hors de
+           son cadre, pour qu'un clic sur lui ne touche jamais le portail. Masqué tant qu'il n'a rien à dire. -->
+      <aside class="guidage toujours-sombre" aria-labelledby="guidage-titre" hidden>
+        <p class="guidage__titre" id="guidage-titre">{t(c.guidage.titre)}</p>
+        <dl class="guidage__gestes">
+          <div>
+            <dt><span class="guidage__souris">{c.guidage.explorer.souris}</span><span class="guidage__doigt">{c.guidage.explorer.doigt}</span></dt>
+            <dd>{t(c.guidage.explorer.texte)}</dd>
+          </div>
+          <div>
+            <dt>{c.guidage.voyager.geste}</dt>
+            <dd>{t(c.guidage.voyager.texte)}</dd>
+          </div>
+        </dl>
+        <button class="guidage__fermer etiquette" type="button">{c.guidage.fermer}</button>
+      </aside>
       <div class="hero__cadre toujours-sombre" style={`--scene: url(${scenePaysage.src}); --scene-portrait: url(${scenePortrait.src})`}>
         <!-- La scène : une photographie rendue vivante en WebGL (voir src/scripts/gl/).
              Sans WebGL, la même image s'affiche en fond fixe. -->

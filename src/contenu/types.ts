@@ -110,7 +110,11 @@ export interface Contenu {
     ecrire: string;
     raccourcis: string;
     fermer: string;
+    /** Les raccourcis, par contexte. Dans une liste de touches, « + » (ensemble) et « / » (ou) sont des liaisons. */
     groupes: { nom: string; lignes: [string[], string][] }[];
+    /** Sous le titre de l'aide clavier, et sa note de bas. */
+    aideTouches: string;
+    aideSaisie: string;
   };
   /** L'introduction jouée à l'arrivée sur l'accueil : trois lignes, écrites en capitales par le CSS. */
   initialisation: { nom: string; metier: string; etat: string; passer: string };
@@ -274,6 +278,14 @@ export interface Contenu {
     sons: string;
     musique: string;
     volume: string;
+    /** La densité de l'interface : son titre, les trois modes et une phrase pour chacun. */
+    densite: string;
+    densites: Record<'compact' | 'equilibre' | 'cinematique', { nom: string; texte: string }>;
+    /** « Restaurer l'affichage d'origine » : le bouton, ce qu'il rétablit, et sa confirmation. */
+    restaurer: string;
+    restaurerAide: string;
+    restaure: string;
+    dejaOrigine: string;
   };
   /** La page « Atmosphère » du panneau : quatre ambiances facultatives, et le lecteur de musique. */
   atmosphere: {
@@ -302,6 +314,18 @@ export interface Contenu {
     portailAide: string;
     /** La courte indication affichée sous le portail (le CSS la met en capitales et ajoute la flèche). */
     invite: string;
+  };
+  /**
+   * Le mini-guidage de la première visite (guidage.ts), près du grand portail : un titre, puis deux
+   * lignes « geste — effet » (à la souris, ou au doigt), le bouton qui le ferme, et le libellé du
+   * bouton qui le remontre depuis l'aide clavier.
+   */
+  guidage: {
+    titre: string;
+    explorer: { souris: string; doigt: string; texte: string };
+    voyager: { geste: string; texte: string };
+    fermer: string;
+    revoir: string;
   };
   /**
    * La navigation par destinations (16 octobre 2026) : chaque section est une destination
@@ -348,6 +372,8 @@ export interface Contenu {
     titre: string;
     aide: string;
     ici: string;
+    /** Lu par les lecteurs d'écran sur une destination déjà explorée (souvenirs.ts). */
+    visitee: string;
     /** Le libellé du noyau de la carte : un clic dessus la referme. */
     refermer: string;
     /** Une ligne par destination. « {n} » est remplacé par le vrai nombre (domaines, réalisations). */

@@ -17,15 +17,39 @@
 // fil et les flèches ← → du clavier rejoignent le chapitre voulu, en douceur.
 //
 // Au-dessus du fil : « Compétences · 02 / 06 ». Le trait tout en haut de la page dit la même chose.
+//
+// Les chapitres parcourus (16 octobre 2026) : un chapitre lu jusqu'à sa fin, à la main (molette, doigt,
+// touches de défilement) et pendant au moins quelques secondes, est « parcouru ». Une lumière cyan
+// court alors une fois sur son segment du fil, et son point réagit à peine ; le segment garde ensuite
+// un mince trait cyan. Rien de tout cela pour un chapitre traversé par un saut (clic sur le fil,
+// recherche, flèches) ou un défilement automatique, ni en revenant en arrière. Chaque chapitre ne
+// s'anime qu'une fois par visite (gardé pour l'onglet : sessionStorage). Rien n'est obligatoire.
+// Réalisations : un projet est parcouru quand il est resté de face trois secondes (la rotation
+// automatique ne s'y arrête jamais aussi longtemps : il faut l'avoir regardé).
 
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { lenis } from './defilement';
 import { borner, mouvementReduit } from './outils';
+import { reglages } from './reglages';
 import { destinationActive, voyager, type Destination } from './voyage';
 
 /** Les blocs qui forment les chapitres d'une destination, dans l'ordre de la page (sans les notes masquées par un filtre). */
 const chapitresDe = (destination: string) => [...document.querySelectorAll<HTMLElement>(`[data-chapitre-de="${destination}"]`)].filter((el) => !el.hidden);
+
+// ---- Les chapitres parcourus : « destination:chapitre », gardés pour l'onglet en cours ----
+const CLE_LUS = 'chapitres-lus';
+const SEJOUR = 1500; //       millisecondes passées dans un chapitre avant qu'il puisse compter comme lu
+const SEJOUR_FIN = 1800; //   pour le dernier chapitre, une fois le bas de la page atteint
+const SEJOUR_PROJET = 3000; // pour un projet de la galerie, resté de face
+const lus: Set<string> = (() => {
+  try {
+    const brut: unknown = JSON.parse(sessionStorage.getItem(CLE_LUS) ?? '[]');
+    return new Set(Array.isArray(brut) ? brut.filter((x): x is string => typeof x === 'string') : []);
+  } catch {
+    return new Set<string>();
+  }
+})();
 
 /** La distance à laisser sous la barre fixe quand on rejoint un chapitre. */
 const retraitChapitre = () => {
@@ -33,13 +57,14 @@ const retraitChapitre = () => {
   return (barre ? barre.getBoundingClientRect().bottom : 76) + 18;
 };
 
-let allerAuChapitre: ((destination: Destination, cle: string, options?: { ouvrir?: boolean }) => void) | null = null;
+let allerAuChapitre: ((destination: Destination, cle: string, options?: { ouvrir?: boolean; direct?: boolean }) => void) | null = null;
 /**
  * Rejoint un chapitre d'une destination (la recherche s'en sert). Si la destination n'est pas
- * affichée, on y voyage d'abord ; « ouvrir » déplie aussi le bloc (une note de veille, le tableau).
+ * affichée, on y voyage d'abord ; « ouvrir » déplie aussi le bloc (une note de veille, le tableau) ;
+ * « direct » : par le court fondu, sans le saut dans le temps (voir voyager).
  */
-export function allerChapitre(destination: Destination, cle?: string, options: { ouvrir?: boolean } = {}): void {
-  if (!cle) return void voyager(destination);
+export function allerChapitre(destination: Destination, cle?: string, options: { ouvrir?: boolean; direct?: boolean } = {}): void {
+  if (!cle) return void voyager(destination, true, options.direct);
   allerAuChapitre?.(destination, cle, options);
 }
 
@@ -59,6 +84,37 @@ export function initFil(): void {
   let version = 0; // augmente quand la mise en page change : les mesures gardées ne valent plus
   let memoire = '';
   const fil = { position: 0, guide: false };
+
+  // ---- Le défilement à la main, et le temps passé dans le chapitre actif ----
+  let saisie = -1e9; // l'instant du dernier geste de défilement du visiteur
+  let sejour = 0; //    millisecondes passées dans le chapitre actif
+  let entreALaMain = false; // le chapitre actif a-t-il été atteint par un geste du visiteur ?
+  const noterSaisie = () => (saisie = performance.now());
+  window.addEventListener('wheel', noterSaisie, { passive: true });
+  window.addEventListener('touchmove', noterSaisie, { passive: true });
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'].includes(e.key)) noterSaisie();
+  });
+  /** Le défilement en cours vient-il du visiteur (et non d'un saut ou d'un défilement automatique) ? */
+  const aLaMain = () => !fil.guide && performance.now() - saisie < 1500;
+  const cleDe = (i: number) => `${destination}:${chapitres[i]?.dataset.chapitre ?? i}`;
+
+  /** Le chapitre i est parcouru : son segment s'allume une fois, pour de bon. */
+  const parcourir = (i: number) => {
+    const cle = cleDe(i);
+    const li = points[i]?.parentElement;
+    if (!li || lus.has(cle)) return;
+    lus.add(cle);
+    try {
+      sessionStorage.setItem(CLE_LUS, JSON.stringify([...lus]));
+    } catch {
+      // stockage indisponible : le souvenir vaut pour cette page
+    }
+    li.classList.add('est-lu');
+    if (mouvementReduit || reglages.animations === 0) return;
+    li.classList.add('vient-d-etre-lu');
+    window.setTimeout(() => li.classList.remove('vient-d-etre-lu'), 1400);
+  };
 
   /** Le nom affiché d'une destination : celui de la carte du portail (il suit la langue). */
   const nomDestination = (id: string) =>
@@ -87,6 +143,10 @@ export function initFil(): void {
       }),
     );
     points = [...liste.querySelectorAll<HTMLButtonElement>('.trajet__point')];
+    // Les chapitres déjà parcourus pendant cette visite gardent leur trait, sans nouvelle animation.
+    points.forEach((point, i) => point.parentElement?.classList.toggle('est-lu', lus.has(cleDe(i))));
+    sejour = 0;
+    entreALaMain = false;
     // Beaucoup de chapitres, ou des noms longs : seul le nom du chapitre actif est écrit.
     rail.toggleAttribute('data-dense', chapitres.length > 5 || destination === 'veille');
     rail.hidden = chapitres.length < 2;
@@ -194,7 +254,7 @@ export function initFil(): void {
     // On voyage d'abord ; le chapitre est rejoint une fois la destination affichée.
     const arrivee = () => window.setTimeout(aller, 120);
     window.addEventListener('destination', arrivee, { once: true });
-    voyager(dest);
+    voyager(dest, true, options.direct);
   };
 
   // ---- Les commandes ----
@@ -240,13 +300,30 @@ export function initFil(): void {
   const scene = document.querySelector<HTMLElement>('.hero__cadre');
   const voile = document.querySelector<HTMLElement>('.methode');
   let positionAffichee = -1;
-  gsap.ticker.add(() => {
+  gsap.ticker.add((_temps, delta) => {
+    // Le temps passé dans le chapitre actif (onglet visible, et pas pendant un saut guidé).
+    if (rang >= 0 && !fil.guide && !document.hidden) sejour += Math.min(delta, 100);
+    const n = chapitres.length;
+    if (rang >= 0 && n > 1) {
+      if (destination === 'realisations') {
+        if (sejour >= SEJOUR_PROJET) parcourir(rang);
+      } else if (rang === n - 1 && entreALaMain && sejour >= SEJOUR_FIN) {
+        // Le dernier chapitre : lu quand on s'y attarde après l'avoir atteint à la main.
+        const fin = document.documentElement.scrollHeight - window.innerHeight;
+        if (window.scrollY >= fin - 2) parcourir(rang);
+      }
+    }
     const cle = `${window.scrollY}|${window.innerHeight}|${version}|${galerie}`;
     if (cle !== memoire) {
       memoire = cle;
       const ou = situer();
       if (!fil.guide) fil.position = ou.position;
       if (ou.rang !== rang) {
+        // On passe au chapitre suivant, à la main, après s'être attardé : le chapitre quitté est lu jusqu'au bout.
+        const main = aLaMain();
+        if (destination !== 'realisations' && rang >= 0 && ou.rang === rang + 1 && main && sejour >= SEJOUR) parcourir(rang);
+        sejour = 0;
+        entreALaMain = main;
         rang = ou.rang;
         points.forEach((point, i) => {
           if (i === rang) point.setAttribute('aria-current', 'step');

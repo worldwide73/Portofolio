@@ -52,6 +52,7 @@ const decrire = (id: keyof Contenu['explorateur']['destinations']) => c.explorat
             <b>{c.sections[id]}</b>
             <small>{decrire(id)}</small>
             <em class="etiquette">{c.explorateur.ici}</em>
+            <span class="sr astre__vue">{c.explorateur.visitee}</span>
           </span>
         </a>
       ))

@@ -208,27 +208,37 @@ const ICONES = {
   <p class="acces__annonce sr" role="status" aria-live="polite"></p>
 </div>
 
-<!-- Les raccourcis clavier : seulement ceux qui existent réellement dans le code. -->
-<dialog class="raccourcis etiquette" aria-labelledby="raccourcis-titre">
+<!-- L'aide clavier (refaite le 16 octobre 2026) : seulement les raccourcis qui existent réellement dans le
+     code, rangés par contexte, chaque touche dessinée comme une touche de verre. Échap la ferme. -->
+<dialog class="raccourcis" aria-labelledby="raccourcis-titre" aria-describedby="raccourcis-aide" data-lenis-prevent>
   <div class="raccourcis__tete">
-    <h2 id="raccourcis-titre">{a.raccourcis}</h2>
-    <button class="pastille" type="button" data-fermer-raccourcis>{a.fermer}</button>
+    <div>
+      <h2 id="raccourcis-titre">{a.raccourcis}</h2>
+      <p class="raccourcis__sous-titre etiquette" id="raccourcis-aide">{a.aideTouches}</p>
+    </div>
+    <button class="pastille raccourcis__fermer" type="button" data-fermer-raccourcis>{a.fermer} <kbd>{langue === 'en' ? 'Esc' : 'Échap'}</kbd></button>
   </div>
-  {
-    a.groupes.map((g) => (
-      <section class="raccourcis__groupe">
-        <h3>{g.nom}</h3>
-        <dl>
-          {g.lignes.map(([touches, texte]) => (
-            <div>
-              <dt>{touches.map((t) => <kbd>{t}</kbd>)}</dt>
-              <dd>{texte}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    ))
-  }
+  <div class="raccourcis__groupes">
+    {
+      a.groupes.map((g) => (
+        <section class="raccourcis__groupe">
+          <h3>{g.nom}</h3>
+          <dl>
+            {g.lignes.map(([touches, texte]) => (
+              <div>
+                <dt>{touches.map((t) => (t === '+' || t === '/' ? <span class="raccourcis__lien">{t}</span> : <kbd>{t}</kbd>))}</dt>
+                <dd>{texte}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))
+    }
+  </div>
+  <div class="raccourcis__pied">
+    <p>{a.aideSaisie}</p>
+    {page === 'accueil' && <button class="raccourcis__guidage etiquette" type="button" data-revoir-guidage>{contenu.guidage.revoir}</button>}
+  </div>
 </dialog>
 
 <div class="curseur" aria-hidden="true">
@@ -249,6 +259,19 @@ const ICONES = {
   </div>
 
   <div class="reglages__page" data-page="affichage">
+    <!-- La densité (16 octobre 2026) : « Équilibré » est l'affichage d'origine (voir densites.css). -->
+    <fieldset class="reglages__groupe">
+      <legend>{contenu.reglages.densite}</legend>
+      <div class="reglages__choix">
+        {(['compact', 'equilibre', 'cinematique'] as const).map((d) => (
+          <label><input type="radio" name="densite" value={d} /><span>{contenu.reglages.densites[d].nom}</span></label>
+        ))}
+      </div>
+      <p class="reglages__note densites__texte">
+        {(['compact', 'equilibre', 'cinematique'] as const).map((d) => <span data-pour={d}>{contenu.reglages.densites[d].texte}</span>)}
+      </p>
+    </fieldset>
+
     <label class="reglages__ligne">
       <span>{contenu.reglages.opacite} <output data-pour="opacite"></output></span>
       <input type="range" name="opacite" min="20" max="90" step="1" />
@@ -270,6 +293,13 @@ const ICONES = {
         <label><input type="radio" name="animations" value="0" /><span>{contenu.reglages.niveaux.coupe}</span></label>
       </div>
     </fieldset>
+
+    <!-- Revenir à l'affichage d'origine, d'un geste (reglages.ts, restaurerAffichage). -->
+    <div class="reglages__restaurer">
+      <button class="reglages__bouton" type="button" data-restaurer>{contenu.reglages.restaurer}</button>
+      <p class="reglages__note">{contenu.reglages.restaurerAide}</p>
+      <p class="reglages__confirmation" role="status" data-confirmation data-fait={contenu.reglages.restaure} data-deja={contenu.reglages.dejaOrigine}></p>
+    </div>
   </div>
 
   <div class="reglages__page" data-page="atmosphere">
