@@ -382,6 +382,106 @@ try {
     await s.context().close();
   });
 
+  // ==========================================================================
+  // LES RÈGLES V4 (moteur seul, sans dessin)
+  // ==========================================================================
+  const m = await visiteur();
+  await m.goto(SITE + '/404');
+  const regle = (fn) => m.evaluate(fn);
+
+  await controle('Overdrive rare : verrouillé au départ, une seule fois par partie, rien à recharger après', async () => {
+    const r = await regle(async () => {
+      const { Partie } = await import('/src/scripts/rush/moteur.ts');
+      const p = new Partie('campagne', 'as', 2, 42, 'aube');
+      p.jauge = 1;
+      const auDepart = { etat: p.etatOverdrive, declenche: p.declencher() };
+      // On avance jusqu'au seuil, sans choc.
+      p.boucliers = 99;
+      while (p.distance < p.seuilOverdrive + 5 && !p.termine) p.avancer(1 / 120);
+      p.jauge = 1;
+      const ouvert = { etat: p.etatOverdrive, declenche: p.declencher() };
+      while (p.overdrive > 0 && !p.termine) p.avancer(1 / 120);
+      p.jauge = 1;
+      const apres = { etat: p.etatOverdrive, declenche: p.declencher(), overdrives: p.overdrives };
+      return { auDepart, seuil: p.seuilOverdrive, ouvert, apres };
+    });
+    assert.deepEqual(r.auDepart, { etat: 'verrouille', declenche: false });
+    assert.ok(r.seuil >= 700, `seuil ${r.seuil}`);
+    assert.equal(r.ouvert.declenche, true);
+    assert.deepEqual(r.apres, { etat: 'utilise', declenche: false, overdrives: 1 });
+  });
+
+  await controle('Overdrive exigeant : un choc fait reculer la jauge, rien ne la remplit au départ', async () => {
+    const r = await regle(async () => {
+      const { Partie } = await import('/src/scripts/rush/moteur.ts');
+      const p = new Partie('campagne', 'pilote', 1, 7, 'aube');
+      // Au départ, une réussite ne remplit pas la jauge.
+      p.reussite?.(40, 0.5);
+      const depart = p.jauge;
+      p.distance = 5000;
+      p.jauge = 0.6;
+      p.heurter?.({ type: 'bloc', voies: [p.voieOccupee], pos: p.distance, passe: false, graine: 0, id: 1 });
+      return { depart, apresChoc: p.jauge };
+    });
+    assert.equal(r.depart, 0);
+    assert.ok(Math.abs(r.apresChoc - 0.35) < 1e-9, `jauge ${r.apresChoc}`);
+  });
+
+  await controle('Survie infinie : une seule vie, et la vitesse continue de monter au-delà du maximum', async () => {
+    const r = await regle(async () => {
+      const { Partie } = await import('/src/scripts/rush/moteur.ts');
+      const p = new Partie('infini', 'as', 1, 3, 'bastion');
+      return { boucliers: p.boucliers, vmax: p.profil.vitesse.max, a: p.vitesseA(20000), b: p.vitesseA(60000) };
+    });
+    assert.equal(r.boucliers, 1, 'une vie, même en Bastion');
+    assert.ok(r.a > r.vmax && r.b > r.a, JSON.stringify(r));
+  });
+
+  await controle('Paradoxe : au-dessus de Nightmare, ouverte seulement après un secteur réussi en Nightmare', async () => {
+    const r = await regle(async () => {
+      const e = await import('/src/scripts/rush/equilibrage.ts');
+      const s = await import('/src/scripts/rush/sauvegarde.ts');
+      const sv = s.charger();
+      const avant = s.difficulteOuverte(sv, 'paradoxe');
+      sv.reussis['3-cauchemar'] = true;
+      const apres = s.difficulteOuverte(sv, 'paradoxe');
+      const P = e.PROFILS;
+      return { ordre: e.ORDRE_DIFFICULTES, avant, apres, plusDur: P.paradoxe.vitesse.depart > P.cauchemar.vitesse.depart && P.paradoxe.reaction.min < P.cauchemar.reaction.min && P.paradoxe.ecart.min < P.cauchemar.ecart.min };
+    });
+    assert.deepEqual(r.ordre, ['pilote', 'as', 'expert', 'cauchemar', 'paradoxe']);
+    assert.equal(r.avant, false);
+    assert.equal(r.apres, true);
+    assert.ok(r.plusDur);
+  });
+
+  await controle('Vaisseaux : vraies différences (vivacité, boucliers) ; le défi du jour se court en Aube', async () => {
+    const r = await regle(async () => {
+      const { Partie } = await import('/src/scripts/rush/moteur.ts');
+      const f = new Partie('campagne', 'as', 1, 5, 'faucon');
+      const b = new Partie('campagne', 'as', 1, 5, 'bastion');
+      const d = new Partie('defi', 'as', 1, undefined, 'bastion');
+      return { faucon: [f.deplacement, f.boucliers], bastion: [b.deplacement, b.boucliers], defi: d.vehicule.id };
+    });
+    assert.deepEqual(r.faucon, [0.096, 2]);
+    assert.ok(Math.abs(r.bastion[0] - 0.1416) < 1e-6 && r.bastion[1] === 4, JSON.stringify(r.bastion));
+    assert.equal(r.defi, 'aube');
+  });
+
+  await controle('Obstacles mobiles V4 : drones, portes, rotors, chutes, éclaireurs posés par le générateur', async () => {
+    const vus = await regle(async () => {
+      const { Partie } = await import('/src/scripts/rush/moteur.ts');
+      const types = new Set();
+      for (const n of [2, 3, 4, 5, 6]) {
+        const p = new Partie('campagne', 'expert', n, 11, 'aube');
+        p.genererJusqua(p.longueur);
+        for (const o of p.objets) types.add(o.type);
+      }
+      return [...types];
+    });
+    for (const t of ['drone', 'porte', 'rotor', 'chute', 'eclaireur']) assert.ok(vus.includes(t), `${t} absent (${vus.join(', ')})`);
+  });
+  await m.context().close();
+
   await controle('Aucune erreur dans la console pendant la recette', async () => {
     assert.deepEqual(erreurs, []);
   });

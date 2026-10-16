@@ -15,7 +15,15 @@
 | Musique adaptative par couches réelles (vitesse, danger, Overdrive, pause, défaite, victoire), sans changement de tempo | V (couches mesurées, pas écoutées) | recette (menu → course → pause) ; morceaux enregistrés : filtre seulement, dit dans la liste |
 | Son moteur synchronisé à la vitesse | V (code), non écouté | `sons.ts` `moteurRush` |
 | Entrée cinématique, tunnel 3D, tutoriel | À faire | — |
-| Gameplay V4, interface AAA | À faire | — |
+| Overdrive extrêmement rare (1 fois, pas au départ, exigeant, non rechargeable, on finit sans) | V | recette (3 contrôles) + simulation |
+| Nouvelle difficulté au-dessus de Nightmare (Paradoxe), extrêmement dure mais jouable | V (simulation) | recette ; simulation : secteurs 1–3, 6, 7 réussis par le pilote automatique |
+| Difficulté qui monte dans chaque niveau | V | `moteur.ts` (complexité + avancée), vitesse et écarts existants |
+| Survie : une vie, vitesse continue, Overdrive rare | V | recette |
+| Obstacles mobiles variés, lisibles, jamais impossibles | V (simulation, rendu logiciel) | recette (5 types posés) ; simulation ; captures 3D |
+| Vaisseaux aux vraies statistiques, sauvegardés | V | recette ; garage (captures) |
+| Séquence de fin raccourcissable | V | réglage Complète / Courte |
+| Piste qui monte, descend, tourne, s'incline (par monde) | V (existant, conservé) | `scene/parcours.ts` (virages, reliefs, dévers par monde, bornés pour l'équité) ; pas de nouvelle déformation ajoutée |
+| Interface AAA | À faire | — |
 
 ## Retours du 16 octobre 2026 (4ᵉ lot) — remplacent la ligne « Animation du portail = celle de l'accueil » du 2ᵉ lot
 

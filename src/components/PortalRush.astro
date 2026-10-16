@@ -10,7 +10,8 @@
 //
 // Les textes qui dépendent de la progression (records, états, objectifs du
 // secteur choisi) sont écrits par rush.ts, à partir des vraies données.
-import { EMPLACEMENTS, NIVEAUX, PIECES, ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from '../scripts/rush/donnees';
+import { EMPLACEMENTS, NIVEAUX, PIECES, ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION, VEHICULES } from '../scripts/rush/donnees';
+import { DEPLACEMENT } from '../scripts/rush/equilibrage';
 import { CATALOGUE_RUSH, minutes } from '../scripts/audio/catalogue';
 import type { Contenu } from '../contenu/types';
 import Drapeau from './Drapeau.astro';
@@ -233,6 +234,7 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
               <span class="difficulte__role etiquette">{r.difficultes[d].role}</span>
               <small>{r.difficultes[d].texte}</small>
               {d === 'cauchemar' && <small class="difficulte__verrou" data-verrou-cauchemar>{r.verrouCauchemar}</small>}
+              {d === 'paradoxe' && <small class="difficulte__verrou" data-verrou-paradoxe>{r.verrouParadoxe}</small>}
             </label>
           ))
         }
@@ -433,6 +435,30 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <span class="garage__repere etiquette" aria-hidden="true">PR-07 · {r.garage.titre}</span>
       </div>
       <div class="garage__emplacements">
+        <!-- Les vaisseaux (V4) : de vraies différences de pilotage, toujours équilibrées. -->
+        <div class="garage__vaisseaux" role="group" aria-label={r.garage.vaisseaux.titre}>
+          <p class="etiquette"><span class="garage__index">00</span>{r.garage.vaisseaux.titre}</p>
+          <div class="garage__flotte">
+            {
+              VEHICULES.map((v) => (
+                <button type="button" class="vaisseau-carte" data-vehicule={v.id} aria-pressed="false">
+                  <span class="vaisseau-carte__tete">
+                    <b>{r.garage.vaisseaux.noms[v.id]}</b>
+                    <small class="etiquette" data-vehicule-etat />
+                  </span>
+                  <span class="vaisseau-carte__role">{r.garage.vaisseaux.roles[v.id]}</span>
+                  <dl class="vaisseau-carte__stats">
+                    <div style={`--n: ${Math.round((1.25 - v.deplacement) * 200)}%`}><dt>{r.garage.vaisseaux.stats.deplacement}</dt><dd>{(DEPLACEMENT * v.deplacement).toLocaleString(locale, { maximumFractionDigits: 3 })} s</dd></div>
+                    <div style={`--n: ${(v.boucliers + 1) * 50}%`}><dt>{r.garage.vaisseaux.stats.boucliers}</dt><dd>{v.boucliers > 0 ? `+${v.boucliers}` : v.boucliers < 0 ? `−${-v.boucliers}` : '±0'}</dd></div>
+                    <div style={`--n: ${Math.round((v.parfait - 0.7) * 125)}%`}><dt>{r.garage.vaisseaux.stats.parfait}</dt><dd>×{v.parfait.toLocaleString(locale)}</dd></div>
+                    <div style={`--n: ${Math.round((v.jauge - 0.6) * 200)}%`}><dt>{r.garage.vaisseaux.stats.jauge}</dt><dd>×{v.jauge.toLocaleString(locale)}</dd></div>
+                  </dl>
+                </button>
+              ))
+            }
+          </div>
+          <p class="garage__note etiquette">{r.garage.vaisseaux.defi}</p>
+        </div>
         {
           EMPLACEMENTS.map((e, k) => (
             <div class="garage__emplacement" role="group" aria-label={r.garage.emplacements[e]}>
@@ -559,6 +585,14 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <span class="option__texte"><b>{r.reglages.secousses}</b></span>
         <input class="interrupteur" type="checkbox" role="switch" data-reglage="secousses" />
       </label>
+      <!-- La séquence de fin de secteur (V4) : complète, ou courte pour enchaîner les essais. -->
+      <fieldset class="option option--choix">
+        <legend class="option__texte"><b>{r.reglages.sequenceFin}</b><small>{r.reglages.sequenceFinTexte}</small></legend>
+        <span class="segments">
+          <label><input type="radio" name="rush-sequence-fin" value="complete" data-reglage="sequenceFin" /><span>{r.reglages.sequenceChoix.complete}</span></label>
+          <label><input type="radio" name="rush-sequence-fin" value="courte" data-reglage="sequenceFin" /><span>{r.reglages.sequenceChoix.courte}</span></label>
+        </span>
+      </fieldset>
     </div>
     <div class="panneau__page" id="set-page-commandes" role="tabpanel" aria-labelledby="set-commandes" data-page-reglages="commandes" hidden>
       <label class="option">

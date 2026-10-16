@@ -175,10 +175,11 @@ export interface Contenu {
     descriptions: { commencer: string; continuer: string; campagne: string; infini: string; defi: string; records: string; garage: string; reglages: string; quitter: string };
     stats: { meilleur: string; campagne: string; etoiles: string; pieces: string; defis: string; derniere: string; bienvenue: string };
     /** Les trois étoiles d'un secteur. « {v} » : le score cible ; « {n} » : un secteur ; « {p} » : une pièce. */
-    etoiles: { titre: string; une: string; deux: string; nouvelle: string; aGagner: string; recompenses: string; debloque: string; piece: string; cauchemar: string; aucune: string; resume: string };
+    etoiles: { titre: string; une: string; deux: string; nouvelle: string; aGagner: string; recompenses: string; debloque: string; piece: string; cauchemar: string; paradoxe: string; aucune: string; resume: string };
     difficulte: string;
-    difficultes: Record<'pilote' | 'as' | 'expert' | 'cauchemar', { nom: string; role: string; texte: string }>;
+    difficultes: Record<'pilote' | 'as' | 'expert' | 'cauchemar' | 'paradoxe', { nom: string; role: string; texte: string }>;
     verrouCauchemar: string;
+    verrouParadoxe: string;
     secteur: string;
     niveaux: { nom: string; mecanique: string }[];
     /** « {v} » : la valeur à atteindre. */
@@ -187,9 +188,9 @@ export interface Contenu {
     verrou: string;
     meilleur: string;
     aucunRecord: string;
-    hud: { score: string; record: string; combo: string; boucliers: string; fragments: string; overdrive: string; charges: string; pause: string; boss: string; touche: string; toucheTactile: string };
+    hud: { score: string; record: string; combo: string; boucliers: string; fragments: string; overdrive: string; charges: string; pause: string; boss: string; touche: string; toucheTactile: string; odVerrouille: string; odUtilise: string; odCharge: string; vie: string };
     phases: Record<'calibrage' | 'acceleration' | 'pression' | 'finale' | 'assaut' | 'tempete' | 'effondrement', string>;
-    annonces: { depart: string; parfait: string; overdrive: string; pret: string; choc: string; dernier: string; portail: string; phase: string; comboPerdu: string; motif: string; record: string };
+    annonces: { depart: string; parfait: string; overdrive: string; pret: string; choc: string; dernier: string; portail: string; phase: string; comboPerdu: string; motif: string; record: string; odOuvert: string };
     conseils: { clavier: string[]; tactile: string[] };
     pause: { titre: string; sousTitre: string; reprendre: string; recommencer: string; confirmer: string; reglages: string; menu: string; confirmerMenu: string; quitter: string; confirmerQuitter: string };
     fin: {
@@ -214,7 +215,7 @@ export interface Contenu {
       autreDifficulte: string;
       menu: string;
     };
-    victoire: { titre: string; recompenses: string; aucune: string; meilleurNiveau: string; suivant: string; rejouer: string; menu: string; cauchemar: string; secteurDebloque: string };
+    victoire: { titre: string; recompenses: string; aucune: string; meilleurNiveau: string; suivant: string; rejouer: string; menu: string; cauchemar: string; paradoxe: string; secteurDebloque: string };
     defi: { titre: string; objectif: string; parcours: string; regles: string; score: string; meilleur: string; derniere: string; aucune: string; lancer: string; tentatives: string };
     infini: { titre: string; texte: string; lancer: string };
     records: {
@@ -237,6 +238,16 @@ export interface Contenu {
     garage: {
       titre: string;
       texte: string;
+      /** Les vaisseaux (V4). */
+      vaisseaux: {
+        titre: string;
+        noms: Record<'aube' | 'faucon' | 'bastion' | 'spectre', string>;
+        roles: Record<'aube' | 'faucon' | 'bastion' | 'spectre', string>;
+        stats: { deplacement: string; boucliers: string; parfait: string; jauge: string };
+        choisi: string;
+        apercu: string;
+        defi: string;
+      };
       emplacements: Record<'coque' | 'trainee' | 'overdrive' | 'noyau', string>;
       pieces: Record<string, string>;
       conditions: { depart: string; niveau: string; rang: string; difficulte: string; infini: string; overdrives: string; parfaits: string; defis: string; multiplicateur: string };
@@ -258,6 +269,9 @@ export interface Contenu {
       toucher: string;
       glisser: string;
       onglets: { audio: string; affichage: string; commandes: string };
+      sequenceFin: string;
+      sequenceFinTexte: string;
+      sequenceChoix: { complete: string; courte: string };
       sons: string;
       sonsTexte: string;
       animations: string;

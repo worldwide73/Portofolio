@@ -360,7 +360,13 @@ export function avancement(s: Sauvegarde, c: Condition): { faite: boolean; mesur
   }
 }
 
-export const cauchemarOuvert = (s: Sauvegarde) => Object.keys(s.reussis).some((cle) => cle.endsWith('-expert') || cle.endsWith('-cauchemar'));
+export const cauchemarOuvert = (s: Sauvegarde) => Object.keys(s.reussis).some((cle) => cle.endsWith('-expert') || cle.endsWith('-cauchemar') || cle.endsWith('-paradoxe'));
+/** Paradoxe (V4) : un secteur réussi en Nightmare (ou déjà en Paradoxe). */
+export const paradoxeOuvert = (s: Sauvegarde) => Object.keys(s.reussis).some((cle) => cle.endsWith('-cauchemar') || cle.endsWith('-paradoxe'));
+/** Une difficulté est-elle ouverte ? */
+export const difficulteOuverte = (s: Sauvegarde, d: Difficulte) => (d === 'cauchemar' ? cauchemarOuvert(s) : d === 'paradoxe' ? paradoxeOuvert(s) : true);
+/** La plus haute difficulté ouverte, au plus « d ». */
+export const difficulteJouable = (s: Sauvegarde, d: Difficulte): Difficulte => (difficulteOuverte(s, d) ? d : d === 'paradoxe' && cauchemarOuvert(s) ? 'cauchemar' : d === 'pilote' ? 'pilote' : 'expert');
 
 /** La pièce verrouillée la plus proche d'être gagnée (pour « Prochaine pièce »). */
 export function prochainePiece(s: Sauvegarde): { piece: Piece; mesure: number; cible: number } | null {
@@ -392,14 +398,16 @@ export interface Bilan {
   ancienRecord: number;
   niveauDebloque: number | null;
   cauchemarDebloque: boolean;
+  paradoxeDebloque: boolean;
   pieces: string[];
   vehicules: string[];
 }
 
 /** Range le résultat d'une partie : records, secteurs, statistiques, pièces. Renvoie ce qui est nouveau. */
 export function ranger(s: Sauvegarde, mode: Mode, difficulte: Difficulte, niveauId: number, r: Resultat, graine: number): Bilan {
-  const bilan: Bilan = { etoiles: null, nouvellesEtoiles: [], record: false, ancienRecord: 0, niveauDebloque: null, cauchemarDebloque: false, pieces: [], vehicules: [] };
+  const bilan: Bilan = { etoiles: null, nouvellesEtoiles: [], record: false, ancienRecord: 0, niveauDebloque: null, cauchemarDebloque: false, paradoxeDebloque: false, pieces: [], vehicules: [] };
   const cauchemarAvant = cauchemarOuvert(s);
+  const paradoxeAvant = paradoxeOuvert(s);
   const t = s.totaux;
   t.parties++;
   t.overdrives += r.overdrives;
@@ -474,6 +482,7 @@ export function ranger(s: Sauvegarde, mode: Mode, difficulte: Difficulte, niveau
     }
   }
   bilan.cauchemarDebloque = !cauchemarAvant && cauchemarOuvert(s);
+  bilan.paradoxeDebloque = !paradoxeAvant && paradoxeOuvert(s);
   enregistrer(s);
   return bilan;
 }

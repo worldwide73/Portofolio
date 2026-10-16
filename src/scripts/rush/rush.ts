@@ -29,12 +29,12 @@ import { dreamRadio } from '../audio/dream';
 import { creerRushRadio } from '../audio/rush-radio';
 import { tamponPret } from '../audio/moteur';
 import type { Adaptation } from '../audio/radio';
-import { NIVEAUX, PIECES, graineDuJour, scoreEtoile, type Condition, type Difficulte, type Mode, type Objectif, type Theme } from './donnees';
+import { NIVEAUX, PIECES, VEHICULES, graineDuJour, scoreEtoile, type Condition, type Difficulte, type Mode, type Objectif, type Theme } from './donnees';
 import { ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from './equilibrage';
 import { Partie, type ObjectifAtteint } from './moteur';
 import { creerRendu, dessinerVaisseau } from './rendu';
 import type { RenduJeu } from './scene/scene';
-import { avancement, cauchemarOuvert, charger, enregistrer, etoilesDe, prochainePiece, ranger, totalEtoiles, type Bilan, type Sauvegarde } from './sauvegarde';
+import { avancement, cauchemarOuvert, charger, difficulteJouable, difficulteOuverte, enregistrer, etoilesDe, paradoxeOuvert, prochainePiece, ranger, totalEtoiles, type Bilan, type Sauvegarde } from './sauvegarde';
 
 type Ecran = 'accueil' | 'campagne' | 'infini' | 'defi' | 'records' | 'garage' | 'pause' | 'fin' | 'victoire' | '';
 type Textes = Contenu['rush'];
@@ -173,6 +173,8 @@ export function initRush(): void {
     enregistrer(s);
   };
   let cleAdaptation = '';
+  /** Le vaisseau montré au garage (un vaisseau verrouillé peut être regardé, pas choisi). */
+  let vehiculeVu: string | null = null;
   let dernierSuivi = 0;
   /** Ce que la course dit à la musique et au moteur, quatre fois par seconde. */
   const suivreSon = () => {
@@ -254,7 +256,7 @@ export function initRush(): void {
   const reprise = () => {
     const premiere = s.totaux.parties === 0 && !Object.keys(s.reussis).length;
     const niveau = premiere ? 1 : Math.min(s.niveauMax, NIVEAUX.length);
-    const difficulte = s.difficulte === 'cauchemar' && !cauchemarOuvert(s) ? 'expert' : s.difficulte;
+    const difficulte = difficulteJouable(s, s.difficulte);
     return { premiere, niveau, difficulte };
   };
 
@@ -363,6 +365,7 @@ export function initRush(): void {
 
   const montrer = (e: Ecran, focus = true) => {
     if (ecran === 'pause' && e !== 'pause') confirmer = '';
+    if (e !== 'garage') vehiculeVu = null;
     ecran = e;
     fenetre.dataset.ecran = e;
     fenetre.dataset.theme = theme();
@@ -421,18 +424,18 @@ export function initRush(): void {
   };
 
   const majDifficultes = () => {
-    const ouvert = cauchemarOuvert(s);
     $$<HTMLInputElement>('input[name="rush-difficulte"], input[name="rush-difficulte-infini"]').forEach((r) => {
-      const verrou = r.value === 'cauchemar' && !ouvert;
+      const verrou = !difficulteOuverte(s, r.value as Difficulte);
       r.disabled = verrou;
       r.closest('.difficulte')?.classList.toggle('est-verrouille', verrou);
       r.checked = r.value === choix.difficulte;
     });
-    $$('[data-verrou-cauchemar]').forEach((el) => (el.hidden = ouvert));
+    $$('[data-verrou-cauchemar]').forEach((el) => (el.hidden = cauchemarOuvert(s)));
+    $$('[data-verrou-paradoxe]').forEach((el) => (el.hidden = paradoxeOuvert(s)));
   };
 
   const majCampagne = () => {
-    if (choix.difficulte === 'cauchemar' && !cauchemarOuvert(s)) choix.difficulte = 'expert';
+    choix.difficulte = difficulteJouable(s, choix.difficulte);
     majDifficultes();
     $$<HTMLButtonElement>('[data-secteur]').forEach((b) => {
       const n = Number(b.dataset.secteur);
@@ -475,6 +478,7 @@ export function initRush(): void {
     if (n.id < NIVEAUX.length && s.niveauMax <= n.id) gains.push(remplir(textes.etoiles.debloque, { n: deux(n.id + 1) }));
     for (const p of PIECES) if (p.condition.type === 'niveau' && p.condition.niveau === n.id && !s.debloques.includes(p.id)) gains.push(remplir(textes.etoiles.piece, { p: `${textes.garage.emplacements[p.emplacement]} · ${textes.garage.pieces[p.id]}` }));
     if (choix.difficulte === 'expert' && !cauchemarOuvert(s)) gains.push(textes.etoiles.cauchemar);
+    if (choix.difficulte === 'cauchemar' && !paradoxeOuvert(s)) gains.push(textes.etoiles.paradoxe);
     $('[data-prep="recompenses"]').replaceChildren(
       ...(gains.length ? gains : [textes.etoiles.aucune]).map((g) => {
         const li = document.createElement('li');
@@ -492,7 +496,7 @@ export function initRush(): void {
   };
 
   const majInfini = () => {
-    if (choix.difficulte === 'cauchemar' && !cauchemarOuvert(s)) choix.difficulte = 'expert';
+    choix.difficulte = difficulteJouable(s, choix.difficulte);
     majDifficultes();
     $$('[data-infini-record]').forEach((el) => {
       const r = s.infini[el.dataset.infiniRecord!];
@@ -565,6 +569,21 @@ export function initRush(): void {
   };
 
   const majGarage = () => {
+    // Les vaisseaux : choisi, gagné, ou verrouillé avec sa condition et sa progression.
+    $$<HTMLButtonElement>('[data-vehicule]').forEach((b) => {
+      const v = VEHICULES.find((x) => x.id === b.dataset.vehicule)!;
+      const gagne = s.vehicules.includes(v.id);
+      const choisi = s.vehicule === v.id;
+      b.setAttribute('aria-pressed', String(choisi));
+      b.classList.toggle('est-verrouille', !gagne);
+      b.classList.toggle('est-vu', vehiculeVu === v.id && !choisi);
+      const a = avancement(s, v.condition);
+      b.querySelector('[data-vehicule-etat]')!.textContent = choisi
+        ? textes.garage.vaisseaux.choisi
+        : gagne
+          ? ''
+          : `${conditionTexte(v.condition)}${a.cible > 1 ? ` · ${remplir(textes.garage.progres, { n: nombre(a.mesure), v: nombre(a.cible) })}` : ''}`;
+    });
     $$<HTMLButtonElement>('[data-piece]').forEach((b) => {
       const piece = PIECES.find((p) => p.id === b.dataset.piece)!;
       const gagnee = s.debloques.includes(piece.id);
@@ -595,6 +614,7 @@ export function initRush(): void {
     v('secousses').checked = s.reglages.secousses;
     v('aideCommandes').checked = s.reglages.aideCommandes;
     $$<HTMLInputElement>('[data-reglage="tactile"]').forEach((r) => (r.checked = r.value === s.reglages.tactile));
+    $$<HTMLInputElement>('[data-reglage="sequenceFin"]').forEach((r) => (r.checked = r.value === s.reglages.sequenceFin));
     $$<HTMLInputElement>('.curseur-jeu input').forEach(peindreCurseur);
   };
   let retourFocus: HTMLElement | null = null;
@@ -650,7 +670,7 @@ export function initRush(): void {
       enregistrer(s);
     }
     fermerPanneau();
-    partie = new Partie(mode, choix.difficulte, niveau);
+    partie = new Partie(mode, choix.difficulte, niveau, undefined, s.vehicule);
     enPause = false;
     confirmer = '';
     reste = 0;
@@ -671,7 +691,7 @@ export function initRush(): void {
         return i;
       }),
     );
-    $('[data-hud="boucliers"]').replaceChildren(...Array.from({ length: partie.profil.boucliers }, () => document.createElement('i')));
+    $('[data-hud="boucliers"]').replaceChildren(...Array.from({ length: partie.bouclierMax }, () => document.createElement('i')));
     $('[data-hud="record"]').textContent = recordCourant() ? nombre(recordCourant()) : '—';
     montrer('');
     majHud();
@@ -745,7 +765,16 @@ export function initRush(): void {
     $('[data-hud="jauge"]').style.transform = `scaleY(${Math.min(1, od ? p.overdrive / p.profil.overdrive.duree : p.jauge).toFixed(3)})`;
     fenetre.classList.toggle('en-overdrive', od);
     fenetre.classList.toggle('od-pret', p.jauge >= 1 && !od);
-    $('[data-hud="charges"]').textContent = od ? `×${p.multOverdrive.toLocaleString(locale(), { maximumFractionDigits: 1 })} · ${remplir(textes.hud.charges, { n: p.charges })}` : '';
+    // L'Overdrive rare (V4) : verrouillé au départ, en charge, prêt, actif, puis « utilisé » jusqu'à la fin.
+    const etatOd = p.etatOverdrive;
+    fenetre.dataset.od = etatOd;
+    $('[data-hud="charges"]').textContent = od
+      ? `×${p.multOverdrive.toLocaleString(locale(), { maximumFractionDigits: 1 })} · ${remplir(textes.hud.charges, { n: p.charges })}`
+      : etatOd === 'verrouille'
+        ? remplir(textes.hud.odVerrouille, { n: nombre(p.seuilOverdrive) })
+        : etatOd === 'utilise'
+          ? textes.hud.odUtilise
+          : '';
     $('[data-hud="mult"]').textContent = `×${p.multiplicateur}`;
     $('[data-hud="combo"]').textContent = String(p.combo);
     $('[data-hud="delai"]').style.transform = `scaleX(${p.comboRestant.toFixed(3)})`;
@@ -844,6 +873,9 @@ export function initRush(): void {
           break;
         case 'fin-overdrive':
           break;
+        case 'od-ouvert':
+          annoncer(textes.annonces.odOuvert, 'pret');
+          break;
         case 'pret':
           annoncer(textes.annonces.pret, 'pret');
           sonRush('pret');
@@ -915,6 +947,14 @@ export function initRush(): void {
       finCine = window.setTimeout(passerCinematique, 900);
       return;
     }
+    // (V4) Séquence courte, au choix du joueur : un éclair de victoire, puis les résultats.
+    if (victoire && s.reglages.sequenceFin === 'courte') {
+      rendu.flasher('236, 244, 255', 0.6);
+      sonRush('ouverture');
+      finCine = window.setTimeout(passerCinematique, 1000);
+      majBarre();
+      return;
+    }
     $('[data-cine-titre]').textContent = victoire ? textes.victoire.titre : '';
     $('[data-cine-sous]').textContent = victoire ? libellePartie() : '';
     fenetre.classList.add('est-cinematique');
@@ -966,6 +1006,7 @@ export function initRush(): void {
       const gains = [
         ...(bilan.niveauDebloque ? [`${remplir(textes.victoire.secteurDebloque, { n: deux(bilan.niveauDebloque) })} · ${textes.niveaux[bilan.niveauDebloque - 1].nom}`] : []),
         ...(bilan.cauchemarDebloque ? [textes.victoire.cauchemar] : []),
+        ...(bilan.paradoxeDebloque ? [textes.victoire.paradoxe] : []),
         ...bilan.pieces.map((id) => {
           const piece = PIECES.find((x) => x.id === id)!;
           return `${textes.garage.emplacements[piece.emplacement]} · ${textes.garage.pieces[id]}`;
@@ -1070,11 +1111,12 @@ export function initRush(): void {
     temps += actif ? dt : dt * 0.35;
     // (La scène 3D dessine ces images dans sa propre toile, puis l'image du jeu la recouvre entièrement.)
     if (!actif && aRendre.length && !transition) aRendre.shift()!();
+    const modele = partie ? partie.vehicule.modele : (VEHICULES.find((v) => v.id === (vehiculeVu ?? s.vehicule))?.modele ?? 0);
     if (ecran === 'garage' && rendu.garage) {
       const b = dimensionnerApercu();
-      if (b && ctxApercu) rendu.garage(ctxApercu, b.width, b.height, s.equipement, temps);
+      if (b && ctxApercu) rendu.garage(ctxApercu, b.width, b.height, s.equipement, temps, modele);
     }
-    const vue = { l, h, reduit: effetsReduits(), secousses: s.reglages.secousses, equipement: s.equipement, theme: theme(), brume: partie?.niveauBase.brume ?? 0, avance: actif && compte <= 0 ? reste : 0 };
+    const vue = { l, h, reduit: effetsReduits(), secousses: s.reglages.secousses, equipement: s.equipement, theme: theme(), brume: partie?.niveauBase.brume ?? 0, avance: actif && compte <= 0 ? reste : 0, modele };
     rendu.dessiner(partie, vue, temps, actif ? dt : partie ? 0 : dt * 0.35);
     if (++images % 3 === 0) majHud();
     if (maintenant - dernierSuivi > 250) {
@@ -1488,13 +1530,28 @@ export function initRush(): void {
       else choisirOnglet('reglages', onglet.dataset.ongletReglages!);
       return;
     }
-    const cible = el.closest<HTMLElement>('[data-rush], [data-secteur], [data-piece]');
+    const cible = el.closest<HTMLElement>('[data-rush], [data-secteur], [data-piece], [data-vehicule]');
     if (!cible || (cible as HTMLButtonElement).disabled) return;
     masquerInfo();
     if (cible.dataset.secteur) {
       secteur = Number(cible.dataset.secteur);
       majCampagne();
       sonRush('deplacement');
+      return;
+    }
+    if (cible.dataset.vehicule) {
+      // Un vaisseau gagné se choisit ; un vaisseau verrouillé se regarde seulement (aperçu 3D).
+      const id = cible.dataset.vehicule as (typeof VEHICULES)[number]['id'];
+      if (s.vehicules.includes(id)) {
+        s.vehicule = id;
+        vehiculeVu = null;
+        enregistrer(s);
+        sonRush('pret');
+      } else {
+        vehiculeVu = vehiculeVu === id ? null : id;
+        sonRush('deplacement');
+      }
+      majGarage();
       return;
     }
     if (cible.dataset.piece) {
@@ -1618,6 +1675,7 @@ export function initRush(): void {
     } else if (cle === 'sons') regler('sons', champ.checked);
     else if (cle === 'animations') regler('animations', Number(champ.value));
     else if (cle === 'tactile') s.reglages.tactile = champ.value as 'toucher' | 'glisser';
+    else if (cle === 'sequenceFin') s.reglages.sequenceFin = champ.value === 'courte' ? 'courte' : 'complete';
     else if (cle === 'effetsReduits' || cle === 'secousses' || cle === 'aideCommandes') s.reglages[cle] = champ.checked;
     enregistrer(s);
     fenetre.classList.toggle('sans-aide', !s.reglages.aideCommandes);

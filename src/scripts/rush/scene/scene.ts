@@ -39,7 +39,7 @@ export interface RenduJeu {
   /** Une image fixe d'un monde (JPEG en data URL), pour la carte de campagne. */
   apercu?(theme: Theme, l: number, h: number): string | null;
   /** Le vaisseau du garage, dessiné dans une autre toile. */
-  garage?(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number): void;
+  garage?(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number, modele?: number): void;
   /**
    * Un mouvement de caméra : ouverture (on recule depuis le vaisseau), fermeture (tout converge vers son noyau),
    * victoire (tour du vaisseau, Overdrive, traversée de la porte d'arrivée), défaite (le monde ralentit).
@@ -354,7 +354,19 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     racine.setParent(parent);
     const corps = new Transform();
     corps.setParent(racine);
-    maillage(geo('vaisseau', Mo.vaisseau), pVaisseau, corps);
+    // (V4) Les quatre silhouettes : une seule est attachée à la fois (« modele »), les autres attendent.
+    const silhouettes: (Mesh | null)[] = [0, 1, 2, 3].map((m) => {
+      const ms = maillage(geo(`vaisseau-${m}`, () => Mo.vaisseau(m)), pVaisseau, corps);
+      if (m > 0) ms?.setParent(null);
+      return ms;
+    });
+    let modele = 0;
+    const choisirModele = (m: number) => {
+      if (m === modele || !silhouettes[m]) return;
+      silhouettes[modele]?.setParent(null);
+      silhouettes[m]!.setParent(corps);
+      modele = m;
+    };
     const emetteurs = Mo.EMETTEURS.map((p) => {
       const m = maillage(geo('emetteur', Mo.emetteur), pVaisseau, corps)!;
       m.position.set(...p);
@@ -377,7 +389,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     })!;
     bulle.scale.set(1.55, 0.75, 2.1);
     bulle.position.set(0, 0.05, 0);
-    return { racine, corps, emetteurs, flammes, bulle, bulleEtat };
+    return { racine, corps, emetteurs, flammes, bulle, bulleEtat, choisirModele };
   };
   const vaisseau = creerVaisseau(scene);
 
@@ -517,6 +529,9 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     x: number | null;
     etat: { couleur: number[]; force: number; impact: number; emission: number; coeur: number[] };
     extra?: Mesh | null;
+    /** Les pièces qui bougent (battants d'une porte, pales d'un rotor), et l'état lissé de leur mouvement. */
+    pieces?: Transform[];
+    lisse?: number;
   }
   const visuels = new Map<string, Visuel>();
   const reserve = new Map<string, Visuel[]>();
@@ -578,6 +593,40 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       case 'cible':
         maillage(geo('cible', Mo.cible), pFaisceau, racine, avantEnergie(pFaisceau));
         break;
+      // ---- Les obstacles mobiles de la V4 ----
+      case 'drone':
+        ajouter(double('drone', Mo.drone));
+        break;
+      case 'chute':
+        ajouter(double('bloc-chute', Mo.bloc));
+        break;
+      case 'eclaireur':
+        ajouter(double('eclaireur', Mo.eclaireur));
+        break;
+      case 'porte': {
+        ajouter(double('porte-cadre', Mo.porteCadre));
+        const battants = [-1, 1].map((sens) => {
+          const t = new Transform();
+          t.setParent(racine);
+          maillage(geo('porte-battant', Mo.porteBattant), pObjet, t, avantObjet);
+          t.rotation.y = sens < 0 ? 0 : Math.PI;
+          return t;
+        });
+        return { type, racine, etat, extra, x: null, pieces: battants, lisse: 0 };
+      }
+      case 'rotor': {
+        ajouter(double('rotor-moyeu', Mo.rotorMoyeu));
+        const tete = new Transform();
+        tete.setParent(racine);
+        tete.position.set(0, 1.0, 0);
+        for (let k = 0; k < 3; k++) {
+          const pale = new Transform();
+          pale.setParent(tete);
+          pale.rotation.y = (k * Math.PI * 2) / 3;
+          maillage(geo('rotor-pale', Mo.rotorPale), pObjet, pale, avantObjet);
+        }
+        return { type, racine, etat, extra, x: null, pieces: [tete], lisse: 0 };
+      }
       case 'chevrons':
         maillage(geo('trait', () => new Assembleur().quad([-0.5, 0, 0], [0.5, 0, 0], [0.5, 0, -1], [-0.5, 0, -1], Mo.M.blanc)), pChevron, racine, avantEnergie(pChevron));
         break;
@@ -612,7 +661,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
 
   /** La voie affichée d'un obstacle mobile : il glisse d'une configuration à la suivante (comme la version 2D). */
   function voiesAffichees(p: Partie, o: Objet, z: number): number[] {
-    if (o.type !== 'mobile' || !o.avant || z <= (o.fige ?? 0)) return p.voiesA(o, z);
+    if ((o.type !== 'mobile' && o.type !== 'drone') || !o.avant || z <= (o.fige ?? 0)) return p.voiesA(o, z);
     const etats = [...o.avant, { des: o.fige ?? 0, voies: o.voies }];
     let depuis = { des: apparition(p.vitesse), voies: etats[0].voies };
     for (const etat of etats) {
@@ -671,6 +720,65 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
           });
           break;
         }
+        case 'porte': {
+          // Une porte par voie qu'elle fermera : ses battants se rejoignent quand la voie se ferme vraiment.
+          const fermees = p.voiesA(o, z);
+          o.voies.forEach((voie, k) => {
+            const v = prendre(`${o.id}:${k}`, 'porte');
+            v.racine.position.set(xVoie(voie), 0, -z);
+            v.racine.scale.set(taille);
+            const cible = fermees.includes(voie) ? 1 : 0;
+            v.lisse = (v.lisse ?? 0) + (cible - (v.lisse ?? 0)) * borne(dt * 9);
+            const ouvert = 1 - (v.lisse ?? 0);
+            v.pieces?.forEach((b, i) => b.position.set((i === 0 ? -1 : 1) * (0.56 + ouvert * 1.05), 0, 0));
+            v.etat.impact = fermees.includes(voie) ? 0 : 0.08 + 0.06 * Math.sin(temps * 8);
+          });
+          break;
+        }
+        case 'rotor': {
+          // Les pales tournent tant que l'ouverture change, ralentissent et se figent sur leur place finale.
+          const fige = z <= (o.fige ?? 0);
+          p.voiesA(o, z).forEach((voie, k) => {
+            const v = prendre(`${o.id}:${k}`, 'rotor');
+            const cibleX = xVoie(voie);
+            v.x = v.x === null ? cibleX : v.x + (cibleX - v.x) * borne(dt * 16);
+            v.racine.position.set(v.x, 0, -z);
+            v.racine.scale.set(taille);
+            v.lisse = (v.lisse ?? 0) + (fige ? -dt * 2.5 : dt * 3);
+            v.lisse = borne(v.lisse, 0.15, 1);
+            const tete = v.pieces?.[0];
+            if (tete) tete.rotation.y += dt * 9 * (v.lisse ?? 0);
+            v.etat.emission = fige ? 1.4 : 1;
+          });
+          break;
+        }
+        case 'chute': {
+          // Le bloc tombe du ciel sur sa voie (connue dès son apparition) et se pose bien avant d'arriver au joueur.
+          const pose = borne((loin - z) / (loin * 0.45));
+          const h = (1 - pose * pose) * 26;
+          const v = prendre(`${o.id}`, 'chute');
+          v.racine.position.set(xVoie(o.voies[0]), h, -z);
+          v.racine.rotation.set((1 - pose) * 0.5 * Math.sin(g * 9), (1 - pose) * 1.5 + g * 6, 0);
+          v.racine.scale.set(taille);
+          v.etat.emission = pose < 1 ? 1.8 : 1;
+          if (o.voies[1] !== undefined) {
+            const w = prendre(`${o.id}:b`, 'chute');
+            w.racine.position.set(xVoie(o.voies[1]), h * 1.1, -z);
+            w.racine.scale.set(taille);
+          }
+          break;
+        }
+        case 'eclaireur': {
+          // L'éclaireur fonce : de loin, il est plus loin encore et se rapproche plus vite que la piste ; il arrive à l'heure exacte.
+          const zv = z + 0.55 * z * borne(z / loin);
+          const v = prendre(`${o.id}`, 'eclaireur');
+          v.racine.position.set(xVoie(o.voies[0]) + Math.sin(temps * 3 + g * 9) * 0.12 * borne(z / 30), 0.15 + Math.sin(temps * 5 + g) * 0.08, -zv);
+          v.racine.rotation.set(0, 0, Math.sin(temps * 2 + g * 5) * 0.12);
+          v.racine.scale.set(taille);
+          v.etat.emission = 1.5;
+          v.etat.impact = 0.12 + 0.08 * Math.sin(temps * 14);
+          break;
+        }
         default: {
           const voies = o.type === 'laser' || o.type === 'debris' ? p.voiesA(o, z) : voiesAffichees(p, o, z);
           const fige = z <= (o.fige ?? 0);
@@ -680,7 +788,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
             const cibleX = xVoie(voie);
             v.x = v.x === null ? cibleX : v.x + (cibleX - v.x) * borne(dt * 22);
             v.racine.position.set(v.x, o.type === 'debris' ? Math.sin(temps * 1.5 + g * 9) * 0.06 : 0, -z);
-            v.racine.scale.set(o.type === 'mobile' && !fige ? 0.94 : 1);
+            v.racine.scale.set((o.type === 'mobile' || o.type === 'drone') && !fige ? 0.94 : 1);
+            if (o.type === 'drone') {
+              v.racine.position.y = 0.25 + Math.sin(temps * 3.2 + g * 7 + k) * 0.12;
+              v.racine.rotation.set(0, Math.sin(temps * 1.4 + g) * 0.4, (v.x - cibleX) * 0.25);
+            }
             v.racine.scale.multiply(taille);
             if (o.type === 'debris') v.racine.rotation.set(Math.sin(temps * 0.7 + g) * 0.2, temps * 0.8 + g * 6, 0);
             v.etat.impact = o.chaud ? 0.15 + 0.1 * Math.sin(temps * 10) : 0;
@@ -691,7 +803,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
             }
           });
           // Le cargo : des cercles au sol montrent où il va s'arrêter.
-          if (o.type === 'mobile' && o.fige && z > o.fige)
+          if ((o.type === 'mobile' || o.type === 'drone') && o.fige && z > o.fige)
             o.voies.forEach((voie, k) => {
               const c = prendre(`${o.id}:cible:${k}`, 'cible');
               c.racine.position.set(xVoie(voie), 0.03, -o.fige!);
@@ -949,6 +1061,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     exposition.eclat = Math.max(0, exposition.eclat - dt * 2.5);
     monde.uExposition.value = exposition.base * (1 + exposition.eclat * 0.35 + monde.uBoost.value * 0.08);
     equiper(vue.equipement, temps);
+    vaisseau.choisirModele(vue.modele ?? 0);
 
     poserTroncons(distance, themePour, vue.brume ? Math.min(VUE, vue.brume * 2.2) : VUE);
 
@@ -1427,8 +1540,9 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const cielGarage = new Mesh(gl, { geometry: new Triangle(gl), program: pCiel, frustumCulled: false, renderOrder: -10 });
   cielGarage.setParent(sceneGarage);
   const cameraGarage = new Camera(gl, { fov: 32, near: 0.1, far: 9000 });
-  function garage(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number) {
+  function garage(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number, modele = 0) {
     if (!taille.l || !l || !h) return;
+    vaisseauGarage.choisirModele(modele);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const lp = Math.min(Math.round(l * dpr), toile.width),
       hp = Math.min(Math.round(h * dpr), toile.height);

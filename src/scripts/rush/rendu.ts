@@ -28,6 +28,8 @@ export interface Vue {
   brume: number;
   /** Le temps écoulé depuis le dernier pas du moteur (s) : l'image montre l'instant exact. */
   avance?: number;
+  /** La silhouette du vaisseau choisi (V4) : 0 Aube, 1 Faucon, 2 Bastion, 3 Spectre. */
+  modele?: number;
 }
 
 type Decor = 'etoiles' | 'neon' | 'asteroides' | 'grille' | 'failles' | 'orage' | 'noyau' | 'trou';

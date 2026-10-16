@@ -4037,3 +4037,141 @@ i.est-gagnee svg,
     transform: scaleY(0.7);
   }
 }
+
+/* ==========================================================================
+   LES VAISSEAUX DU GARAGE (V4) : quatre cartes, leurs vraies statistiques
+   ========================================================================== */
+.garage__vaisseaux > .etiquette {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.garage__flotte {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.vaisseau-carte {
+  --coupe: 11px;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: 6px;
+  padding: 11px 12px 12px;
+  border: 0;
+  clip-path: var(--forme);
+  background: var(--r-bord);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s;
+}
+
+.vaisseau-carte::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  z-index: -1;
+  clip-path: var(--forme);
+  background: var(--r-verre-fort);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: background 0.2s;
+}
+
+.vaisseau-carte:hover,
+.vaisseau-carte:focus-visible {
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.vaisseau-carte:hover::before,
+.vaisseau-carte:focus-visible::before {
+  background: rgba(12, 26, 46, 0.9);
+}
+
+.vaisseau-carte[aria-pressed='true'] {
+  background: linear-gradient(150deg, var(--r-cyan), rgba(98, 217, 255, 0.2) 50%, var(--r-cyan));
+}
+
+.vaisseau-carte.est-vu {
+  background: linear-gradient(150deg, var(--r-violet), rgba(169, 140, 255, 0.15) 50%, var(--r-violet));
+}
+
+.vaisseau-carte__tete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vaisseau-carte__tete b {
+  font: italic 800 1.05rem/1 var(--police);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--r-blanc);
+}
+
+.vaisseau-carte[aria-pressed='true'] .vaisseau-carte__tete small {
+  color: var(--r-cyan);
+}
+
+.vaisseau-carte__role {
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: var(--r-doux);
+}
+
+.vaisseau-carte__stats {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+}
+
+.vaisseau-carte__stats div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  font-size: 0.64rem;
+}
+
+.vaisseau-carte__stats div::after {
+  content: '';
+  grid-column: 1 / -1;
+  height: 3px;
+  background: linear-gradient(90deg, var(--r-cyan) var(--n), rgba(205, 224, 246, 0.12) var(--n));
+  transform: skewX(-20deg);
+}
+
+.vaisseau-carte__stats dt {
+  color: var(--r-pale);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vaisseau-carte__stats dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--r-texte);
+}
+
+.vaisseau-carte.est-verrouille .vaisseau-carte__tete b,
+.vaisseau-carte.est-verrouille .vaisseau-carte__stats {
+  opacity: 0.55;
+}
+
+.vaisseau-carte.est-verrouille .vaisseau-carte__tete small {
+  color: var(--r-or);
+  text-align: right;
+}
+
+.garage__note {
+  margin: 8px 0 0;
+  color: var(--r-pale);
+}

@@ -26,9 +26,13 @@
 // Version 3 (14 octobre 2026) : les étoiles. Un seul objectif de maîtrise par secteur (la 3e étoile),
 // le score cible fait la 2e. La note de fin compte cet objectif pour 30 points (au lieu de 2 × 15).
 // Version 4 (15 octobre 2026) : l'Overdrive se gagne deux fois moins vite ; scores cibles des étoiles recalculés.
-export const REGLES_VERSION = 4;
+// Version 5 (16 octobre 2026, Portal Rush V4) : l'Overdrive devient rare (une seule fois par partie, jamais
+// au départ, jauge qui recule sur un choc, rien à recharger après usage) ; difficulté Paradoxe ; survie à une
+// seule vie et vitesse qui ne cesse de monter ; nouveaux obstacles mobiles ; vaisseaux aux vraies statistiques ;
+// la complexité monte aussi avec l'avancée dans un secteur.
+export const REGLES_VERSION = 5;
 
-export type Difficulte = 'pilote' | 'as' | 'expert' | 'cauchemar';
+export type Difficulte = 'pilote' | 'as' | 'expert' | 'cauchemar' | 'paradoxe';
 
 export interface Profil {
   /** Multiplicateur de score affiché et appliqué. */
@@ -68,7 +72,7 @@ export const PROFILS: Record<Difficulte, Profil> = {
     boucliers: 4,
     invulnerable: 1.2,
     fragments: 1.15,
-    gainOverdrive: 1.25,
+    gainOverdrive: 0.9,
     overdrive: { duree: 6, charges: 3, multiplicateur: 2 },
     parfait: 0.28,
     comboDelai: 6,
@@ -84,7 +88,7 @@ export const PROFILS: Record<Difficulte, Profil> = {
     boucliers: 3,
     invulnerable: 1,
     fragments: 1,
-    gainOverdrive: 1,
+    gainOverdrive: 0.8,
     overdrive: { duree: 5, charges: 2, multiplicateur: 2 },
     parfait: 0.22,
     comboDelai: 4.5,
@@ -100,7 +104,7 @@ export const PROFILS: Record<Difficulte, Profil> = {
     boucliers: 2,
     invulnerable: 0.85,
     fragments: 0.8,
-    gainOverdrive: 0.8,
+    gainOverdrive: 0.7,
     overdrive: { duree: 4.5, charges: 1, multiplicateur: 2.5 },
     parfait: 0.18,
     comboDelai: 3.5,
@@ -116,14 +120,31 @@ export const PROFILS: Record<Difficulte, Profil> = {
     boucliers: 1,
     invulnerable: 0.7,
     fragments: 0.65,
-    gainOverdrive: 0.65,
+    gainOverdrive: 0.6,
     overdrive: { duree: 4, charges: 1, multiplicateur: 3 },
     parfait: 0.15,
     comboDelai: 2.8,
     pression: { toutesLes: 450, motifs: 5 },
   },
+  // Au-delà de Nightmare (V4) : le temps se plie. Extrêmement dur, jamais impossible : le générateur garde
+  // sa règle de justice (une voie atteignable, visible à temps) ; c'est la marge qui disparaît.
+  paradoxe: {
+    score: 2.6,
+    vitesse: { depart: 54, max: 92, acceleration: 0.36 },
+    ecart: { depart: 15, min: 8.5, resserrement: 0.11 },
+    reaction: { depart: 0.24, min: 0.18, sur: 80 },
+    complexite: { depart: 0.85, max: 1, parMotif: 0.014 },
+    boucliers: 1,
+    invulnerable: 0.6,
+    fragments: 0.55,
+    gainOverdrive: 0.5,
+    overdrive: { duree: 3.5, charges: 1, multiplicateur: 3.5 },
+    parfait: 0.13,
+    comboDelai: 2.4,
+    pression: { toutesLes: 380, motifs: 5 },
+  },
 };
-export const ORDRE_DIFFICULTES: Difficulte[] = ['pilote', 'as', 'expert', 'cauchemar'];
+export const ORDRE_DIFFICULTES: Difficulte[] = ['pilote', 'as', 'expert', 'cauchemar', 'paradoxe'];
 
 /** Les points. Tout est multiplié par le profil (score) et le multiplicateur de combo, sauf la distance. */
 export const POINTS = {
@@ -147,17 +168,29 @@ export const POINTS = {
 /** Le combo : un cran de multiplicateur toutes les « parCran » réussites, jusqu'à « max ». */
 export const COMBO = { parCran: 4, max: 10 };
 
-/** La jauge d'Overdrive : ce que rapporte chaque réussite (avant le gain du profil). */
+/** La jauge d'Overdrive : ce que rapporte chaque réussite (avant le gain du profil et du vaisseau). */
 // (15 octobre 2026, à la demande de Mathéo : l'Overdrive venait trop vite. Gains presque divisés par deux ;
 // avant : fragment 0,06 · doré 0,12 · parfait 0,12 · motif 0,05.)
-export const JAUGE = { fragment: 0.032, dore: 0.065, parfait: 0.065, motif: 0.026 };
+// (16 octobre 2026, V4 : « extrêmement rare ». Environ trois fois moins ; avant : 0,032 · 0,065 · 0,065 · 0,026.
+// Un secteur mené proprement de bout en bout la remplit une fois, à peu près ; une partie moyenne, non.)
+export const JAUGE = { fragment: 0.011, dore: 0.024, parfait: 0.024, motif: 0.01, choc: 0.25 };
+
+/**
+ * Les règles de rareté de l'Overdrive (V4) : une seule fois par partie ; la jauge ne se remplit pas au départ
+ * (avant « metres » mètres et « part » du secteur) ; un choc lui retire « JAUGE.choc » ; une fois utilisé,
+ * plus rien à recharger. On peut finir chaque secteur sans lui.
+ */
+export const OVERDRIVE = { parPartie: 1, depart: { metres: 700, part: 0.3 } };
+
+/** La survie infinie (V4) : une seule vie, et une vitesse qui ne cesse de monter au-delà du maximum du profil. */
+export const INFINI = { boucliers: 1, surcroit: 0.05, plafond: 140 };
 
 /** Bonus de l'Overdrive déclenché sur un gros combo : jusqu'à +1 au multiplicateur, atteint à « combo » réussites. */
 export const OVERDRIVE_COMBO = { combo: 24, bonus: 1 };
 
 /** Le boss : points de vie par difficulté, et ce qui le blesse. */
 export const BOSS = {
-  vie: { pilote: 0.85, as: 1, expert: 1.25, cauchemar: 1.5 } as Record<Difficulte, number>,
+  vie: { pilote: 0.85, as: 1, expert: 1.25, cauchemar: 1.5, paradoxe: 1.75 } as Record<Difficulte, number>,
   degats: { parfait: 1, noyau: 2, overdrive: 3, brise: 1 },
 };
 
