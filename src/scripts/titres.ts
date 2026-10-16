@@ -61,7 +61,17 @@ export function initTitres(): void {
     return;
   }
 
-  document.querySelectorAll<HTMLElement>('[data-titre]').forEach((el) => decouper(el));
+  // Un titre d'une destination masquée n'a pas de largeur : découpé maintenant, il le serait mot par mot,
+  // puis redécoupé à son arrivée à l'écran (son entrée sautait, ou se rejouait en retard). On attend qu'il paraisse.
+  let enAttente: HTMLElement[] = [];
+  document.querySelectorAll<HTMLElement>('[data-titre]').forEach((el) => (el.getClientRects().length ? decouper(el) : enAttente.push(el)));
+  window.addEventListener('destination', () => {
+    enAttente = enAttente.filter((el) => {
+      if (!el.getClientRects().length) return true;
+      decouper(el);
+      return false;
+    });
+  });
 
   etapes.forEach((el) => {
     ScrollTrigger.create({

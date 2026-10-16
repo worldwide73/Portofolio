@@ -271,9 +271,9 @@ const ch = c.navigation.chapitres;
         <p class="tableau__source etiquette">{t(c.competences.tableau.source)}</p>
       </div>
     </details>
-
-    <Suite contenu={c} destination="competences" />
   </section>
+  <!-- La fin de chaque destination : le passage vers le portail, hors du panneau, comme celui de l'accueil. -->
+  <Suite contenu={c} destination="competences" />
 
   <!-- 3. RÉALISATIONS -->
   <section id="realisations" class="galerie" data-section>
@@ -354,9 +354,8 @@ const ch = c.navigation.chapitres;
         <p class="galerie__aide etiquette">{t(c.realisations.aide)}</p>
       </div>
     </div>
-
-    <Suite contenu={c} destination="realisations" />
   </section>
+  <Suite contenu={c} destination="realisations" />
 
   <Constellation contenu={c} />
 
@@ -413,9 +412,8 @@ const ch = c.navigation.chapitres;
       }
     </ol>
     <p class="veille__vide" hidden>{t(c.veille.vide)}</p>
-
-    <Suite contenu={c} destination="veille" />
   </section>
+  <Suite contenu={c} destination="veille" />
 
   <!-- 5. CONTACT : la dernière section, dans le même verre que les autres. Les deux moyens directs
        d'abord (l'e-mail, LinkedIn), puis le téléphone, GitHub et le CV. -->
@@ -479,11 +477,11 @@ const ch = c.navigation.chapitres;
       <span>{t(c.contact.dispo)}</span>
       <span class="contact__horloge"><span>{c.interface.lieuHorloge}</span><time data-horloge>--:--</time></span>
     </p>
-
-    <Suite contenu={c} destination="contact" />
   </section>
+  <Suite contenu={c} destination="contact" />
 
-  <!-- LE PIED DE PAGE : la signature du portfolio, ses crédits, les liens utiles, le retour en haut. -->
+  <!-- LE PIED DE PAGE : la signature du portfolio, ses crédits, les liens utiles. (Plus de « Revenir en haut »
+       depuis le 16 octobre 2026 : Contact est une destination à part, on n'y descend plus depuis l'accueil.) -->
   <!-- (Il appartient à la destination Contact : son dernier chapitre, « Crédits ».) -->
   <footer class="pied" aria-labelledby="pied-titre" data-chapitre-de="contact" data-chapitre="credits" data-chapitre-nom={ch.credits}>
     <div class="pied__trait" aria-hidden="true"></div>
@@ -520,7 +518,6 @@ const ch = c.navigation.chapitres;
     </div>
     <div class="pied__bas etiquette">
       <p>© <span data-annee>{new Date().getFullYear()}</span> Mathéo Maleyran. {t(c.contact.credits.droits)}</p>
-      <a class="pied__haut" href="#accueil">{t(c.contact.haut)}<span aria-hidden="true">↑</span></a>
     </div>
   </footer>
 </Base>

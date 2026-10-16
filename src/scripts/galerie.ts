@@ -165,7 +165,10 @@ export function initGalerie(): void {
       rayon = (cartes[0].carte.offsetWidth * 1.02) / Math.sin(PAS);
     };
     mesurer();
-    window.addEventListener('resize', mesurer);
+    // (On mesure la carte elle-même, pas la fenêtre : masquée avec sa destination, elle n'a aucune
+    // largeur, et l'anneau se refermait en une pile. Elle est remesurée dès qu'elle reparaît.)
+    const taille = new ResizeObserver(mesurer);
+    taille.observe(cartes[0].carte);
 
     /** La distance « en rond » : entre −n/2 et n/2. */
     const enRond = (d: number) => ((((d + n / 2) % n) + n) % n) - n / 2;
@@ -421,7 +424,7 @@ export function initGalerie(): void {
     return () => {
       gsap.ticker.remove(image);
       quandChange = null;
-      window.removeEventListener('resize', mesurer);
+      taille.disconnect();
       piste.removeEventListener('pointerdown', appui);
       window.removeEventListener('pointermove', mouvement);
       window.removeEventListener('pointerup', relache);

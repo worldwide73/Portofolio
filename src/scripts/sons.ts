@@ -241,42 +241,6 @@ function sonRupture(): void {
   filtre.frequency.setValueAtTime(2400, t);
 }
 
-/**
- * Le bouton « Portail » de la barre se fissure, se brise, et nous aspire vers la carte (16 octobre 2026) :
- * un tintement de verre, quatre craquements, puis un souffle qui monte. Court et discret ; il passe par
- * la sortie des effets (réglages, volume, ambiance) et s'efface si l'animation est annulée.
- */
-export function sonPortailBouton(): void {
-  const p = piste(1.0);
-  if (!p) return;
-  const { c, g, t } = p;
-  g.gain.setValueAtTime(0.6, t);
-  g.gain.setTargetAtTime(0.0001, t + 0.72, 0.1);
-  // Le verre réagit : deux notes claires.
-  note(c, g, 1760, t, 0.45, 0.045);
-  note(c, g, 2637, t + 0.012, 0.3, 0.025);
-  // Les fissures : des craquements très courts, de plus en plus aigus.
-  [0.09, 0.15, 0.21, 0.26].forEach((d, i) => {
-    const vol = c.createGain();
-    vol.connect(g);
-    vol.gain.setValueAtTime(0.0001, t + d);
-    vol.gain.exponentialRampToValueAtTime(0.3 - i * 0.04, t + d + 0.004);
-    vol.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.045);
-    const { filtre } = souffle(c, vol, t + d, t + d + 0.06);
-    filtre.type = 'highpass';
-    filtre.frequency.value = 3000 + i * 650;
-  });
-  // La traversée : un souffle filtré qui monte, comme une aspiration.
-  const vol = c.createGain();
-  vol.connect(g);
-  vol.gain.setValueAtTime(0.0001, t + 0.24);
-  vol.gain.exponentialRampToValueAtTime(0.2, t + 0.48);
-  vol.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
-  const { filtre } = souffle(c, vol, t + 0.24, t + 0.9);
-  filtre.frequency.setValueAtTime(260, t + 0.24);
-  filtre.frequency.exponentialRampToValueAtTime(2600, t + 0.74);
-}
-
 /** Le survol : une note de verre, très légère. */
 function sonSurvol(): void {
   const p = piste(0.5);

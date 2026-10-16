@@ -1,6 +1,7 @@
 // RECETTE : la navigation par destinations (16 octobre 2026).
 // Vérifie, dans un vrai navigateur, les scénarios de la demande « refonte de la navigation » :
-// destinations indépendantes, portail (grand portail, bouton de la barre, touche P), fil des
+// destinations indépendantes, barre (le lieu affiché, puis Rechercher et Visite rapide), portail (le
+// grand portail de l'accueil, rejoint depuis le passage en bas de chaque destination), fil des
 // chapitres, recherche, visite rapide, menu d'identité, Portal Rush, langue, mouvement réduit, mobile.
 //
 // Utilisation (le serveur local doit tourner) :
@@ -50,6 +51,15 @@ const etat = (p) =>
   }));
 const carteFormee = (p) => p.waitForSelector('.explorateur.est-formee', { timeout: 20000 });
 const carteFermee = (p) => p.waitForFunction(() => !document.querySelector('.explorateur').open, null, { timeout: 20000 });
+const lieuAffiche = (p) => p.evaluate(() => [...document.querySelectorAll('.nav__lieu .nav__nom')].filter((e) => e.getClientRects().length).map((e) => e.textContent.trim()).join('|'));
+/** Descend au bas de la destination affichée et prend son passage vers le portail. */
+const traverser = async (p) => {
+  await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await p.waitForTimeout(1200);
+  const y = (await etat(p)).y;
+  await p.locator(`main > .suite[data-suite-de="${(await etat(p)).destination}"] .suite__action`).click();
+  return y;
+};
 const choisir = async (p, id) => {
   const b = await p.locator(`.explorateur [data-destination="${id}"] i`).boundingBox();
   await p.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
@@ -63,6 +73,12 @@ try {
   await pret(p);
   await p.mouse.move(30, 880);
 
+  await controle('Barre : « Accueil » sur le fond clair, sans action, puis Rechercher et Visite rapide', async () => {
+    assert.equal(await lieuAffiche(p), 'Accueil');
+    assert.equal(await p.locator('.nav__lieu').evaluate((e) => e.tagName), 'P');
+    assert.equal(await p.locator('[data-outil="portail"], .nav__lieu a, .nav__lieu button').count(), 0);
+    assert.deepEqual(await p.locator('.nav__outil').allTextContents().then((t) => t.map((x) => x.trim())), ['Rechercher', 'Visite rapide']);
+  });
   await controle('Accueil : quatre chapitres, Intro actif en haut', async () => {
     const e = await etat(p);
     assert.equal(e.destination, 'accueil');
@@ -84,12 +100,20 @@ try {
     assert.equal(e.y, 0);
     assert.ok(e.carte);
   });
-  await controle('Carte → Réalisations : destination affichée seule, ancre #realisations', async () => {
+  await controle('Carte : cinq destinations (plus de CV), régulièrement espacées', async () => {
+    assert.deepEqual(await p.locator('.astre').evaluateAll((a) => a.map((e) => e.dataset.destination)), ['accueil', 'competences', 'realisations', 'veille', 'contact']);
+  });
+  await controle('Carte → Réalisations : destination affichée seule, ancre #realisations, lieu écrit dans la barre', async () => {
     await choisir(p, 'realisations');
     const e = await etat(p);
     assert.equal(e.destination, 'realisations');
     assert.equal(e.ancre, '#realisations');
     assert.match(e.fil, /07$/);
+    assert.equal(await lieuAffiche(p), 'Réalisations');
+  });
+  await controle('Galerie : l’anneau est déployé à l’arrivée (pas de cartes empilées)', async () => {
+    const ecarts = await p.locator('.galerie .carte').evaluateAll((c) => c.map((e) => Math.abs(new DOMMatrix(getComputedStyle(e).transform).m41)));
+    assert.ok(ecarts.filter((x) => x > 100).length >= 2, ecarts.join(', '));
   });
   await controle('La molette explore Réalisations sans en sortir', async () => {
     await p.mouse.wheel(0, 4000);
@@ -108,50 +132,64 @@ try {
     assert.equal((await etat(p)).chapitre, 'Tweaks');
   });
   let yLecture = 0;
-  await controle('Bouton Portail (barre) : cassure du bouton, puis la même carte s’ouvre', async () => {
-    await p.mouse.wheel(0, 300);
-    await p.waitForTimeout(1200);
-    yLecture = (await etat(p)).y;
-    const b = await p.locator('[data-outil="portail"]').boundingBox();
-    await p.mouse.click(b.x + b.width * 0.4, b.y + b.height / 2);
-    await p.waitForTimeout(120);
-    assert.ok(await p.evaluate(() => document.querySelector('[data-outil="portail"]').matches('.est-charge, .est-brise')), 'le bouton ne réagit pas');
-    assert.ok(await p.evaluate(() => !!document.querySelector('.fracture:popover-open')), 'pas de toile de cassure');
+  await controle('Passage en bas de Réalisations : l’accueil, puis le grand portail se brise et forme la même carte', async () => {
+    await p.locator('.galerie__pause').click(); // la rotation reprend
+    yLecture = await traverser(p);
+    await p.waitForFunction(() => document.documentElement.classList.contains('carte-en-transition'), null, { timeout: 10000 });
+    const pendant = await etat(p);
+    assert.equal(pendant.destination, 'accueil'); // le grand portail est sur l'accueil
+    assert.equal(pendant.ancre, '#realisations'); // l'adresse ne change pas tant que rien n'est choisi
     await carteFormee(p);
-    await p.waitForTimeout(1200);
+    await p.waitForTimeout(800);
     assert.equal(await p.locator('.explorateur').count(), 1);
     assert.equal(await p.evaluate(() => document.querySelector('.explorateur [aria-current]')?.dataset.destination), 'realisations');
-    assert.ok(await p.evaluate(() => !document.querySelector('.fracture:popover-open')), 'toile non nettoyée');
-    assert.ok(await p.evaluate(() => !document.querySelector('[data-outil="portail"]').matches('.est-charge, .est-brise')), 'bouton non restauré');
+    assert.ok(await p.evaluate(() => !document.querySelector('.explorateur').classList.contains('sans-scene')), 'carte sur fond noir');
+    assert.equal(await p.locator('.fracture').count(), 0);
   });
-  await controle('Fermer la carte sans choisir : même destination, même position de lecture', async () => {
+  await controle('Carte ouverte : la page ne bouge plus (molette, touches)', async () => {
+    const avant = (await etat(p)).y;
+    await p.mouse.wheel(0, 1200);
+    await p.waitForTimeout(700);
+    await p.keyboard.press('PageDown');
+    await p.waitForTimeout(500);
+    assert.equal((await etat(p)).y, avant);
+  });
+  await controle('Fermer la carte sans choisir : retour à la même destination, même position de lecture', async () => {
     await p.keyboard.press('Escape');
     await carteFermee(p);
-    await p.waitForTimeout(800);
+    await p.waitForTimeout(1200);
     const e = await etat(p);
     assert.equal(e.destination, 'realisations');
+    assert.equal(e.ancre, '#realisations');
     assert.ok(Math.abs(e.y - yLecture) < 4, `${e.y} au lieu de ${yLecture}`);
   });
-  await controle('Clics répétés sur Portail : une seule transition', async () => {
-    const bouton = p.locator('[data-outil="portail"]');
+  await controle('Clics répétés sur le passage : une seule transition', async () => {
+    const bouton = p.locator('main > .suite[data-suite-de="realisations"] .suite__action');
     await bouton.click();
     await bouton.click({ force: true }).catch(() => {});
     await carteFormee(p);
     assert.equal(await p.locator('.explorateur[open]').count(), 1);
     await p.keyboard.press('Escape');
     await carteFermee(p);
-    await p.waitForTimeout(600);
+    await p.waitForTimeout(1200);
   });
-  await controle('Touche P → carte → Contact, puis jusqu’aux crédits du pied de page', async () => {
+  await controle('Touche P sans effet ; passage → carte → Contact, jusqu’aux crédits (sans « Revenir en haut »)', async () => {
     await p.keyboard.press('p');
+    await p.waitForTimeout(600);
+    assert.equal(await p.locator('.explorateur[open]').count(), 0);
+    await traverser(p);
     await carteFormee(p);
     await choisir(p, 'contact');
+    assert.equal(await lieuAffiche(p), 'Contact');
     await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await p.waitForTimeout(1800);
     const e = await etat(p);
     assert.equal(e.destination, 'contact');
     assert.equal(e.chapitre, 'Crédits');
     assert.ok(await p.locator('.pied').isVisible());
+    assert.equal(await p.locator('.pied__haut').count(), 0);
+    assert.equal(await p.locator('#contact .suite').count(), 0, 'le passage est encore dans le panneau');
+    assert.ok(await p.locator('main > .suite[data-suite-de="contact"]').isVisible());
   });
   await controle('Bouton « précédent » du navigateur : retour à Réalisations', async () => {
     await p.goBack();
@@ -187,7 +225,7 @@ try {
     await p.locator('[data-outil="rapide"]').click();
     await p.waitForSelector('.rapide[open]');
     assert.equal(await p.locator('.rapide__projets li').count(), 7);
-    assert.equal(await p.locator('.nav__outil[data-actif]').getAttribute('data-outil'), 'rapide');
+    assert.equal(await p.locator('[data-outil="rapide"]').getAttribute('aria-pressed'), 'true');
     assert.ok(await p.locator('.rapide a[href="/cv-matheo-maleyran.pdf"]').count());
     await p.keyboard.press('Escape');
     await p.waitForTimeout(300);
@@ -212,7 +250,8 @@ try {
     await p.waitForTimeout(1200);
     assert.equal(await p.evaluate(() => window.marque), 1);
     assert.equal((await etat(p)).destination, 'realisations');
-    assert.deepEqual(await p.locator('.nav__outil').allTextContents().then((t) => t.map((x) => x.trim())), ['Portal', 'Search', 'Quick view']);
+    assert.deepEqual(await p.locator('.nav__outil').allTextContents().then((t) => t.map((x) => x.trim())), ['Search', 'Quick view']);
+    assert.equal(await lieuAffiche(p), 'Work');
   });
   await p.screenshot({ path: `${DOSSIER}/bureau-fin.png` });
   await p.context().close();
@@ -239,15 +278,29 @@ try {
   });
   await jeu.context().close();
 
+  // ---- Arrivée directe sur une destination : le grand portail n'est pas noir ----
+  const direct = await page();
+  await direct.goto(SITE + '/#contact');
+  await pret(direct);
+  await controle('Arrivée sur #contact, puis le portail : le paysage et le cube sont là (pas d’écran noir)', async () => {
+    await direct.waitForTimeout(800);
+    await traverser(direct);
+    await carteFormee(direct);
+    const taille = await direct.evaluate(() => [document.getElementById('champ').width, document.getElementById('champ').clientWidth]);
+    assert.ok(taille[0] >= taille[1] && taille[1] > 300, taille.join(' / '));
+    assert.equal(await direct.evaluate(() => document.querySelector('.explorateur [aria-current]')?.dataset.destination), 'contact');
+  });
+  await direct.screenshot({ path: `${DOSSIER}/carte-depuis-contact.png` });
+  await direct.context().close();
+
   // ---- Mouvement réduit ----
   const reduit = await page({ reducedMotion: 'reduce' });
   await reduit.goto(SITE + '/#veille');
   await pret(reduit);
   await controle('Mouvement réduit : la carte s’ouvre directement, le clavier choisit la destination', async () => {
-    await reduit.locator('[data-outil="portail"]').click();
-    await reduit.waitForTimeout(300);
+    await traverser(reduit);
+    await reduit.waitForTimeout(500);
     assert.ok(await reduit.locator('.explorateur.est-formee').count());
-    assert.equal(await reduit.evaluate(() => !!document.querySelector('.fracture:popover-open')), false);
     await reduit.keyboard.press('ArrowRight');
     await reduit.keyboard.press('Enter');
     await reduit.waitForTimeout(600);
@@ -262,11 +315,18 @@ try {
   const mobile = await page({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await mobile.goto(SITE + '/');
   await pret(mobile);
-  await controle('Téléphone : menu des trois outils, carte, destination', async () => {
+  await controle('Téléphone : menu (le lieu, puis les deux outils), passage, carte, destination', async () => {
     await mobile.locator('.barre__menu').tap();
     await mobile.waitForTimeout(800);
     assert.ok(await mobile.locator('.nav [data-outil="rapide"]').isVisible());
-    await mobile.locator('.nav [data-outil="portail"]').tap();
+    assert.equal(await lieuAffiche(mobile), 'Accueil');
+    assert.equal(await mobile.locator('.nav [data-outil="portail"]').count(), 0);
+    await mobile.screenshot({ path: `${DOSSIER}/mobile-menu.png` });
+    await mobile.locator('.barre__menu').tap();
+    await mobile.waitForTimeout(600);
+    await mobile.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await mobile.waitForTimeout(1200);
+    await mobile.locator('#accueil .suite__action').tap();
     await carteFormee(mobile);
     await mobile.locator('[data-destination="competences"]').evaluate((a) => a.click());
     await mobile.waitForTimeout(2200);

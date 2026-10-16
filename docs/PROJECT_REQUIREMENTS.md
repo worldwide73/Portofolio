@@ -1,3 +1,17 @@
+## Retours du 16 octobre 2026 (2ᵉ lot) — remplacent les lignes « Barre », « cassure du bouton Portail » et « raccourci P » du lot ci-dessous
+
+| Demande | État | Preuve |
+|---|---|---|
+| Pas d'écran noir en revenant au grand portail | V | recette « arrivée sur #contact puis portail » (toile WebGL à la taille du cadre) + capture |
+| Animation du portail = celle de l'accueil (cube qui se brise, mêmes sons) | V (rendu logiciel) | recette (détour par l'accueil, classe `carte-en-transition`, carte sans fond noir) + captures ; son non écouté |
+| Texte à l'arrivée sans retard ni saut | V (rendu logiciel) | capture à 0,7 s : tout le texte visible, titre découpé en une ligne |
+| Galerie en anneau, qui tourne comme avant | V | recette (écarts des cartes) + captures |
+| CV retiré de la carte ; cinq planètes espacées régulièrement | V | recette (5 destinations) + captures |
+| Passages « Traverser le portail » hors des panneaux ; Contact resserré | V | recette (aucun passage dans `#contact`) + captures |
+| « Revenir en haut » retiré | V | recette |
+| Plus de mouvement de page une fois la carte ouverte | V | recette (molette + PageDown : position inchangée) |
+| Barre : lieu non cliquable (blanc), puis Rechercher, Visite rapide ; portail seulement en bas des pages | V | recette (bureau, anglais, téléphone) |
+
 ## Lot du 16 octobre 2026 — navigation par destinations (Claude Code Cloud)
 
 | Demande | État | Preuve |

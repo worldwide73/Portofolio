@@ -64,7 +64,6 @@ export const en: Contenu = {
     fermer: 'Close',
     groupes: [
       { nom: 'On the site', lignes: [
-        [['P'], 'Open the portal map and choose a destination'],
         [['Ctrl', 'K'], 'Search the portfolio (⌘ K on Mac)'],
         [['←', '→'], 'Previous or next chapter of the destination (the bottom trail)'],
         [['Esc'], 'Close the open window: map, search, quick view, settings, menu'],
@@ -223,7 +222,7 @@ export const en: Contenu = {
         reglages: { texte: 'The three-slider icon, top right: panel opacity and blur, glow, animations, sound effects, music and moods.', action: 'Open the settings' },
         jeu: { texte: 'Portal Rush: three lanes, obstacles, energy fragments and Overdrive. Eight levels, four difficulties, endless survival and a daily challenge.', action: 'Launch Portal Rush' },
         commandes: { texte: '← → (or A / D) to change lanes, Space for Overdrive, Escape to pause. On touch: tap left or right, swipe up for Overdrive.', action: 'See all the controls' },
-        carte: { texte: 'The Portal button, at the top of the screen (or the P key), opens the portal map: it is how you travel from one destination to another. On the home page, the glass cube shatters and forms that map.', action: 'Open the map' },
+        carte: { texte: 'You travel from one destination to another through the portal map: the glass cube of the home page shatters and its shards form that map. The “Cross the portal” passage, at the bottom of each destination, leads there.', action: 'Open the map' },
         langue: { texte: 'The site exists in French and in English; the flag, top right, switches language without reloading the page.', action: 'Switch to French' },
         visite: { texte: 'A short guided tour, in a few steps: that’s Explore My Universe.', action: 'Pick a tour' },
         coulisses: { texte: 'Astro, TypeScript, GSAP, WebGL and Web Audio: it’s all detailed in Behind the Build.', action: 'See behind the scenes' },
@@ -552,8 +551,8 @@ export const en: Contenu = {
   navigation: {
     outils: {
       titre: 'Navigation tools',
-      portail: 'Portal',
-      portailAide: 'Reach the portal map and choose a destination (P key)',
+      ici: 'You are here:',
+      iciAide: 'The destination on screen. To change it, cross the portal at the bottom of the page.',
       rechercher: 'Search',
       rechercherAide: 'Search the portfolio (Ctrl + K)',
       rapide: 'Quick view',
@@ -623,7 +622,6 @@ export const en: Contenu = {
     titre: 'Portal map',
     aide: 'Choose a destination.',
     ici: 'You are here',
-    cv: 'CV',
     refermer: 'Close the map',
     destinations: {
       accueil: 'The portal, the method, the journey',
@@ -631,7 +629,6 @@ export const en: Contenu = {
       realisations: '{n} projects, each with its own page',
       veille: 'My watch notes, with their sources',
       contact: 'Email, phone, LinkedIn, GitHub',
-      cv: 'The PDF, in a new tab',
     },
   },
 
@@ -998,7 +995,6 @@ export const en: Contenu = {
       droits: 'All rights reserved.',
     },
     coulisses: 'Behind the build',
-    haut: 'Back to top',
   },
 
   introuvable: {

@@ -384,10 +384,10 @@ export function initHub(): void {
           actions: [
             {
               libelle: rep.action,
-              // Le même portail que le bouton de la barre : une seule action, d'où que l'on soit.
+              // Le grand portail de l'accueil, d'où que l'on soit : il se brise comme d'habitude (portail.ts).
               faire: () => {
                 masquer();
-                ouvrirPortail({ source: document.querySelector<HTMLElement>('[data-outil="portail"]') });
+                ouvrirPortail();
               },
             },
           ],
@@ -613,7 +613,7 @@ export function initHub(): void {
       if (savoir.page !== 'accueil') return void (window.location.href = `${savoir.accueil}?visite=${id}`);
       masquer();
       if (id === 'libre') {
-        ouvrirPortail({ source: document.querySelector<HTMLElement>('[data-outil="portail"]') });
+        ouvrirPortail();
         return;
       }
       visite = { id, k: 0 };

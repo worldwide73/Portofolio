@@ -2,11 +2,12 @@
    LA NAVIGATION PAR DESTINATIONS (16 octobre 2026)
    - une seule destination affichée à la fois (html[data-lieu], posé par
      public/avant.js puis voyage.ts) ; sans JavaScript, tout reste visible ;
-   - la barre du haut : trois outils (Portail, Rechercher, Visite rapide) dans
-     la pastille de verre d'origine ;
+   - la barre du haut, dans la pastille de verre d'origine : la destination
+     où l'on est (un repère, sans action), puis Rechercher et Visite rapide ;
    - le fil du bas : les chapitres de la destination, et son état « 02 / 04 » ;
-   - la fin de chaque destination : une invitation à rejoindre le portail ;
-   - la recherche, la visite rapide, et la toile de la cassure du bouton Portail.
+   - la fin de chaque destination : le passage vers le portail, posé hors des
+     panneaux, comme celui de l'accueil ;
+   - la recherche et la visite rapide.
    Rien ici ne touche au grand portail ni à la carte du portail.
    ========================================================================== */
 
@@ -17,6 +18,19 @@ html[data-lieu='realisations'] main > :is([data-section], .pied):not(#realisatio
 html[data-lieu='veille'] main > :is([data-section], .pied):not(#veille),
 html[data-lieu='contact'] main > [data-section]:not(#contact) {
   display: none;
+}
+
+/* Le passage vers le portail qui suit chaque destination (hors de son panneau) ne paraît qu'avec elle.
+   (Celui de l'accueil est dans sa section.) */
+html[data-lieu] main > .suite {
+  display: none;
+}
+
+html[data-lieu='competences'] main > .suite[data-suite-de='competences'],
+html[data-lieu='realisations'] main > .suite[data-suite-de='realisations'],
+html[data-lieu='veille'] main > .suite[data-suite-de='veille'],
+html[data-lieu='contact'] main > .suite[data-suite-de='contact'] {
+  display: grid;
 }
 
 /* Chaque destination commence en haut de la page, juste sous la barre. */
@@ -37,7 +51,7 @@ html[data-lieu] #contact {
   margin-top: calc(var(--barre-h) + var(--marge-cadre) * 2);
 }
 
-/* ---- La barre : trois outils ---- */
+/* ---- La barre : où l'on est, puis deux outils ---- */
 .nav__outil {
   position: relative;
   z-index: 1;
@@ -63,90 +77,25 @@ html[data-lieu] #contact {
   outline-offset: 2px;
 }
 
-/* Le petit portail du bouton : une lame de verre dressée, au contour lumineux. */
-.nav__verre {
-  flex: none;
-  width: 7px;
-  height: 12px;
-  border: 1px solid currentColor;
-  border-radius: 1.5px;
-  background: linear-gradient(160deg, rgba(207, 225, 255, 0.6), rgba(207, 225, 255, 0.06));
-  box-shadow: 0 0 calc(var(--lueur, 0.7) * 7px) rgba(207, 225, 255, 0.55);
-  transform: perspective(40px) rotateY(-20deg) skewY(-5deg);
-  transition: box-shadow 0.3s var(--c-douce);
-}
-
-.nav__outil--portail:hover .nav__verre,
-.nav__outil--portail:focus-visible .nav__verre {
-  box-shadow: 0 0 calc(var(--lueur, 0.7) * 12px) rgba(207, 236, 255, 0.85);
-}
-
-/* La cassure du bouton (portail.ts) : il s'allume et tremble, se brise (la toile prend le relais), puis revient. */
-.nav__liste.est-charge {
-  box-shadow: 0 0 calc(var(--lueur, 0.7) * 26px) rgba(159, 230, 255, 0.32);
-}
-
-.est-charge:is(.nav__outil, .suite__action, .barre__menu) {
-  animation: portail-tremble 0.07s linear infinite;
-}
-
-.est-charge .nav__verre {
-  box-shadow: 0 0 14px rgba(230, 246, 255, 0.95), 0 0 2px #fff;
-}
-
-.est-brise:is(.nav__outil, .suite__action, .barre__menu),
-.nav__liste.est-brise .nav__actif {
-  opacity: 0;
-  transition: opacity 0.06s linear;
-}
-
-.est-reforme:is(.nav__outil, .suite__action, .barre__menu) {
-  animation: portail-reforme 0.5s var(--c-douce) both;
-}
-
-.est-impulsion .nav__verre {
-  animation: portail-impulsion 0.5s var(--c-douce);
-}
-
-@keyframes portail-tremble {
-  0% { translate: 0 0; }
-  25% { translate: -0.7px 0.4px; }
-  50% { translate: 0.6px -0.5px; }
-  75% { translate: -0.4px -0.3px; }
-  100% { translate: 0.7px 0.5px; }
-}
-
-@keyframes portail-reforme {
-  from {
-    opacity: 0;
-    filter: blur(3px);
-  }
-}
-
-@keyframes portail-impulsion {
-  50% {
-    box-shadow: 0 0 16px rgba(230, 246, 255, 1);
-  }
-}
-
-/* La toile de la cassure : posée par-dessus tout (popover), elle ne capte aucun clic. */
-.fracture {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  max-width: none;
-  max-height: none;
+/* Le lieu : un simple repère sur le fond clair (nav.ts), sans action. Il n'écrit que la destination affichée. */
+.nav__lieu {
   margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  overflow: visible;
-  pointer-events: none;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
 }
 
-.fracture::backdrop {
+.nav__lieu [data-lieu-nom] {
   display: none;
+}
+
+html:not([data-lieu]) .nav__lieu [data-lieu-nom='accueil'],
+html[data-lieu='accueil'] .nav__lieu [data-lieu-nom='accueil'],
+html[data-lieu='competences'] .nav__lieu [data-lieu-nom='competences'],
+html[data-lieu='realisations'] .nav__lieu [data-lieu-nom='realisations'],
+html[data-lieu='veille'] .nav__lieu [data-lieu-nom='veille'],
+html[data-lieu='contact'] .nav__lieu [data-lieu-nom='contact'] {
+  display: inline;
 }
 
 /* ---- Le fil des chapitres ---- */
@@ -211,11 +160,6 @@ html[data-lieu] #contact {
 }
 
 @media (max-width: 860px) {
-  /* Dans le menu plein écran du téléphone, les outils s'écrivent en grand : la petite lame n'y a pas sa place. */
-  .nav .nav__verre {
-    display: none;
-  }
-
   .trajet[data-dense] {
     --pas: 34px;
   }
@@ -234,6 +178,12 @@ html[data-lieu] #contact {
   gap: 0.85rem;
   padding: var(--s-5) var(--gouttiere) calc(var(--s-5) + 84px);
   text-align: center;
+}
+
+/* Sous Contact, le pied de page suit : le passage reste près des coordonnées, sans grand vide. */
+.suite[data-suite-de='contact'] {
+  padding-top: var(--s-4);
+  padding-bottom: 0;
 }
 
 /* Un filet de lumière, qui s'efface vers les bords. */
@@ -788,8 +738,7 @@ html.curseur-actif :is(.recherche, .rapide) :is(a, button, [role='option']) {
 /* Mouvement réduit, ou animations coupées : aucune animation décorative ici. */
 @media (prefers-reduced-motion: reduce) {
   .suite__voyageur,
-  .suite__verre,
-  .est-charge:is(.nav__outil, .suite__action, .barre__menu) {
+  .suite__verre {
     animation: none;
   }
 }

@@ -1,16 +1,16 @@
-// LA BARRE DU HAUT : le centre de commandes (16 octobre 2026).
-// La même pastille de verre qu'avant, mais elle ne répète plus les cinq destinations
-// (on voyage par le portail). Elle porte trois outils :
-//   - Portail : rejoint la carte du portail en une seule action (portail.ts) ;
+// LA BARRE DU HAUT (16 octobre 2026).
+// La même pastille de verre qu'avant. Elle dit d'abord où l'on est : la destination affichée
+// (Accueil, Compétences, Réalisations, Veille, Contact ; sur une fiche, Réalisations), sur le fond
+// clair. Ce n'est qu'un repère, sans action : on change de destination par le portail, en bas de
+// chaque page. Viennent ensuite deux outils :
 //   - Rechercher : la recherche dans le portfolio (recherche.ts, aussi Ctrl + K) ;
 //   - Visite rapide : le profil en un coup d'œil (rapide.ts).
-// Le fond clair glisse sous l'outil « actif » : Portail au repos, Rechercher ou Visite rapide
-// tant que leur fenêtre est ouverte. Sur téléphone, le bouton « Menu » ouvre ces outils en plein écran.
+// Le nom affiché suit html[data-lieu] en CSS (destinations.css) ; ici, on ajuste seulement le fond
+// clair à sa largeur. Sur téléphone, le bouton « Menu » ouvre la même liste en plein écran.
 
 import { decoder } from './decode';
 import { lenis } from './defilement';
 import { apresPause } from './outils';
-import { ouvrirPortail } from './portail';
 import { ouvrirRecherche } from './recherche';
 import { basculerRapide } from './rapide';
 
@@ -20,34 +20,25 @@ export function initNav(): void {
   if (!barre || !nav) return;
 
   const outils = [...nav.querySelectorAll<HTMLButtonElement>('[data-outil]')];
+  const lieu = nav.querySelector<HTMLElement>('.nav__lieu');
   const fond = nav.querySelector<HTMLElement>('.nav__actif');
-  let actif = '';
 
-  /** Glisse le fond clair sous l'outil actif. */
+  /** Le fond clair épouse le nom de la destination (sa largeur change avec elle). */
   const placer = () => {
-    const bouton = outils.find((b) => b.dataset.outil === actif);
-    if (!fond || !bouton) return;
-    fond.style.transform = `translateX(${bouton.offsetLeft}px)`;
-    fond.style.width = `${bouton.offsetWidth}px`;
+    if (!fond || !lieu) return;
+    fond.style.transform = `translateX(${lieu.offsetLeft}px)`;
+    fond.style.width = `${lieu.offsetWidth}px`;
   };
-  const activer = (id: string) => {
-    if (id === actif) return;
-    actif = id;
-    outils.forEach((b) => b.toggleAttribute('data-actif', b.dataset.outil === id));
-    placer();
-  };
-  /** L'outil actif d'après ce qui est ouvert : la recherche, la visite rapide, sinon le portail. */
-  const suivre = () => {
-    const rapide = !!document.querySelector('.rapide[open]');
-    const recherche = !!document.querySelector('.recherche[open]');
-    outils.find((b) => b.dataset.outil === 'rapide')?.setAttribute('aria-pressed', String(rapide));
-    activer(recherche ? 'recherche' : rapide ? 'rapide' : 'portail');
-  };
-  window.addEventListener('outil', suivre);
+  window.addEventListener('destination', placer);
   window.addEventListener('resize', apresPause(placer, 150));
   window.addEventListener('langue', () => requestAnimationFrame(placer));
   document.fonts.ready.then(placer);
-  suivre();
+  placer();
+
+  // La Visite rapide se dit « enfoncée » tant que sa fenêtre est ouverte.
+  window.addEventListener('outil', () =>
+    outils.find((b) => b.dataset.outil === 'rapide')?.setAttribute('aria-pressed', String(!!document.querySelector('.rapide[open]'))),
+  );
 
   // ---- Menu plein écran (téléphone) ----
   const bouton = barre.querySelector<HTMLButtonElement>('.barre__menu');
@@ -66,18 +57,12 @@ export function initNav(): void {
     }
   };
 
-  // ---- Les trois outils ----
+  // ---- Les deux outils ----
   outils.forEach((outil) =>
-    outil.addEventListener('click', (e) => {
-      const point = e.detail > 0 ? { x: e.clientX, y: e.clientY } : null;
-      const dansLeMenu = html.classList.contains('menu-ouvert');
-      if (dansLeMenu) basculer(false);
-      const id = outil.dataset.outil;
-      if (id === 'portail') {
-        // Dans le menu du téléphone, c'est le bouton « Menu » (resté à l'écran) qui se brise.
-        ouvrirPortail({ source: dansLeMenu ? bouton : outil, point: dansLeMenu ? null : point });
-      } else if (id === 'recherche') ouvrirRecherche(outil);
-      else if (id === 'rapide') basculerRapide(outil);
+    outil.addEventListener('click', () => {
+      if (html.classList.contains('menu-ouvert')) basculer(false);
+      if (outil.dataset.outil === 'recherche') ouvrirRecherche(outil);
+      else if (outil.dataset.outil === 'rapide') basculerRapide(outil);
     }),
   );
 

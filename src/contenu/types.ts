@@ -309,7 +309,8 @@ export interface Contenu {
    * outils (Portail, Rechercher, Visite rapide), le fil du bas les chapitres de la destination.
    */
   navigation: {
-    outils: { titre: string; portail: string; portailAide: string; rechercher: string; rechercherAide: string; rapide: string; rapideAide: string };
+    /** La barre du haut : « ici » précède, pour les lecteurs d'écran, le nom de la destination affichée ; « iciAide » est sa bulle. */
+    outils: { titre: string; ici: string; iciAide: string; rechercher: string; rechercherAide: string; rapide: string; rapideAide: string };
     /** Les chapitres internes qui n'ont pas de titre propre dans la page. */
     chapitres: { intro: string; methode: string; parcours: string; explorer: string; tableau: string; presentation: string; coordonnees: string; credits: string };
     /** Au-dessus du fil : « {destination} · {k} / {n} ». */
@@ -347,11 +348,10 @@ export interface Contenu {
     titre: string;
     aide: string;
     ici: string;
-    cv: string;
     /** Le libellé du noyau de la carte : un clic dessus la referme. */
     refermer: string;
     /** Une ligne par destination. « {n} » est remplacé par le vrai nombre (domaines, réalisations). */
-    destinations: Record<IdSection | 'cv', string>;
+    destinations: Record<IdSection, string>;
   };
   hero: {
     /** Petite ligne au-dessus du titre. */
@@ -454,7 +454,6 @@ export interface Contenu {
     credits: { titre: string; signature: string; role: string; roleTexte: string; outils: string; outilsTexte: string; liens: string; droits: string };
     /** Lien du pied de page vers la fiche qui raconte comment ce site est fait. */
     coulisses: string;
-    haut: string;
   };
   introuvable: { titreOnglet: string; surtitre: string; titre: [string, string]; texte: string; accueil: string; realisations: string };
   /** La palette de commandes, en forme de terminal (Ctrl + K, touche ², ou le mot « trace »). */

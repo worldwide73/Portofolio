@@ -69,7 +69,6 @@ export const fr: Contenu = {
     fermer: 'Fermer',
     groupes: [
       { nom: 'Sur le site', lignes: [
-        [['P'], 'Ouvrir la carte du portail et choisir une destination'],
         [['Ctrl', 'K'], 'Rechercher dans le portfolio (⌘ K sur Mac)'],
         [['←', '→'], 'Chapitre précédent ou suivant de la destination (le fil du bas)'],
         [['Échap'], 'Fermer la fenêtre ouverte : carte, recherche, visite rapide, réglages, menu'],
@@ -228,7 +227,7 @@ export const fr: Contenu = {
         reglages: { texte: 'L’icône à trois curseurs, en haut à droite : opacité et flou des panneaux, intensité lumineuse, animations, effets sonores, musique et ambiances.', action: 'Ouvrir les réglages' },
         jeu: { texte: 'Portal Rush : trois voies, des obstacles, des fragments d’énergie et l’Overdrive. Huit niveaux, quatre difficultés, une survie infinie et un défi du jour.', action: 'Lancer Portal Rush' },
         commandes: { texte: '← → (ou A / D) pour changer de voie, Espace pour l’Overdrive, Échap pour la pause. Au doigt : touchez à gauche ou à droite, glissez vers le haut pour l’Overdrive.', action: 'Voir toutes les commandes' },
-        carte: { texte: 'Le bouton Portail, en haut de l’écran (ou la touche P), ouvre la carte du portail : c’est par elle qu’on voyage d’une destination à l’autre. Sur l’accueil, le cube de verre se brise et forme cette carte.', action: 'Ouvrir la carte' },
+        carte: { texte: 'On voyage d’une destination à l’autre par la carte du portail : le cube de verre de l’accueil se brise et ses éclats forment cette carte. Le passage « Traverser le portail », en bas de chaque destination, y mène.', action: 'Ouvrir la carte' },
         langue: { texte: 'Le site existe en français et en anglais ; le drapeau, en haut à droite, change la langue sans recharger la page.', action: 'Passer en anglais' },
         visite: { texte: 'Une visite guidée courte, en quelques étapes : c’est Explore My Universe.', action: 'Choisir une visite' },
         coulisses: { texte: 'Astro, TypeScript, GSAP, WebGL et Web Audio : tout est détaillé dans Behind the Build.', action: 'Voir les coulisses' },
@@ -557,8 +556,8 @@ export const fr: Contenu = {
   navigation: {
     outils: {
       titre: 'Outils de navigation',
-      portail: 'Portail',
-      portailAide: 'Rejoindre la carte du portail et choisir une destination (touche P)',
+      ici: 'Vous êtes ici :',
+      iciAide: 'La destination affichée. Pour en changer, traversez le portail en bas de la page.',
       rechercher: 'Rechercher',
       rechercherAide: 'Rechercher dans le portfolio (Ctrl + K)',
       rapide: 'Visite rapide',
@@ -628,7 +627,6 @@ export const fr: Contenu = {
     titre: 'Carte du portail',
     aide: 'Choisissez une destination.',
     ici: 'Vous êtes ici',
-    cv: 'CV',
     refermer: 'Refermer la carte',
     destinations: {
       accueil: 'Le portail, la méthode, le parcours',
@@ -636,7 +634,6 @@ export const fr: Contenu = {
       realisations: '{n} réalisations, chacune avec sa fiche',
       veille: 'Mes notes de veille, avec leurs sources',
       contact: 'Écrire, appeler, LinkedIn, GitHub',
-      cv: 'Le PDF, dans un nouvel onglet',
     },
   },
 
@@ -1025,7 +1022,6 @@ export const fr: Contenu = {
       droits: 'Tous droits réservés.',
     },
     coulisses: 'Les coulisses du site',
-    haut: 'Revenir en haut',
   },
 
   introuvable: {

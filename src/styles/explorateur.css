@@ -209,12 +209,6 @@
   justify-items: end;
 }
 
-/* Le CV : un point un peu plus petit, il mène hors de la page. */
-.astre--annexe i {
-  width: 12px;
-  height: 12px;
-}
-
 /* L'endroit où l'on se trouve : un anneau autour du point. */
 .astre[aria-current] i {
   outline: 1px solid color-mix(in srgb, var(--lampe) 80%, transparent);

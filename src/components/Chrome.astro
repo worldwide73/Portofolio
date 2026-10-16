@@ -10,13 +10,18 @@ import Recherche from './Recherche.astro';
 import Symbole from './Symbole.astro';
 import VisiteRapide from './VisiteRapide.astro';
 
+// Les destinations, dans l'ordre du site : la barre écrit celle qui est affichée (html[data-lieu]).
+const DESTINATIONS = ['accueil', 'competences', 'realisations', 'veille', 'contact'] as const;
+
 interface Props {
   contenu: Contenu;
   page: 'accueil' | 'fiche';
   cheminAutreLangue: string;
+  /** Le lieu écrit dans la barre hors de l'accueil (par défaut : les réalisations, pour une fiche). */
+  ici?: string;
 }
 
-const { contenu, page, cheminAutreLangue } = Astro.props;
+const { contenu, page, cheminAutreLangue, ici } = Astro.props;
 const langue = contenu.langue;
 const autre = langue === 'fr' ? 'en' : 'fr';
 const accueil = cheminAccueil(langue);
@@ -72,15 +77,20 @@ const ICONES = {
     </button>
   </div>
 
-  <!-- Le centre de commandes : trois outils, dans la pastille de verre d'origine. Les cinq destinations
-       ne s'y répètent plus : on voyage par le portail (voir src/scripts/portail.ts et nav.ts). -->
+  <!-- Le centre de commandes, dans la pastille de verre d'origine : d'abord la destination où l'on est
+       (un simple repère, sans action : on change de destination par le portail, en bas de chaque page),
+       puis deux outils, Rechercher et Visite rapide (voir src/scripts/nav.ts). -->
   <nav class="nav etiquette" id="menu" aria-label={n.outils.titre}>
     <div class="nav__liste" data-intro="barre">
       <span class="nav__actif" aria-hidden="true"></span>
-      <button class="nav__outil nav__outil--portail" type="button" data-outil="portail" aria-haspopup="dialog" aria-keyshortcuts="P" title={n.outils.portailAide} data-accueil={accueil}>
-        <span class="nav__verre" aria-hidden="true"></span>
-        <span class="nav__libelle">{n.outils.portail}</span>
-      </button>
+      <p class="nav__lieu" title={n.outils.iciAide}>
+        <span class="sr">{n.outils.ici} </span>
+        {
+          page === 'accueil'
+            ? DESTINATIONS.map((id) => <span class="nav__nom" data-lieu-nom={id}>{contenu.sections[id]}</span>)
+            : <span class="nav__nom">{ici ?? contenu.sections.realisations}</span>
+        }
+      </p>
       <button class="nav__outil" type="button" data-outil="recherche" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" title={n.outils.rechercherAide}>
         <span class="nav__libelle">{n.outils.rechercher}</span>
       </button>

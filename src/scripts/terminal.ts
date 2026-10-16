@@ -120,7 +120,7 @@ export function initTerminal(): void {
     contact: () => allerSection('contact'),
     carte: () => {
       fermer();
-      ouvrirPortail({ source: document.querySelector<HTMLElement>('[data-outil="portail"]') });
+      ouvrirPortail();
     },
     cv: () => window.open(liens.cv, '_blank', 'noopener'),
     projets: () => projets.forEach((p, i) => ecrire(`  ${i + 1}  ${p.nom}`)),
