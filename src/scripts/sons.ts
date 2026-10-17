@@ -468,6 +468,9 @@ export function sonRush(evenement: EvenementRush): void {
  * un souffle. L'Overdrive ouvre tout. Il passe par le canal des effets : coupé avec eux, réglé par le volume du jeu.
  */
 let moteurEnCours: { c: AudioContext; g: GainNode; source: AudioBufferSourceNode | null; turbine: OscillatorNode[]; filtre: BiquadFilterNode; vent: BiquadFilterNode; ventGain: GainNode; arret: () => void } | null = null;
+/** Le son du moteur tourne-t-il ? (Pour les recettes : rien ne doit rester allumé après le tutoriel.) */
+export const moteurRushActif = (): boolean => !!moteurEnCours;
+
 export function moteurRush(etat: { actif: boolean; vitesse: number; overdrive: boolean }): void {
   const sortie = canalEffets();
   if (!etat.actif || !reglages.sons || volumeRush <= 0) {

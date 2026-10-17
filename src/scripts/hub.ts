@@ -182,16 +182,12 @@ export function initHub(): void {
     if (hub.parentElement !== place.parent) place.parent.insertBefore(hub, place.suivant);
   });
   hub.querySelectorAll<HTMLElement>('[data-onglet]').forEach((bouton) =>
-    bouton.addEventListener('click', () => {
+    bouton.addEventListener('click', (e) => {
       const vue = bouton.dataset.onglet as 'assistant' | 'rush' | 'explorer' | 'coulisses';
-      if (vue === 'rush') {
-        bouton.classList.add('est-lance');
-        window.setTimeout(() => {
-          bouton.classList.remove('est-lance');
-          masquer();
-          ouvrirRush();
-        }, 140);
-      } else montrerVue(vue);
+      // Portal Rush : le bouton se fissure là où on l'a touché, se brise, et le voyage temporel commence
+      // (rush/tunnel.ts). Le Hub reste ouvert dessous et ne se range qu'à l'arrivée dans le jeu.
+      if (vue === 'rush') ouvrirRush('accueil', bouton, e.detail > 0 ? { x: e.clientX, y: e.clientY } : null);
+      else montrerVue(vue);
     }),
   );
 

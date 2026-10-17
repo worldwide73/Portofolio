@@ -265,8 +265,13 @@ try {
   await controle('Portal Rush : P, ← →, Ctrl+K sans effet sur le site ; quitter ramène en haut de l’accueil', async () => {
     await jeu.locator('.jeu-bouton').click();
     await jeu.locator('[data-onglet="rush"]').click();
-    await jeu.waitForSelector('.rush[open]', { timeout: 20000 });
+    await jeu.waitForSelector('.rush[open]', { timeout: 30000 });
     await jeu.waitForTimeout(2000);
+    // (Portal Rush V4 : au premier lancement, on arrive dans le tutoriel ; on le passe pour partir du menu.)
+    if (await jeu.locator('.tuto__passer:visible').count()) {
+      await jeu.locator('.tuto__passer').click();
+      await jeu.waitForTimeout(500);
+    }
     for (const touche of ['p', 'ArrowRight', 'ArrowLeft', 'Control+k']) await jeu.keyboard.press(touche);
     await jeu.waitForTimeout(500);
     assert.equal(await jeu.locator('.explorateur[open], .recherche[open]').count(), 0);

@@ -43,7 +43,12 @@ const pret = (p) => p.waitForFunction(() => !document.documentElement.classList.
 /** Ouvre Portal Rush et attend la fin de son entrée (la scène 3D est lente à charger sans carte graphique). */
 const ouvrirRush = async (p) => {
   await p.evaluate(() => document.querySelector('[data-jouer-rush]')?.click());
-  await p.waitForFunction(() => document.querySelector('.rush').open && !window.__portalRush.etat().transition, null, { timeout: 20000 });
+  await p.waitForFunction(() => document.querySelector('.rush').open && !window.__portalRush.etat().transition, null, { timeout: 30000 });
+  // (V4-C : au premier lancement d'un profil, on arrive dans le tutoriel ; ces contrôles partent du menu.)
+  if (await p.evaluate(() => window.__portalRush.tutoriel?.().actif)) {
+    await p.click('.tuto__passer');
+    await p.waitForFunction(() => window.__portalRush.etat().ecran === 'accueil', null, { timeout: 8000 });
+  }
   await p.waitForTimeout(800);
 };
 const quitterRush = async (p) => {

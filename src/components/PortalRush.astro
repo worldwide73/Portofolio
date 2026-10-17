@@ -120,6 +120,23 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
   </div>
   <p class="rush__annonce" aria-live="polite"></p>
   <p class="rush__conseil etiquette" aria-live="polite" hidden></p>
+  <!-- Le tutoriel immersif (V4, src/scripts/rush/tutoriel.ts) : la consigne, les touches animées, l'avancée. -->
+  <div class="tuto" data-tuto hidden>
+    <p class="tuto__etape etiquette"><span data-tuto="etape"></span> · <span data-tuto="titre"></span></p>
+    <p class="tuto__consigne" data-tuto="consigne" aria-live="polite"></p>
+    <div class="tuto__touches" aria-hidden="true">
+      <kbd class="tuto__touche" data-touche="gauche"><span>←</span><small>A</small></kbd>
+      <kbd class="tuto__touche" data-touche="droite"><span>→</span><small>D</small></kbd>
+    </div>
+    <div class="tuto__tactile" aria-hidden="true"><i data-touche="gauche"></i><i data-touche="droite"></i></div>
+    <span class="tuto__ok" data-tuto="ok" aria-hidden="true"></span>
+    <ol class="tuto__progres" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
+  </div>
+  <button class="tuto__passer" type="button" data-rush="passer-tuto" hidden>{r.tutoriel.passer}</button>
+  <div class="tuto__fin" data-tuto="fin" aria-live="polite" hidden>
+    <p class="tuto__fin-titre">{r.tutoriel.fin[0]}</p>
+    <p class="tuto__fin-sous">{r.tutoriel.fin[1]}</p>
+  </div>
   <!-- La séquence de fin d'un niveau : bandes de cinéma et titre (voir finDePartie dans rush.ts). -->
   <div class="rush__cine" aria-hidden="true">
     <p class="rush__cine-titre" data-cine-titre></p>
@@ -144,6 +161,7 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <span class="action-principale__chevrons" aria-hidden="true"><i></i><i></i><i></i></span>
       </button>
       <p class="accueil__bienvenue etiquette" data-stat="bienvenue">{r.stats.bienvenue}</p>
+      <button class="accueil__refaire etiquette" type="button" data-rush="tutoriel"><b>{r.tutoriel.refaire}</b><small>{r.tutoriel.refaireTexte}</small></button>
       <nav class="modes" aria-label={r.titre}>
         {
           modes.map(([id, index, icone]) => (

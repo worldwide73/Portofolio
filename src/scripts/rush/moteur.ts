@@ -398,12 +398,12 @@ export class Partie {
     this.score += pas * POINTS.metre * this.profil.score * (this.overdrive > 0 ? this.multOverdrive : 1);
 
     const phase = this.phaseA(this.distance);
-    if (phase !== this.phase) {
+    if (phase !== this.phase && !this.scriptee) {
       this.phase = phase;
       this.evenements.push({ type: 'phase', valeur: phase });
     }
     this.tutoriel();
-    if (!this.odAnnonce && this.overdriveOuvert && this.overdrives === 0) {
+    if (!this.odAnnonce && !this.scriptee && this.overdriveOuvert && this.overdrives === 0) {
       this.odAnnonce = true;
       this.evenements.push({ type: 'od-ouvert' });
     }
@@ -569,7 +569,7 @@ export class Partie {
 
   /** Le tutoriel du premier niveau : quatre conseils, au bon moment. */
   private tutoriel(): void {
-    if (!this.niveauBase.tutoriel || this.mode !== 'campagne') return;
+    if (!this.niveauBase.tutoriel || this.mode !== 'campagne' || this.scriptee) return;
     const etapes = [20, 380, 760, 1150];
     const prochain = this.conseil + 1;
     if (prochain < etapes.length && this.distance >= etapes[prochain]) {

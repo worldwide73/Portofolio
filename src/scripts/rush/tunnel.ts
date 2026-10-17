@@ -72,11 +72,14 @@ void main() {
   float dOuv = length((frag * 2.0 - uRes) / uRes.y - c);
   float rayonOuv = uOuverture * 2.6;
   float masque = smoothstep(rayonOuv, rayonOuv - 0.06 - 0.25 * uOuverture, dOuv);
-  // La courbure de l'espace : le centre du tube se déplace avec la profondeur (le tunnel tourne).
-  float r0 = length(p);
-  float zv = 1.5 / max(r0, 0.02);
-  vec2 decal = uCourbe * (zv * zv) * 0.012;
-  vec2 q = p - decal / max(1.0, zv * 0.15);
+  // La courbure de l'espace : l'axe du tube s'écarte avec la profondeur (le tunnel tourne). On cherche où le
+  // rayon du pixel touche la paroi d'un tube courbé : quelques itérations (point fixe) suffisent.
+  float z0 = 1.5 / max(length(p), 0.02);
+  vec2 q = p;
+  for (int i = 0; i < 4; i++) {
+    q = p - uCourbe * 0.014 * min(z0, 30.0);
+    z0 = 1.5 / max(length(q), 0.02);
+  }
   float r = max(length(q), 0.0015);
   float ang = atan(q.y, q.x);
   float z = 1.5 / r;
@@ -84,7 +87,8 @@ void main() {
   // Les distorsions, mesurées : la paroi ondule un peu, plus vite quand la vitesse monte.
   ang += 0.05 * sin(zw * 0.35 + uT * 1.7) * (0.4 + uVitesse);
   float u = ang / 6.28318 + 0.5;
-  float brouillard = exp(-z * 0.055);
+  // (Au-delà de 16 m, la paroi se fond dans la lumière du cœur : la courbure y est bornée.)
+  float brouillard = exp(-z * 0.055) * (1.0 - smoothstep(16.0, 30.0, z));
   // Les plaques de la paroi : une grille en (angle, profondeur), aux joints lumineux.
   vec2 g = vec2(u * 24.0, zw * 0.5);
   vec2 gf = abs(fract(g) - 0.5);
@@ -93,8 +97,11 @@ void main() {
   // Les anneaux (structures qui passent) : une bande tous les 9 m, plus marquée une fois sur trois.
   float an = fract(zw / 9.0);
   float anneau = smoothstep(0.035, 0.0, abs(an - 0.5) - 0.0) * (mod(floor(zw / 9.0), 3.0) < 1.0 ? 1.6 : 0.8);
-  // Les arceaux : de grandes structures en losange, tous les 27 m.
-  float arc = smoothstep(0.02, 0.0, abs(fract(zw / 27.0 + u * 2.0) - 0.5) - 0.48) * 0.6;
+  // Les nervures : deux grandes hélices fines (structure du tube), un tour tous les 27 m.
+  float arc = smoothstep(0.465, 0.5, abs(fract(zw / 27.0 + u * 2.0) - 0.5));
+  // Les rails : quatre filets de lumière le long du tube, parcourus d'impulsions qui filent vers l'arrière.
+  float ru = 0.5 - abs(fract(u * 4.0 + 0.125) - 0.5);
+  float rail = smoothstep(0.012, 0.0, ru) * (0.35 + 0.65 * smoothstep(0.55, 1.0, fract(zw / 14.0)));
   // Trois couches de particules : des traits étirés par la vitesse, à trois rayons du centre.
   float part = 0.0;
   for (int k = 0; k < 3; k++) {
@@ -106,20 +113,31 @@ void main() {
     float trait = smoothstep(0.08, 0.0, abs(fc.x - 0.5)) * smoothstep(0.0, 0.2 + uVitesse * 0.6, fc.y) * smoothstep(1.0, 0.7, fc.y);
     part += trait * step(0.86 - fk * 0.04, hh) * (1.0 - fk * 0.25);
   }
-  // Les couleurs : cyan, bleu, blanc, violet, qui tournent lentement.
+  // Les couleurs : une nuit bleue profonde, cyan, blanc et violet pour la lumière.
   vec3 cyan = vec3(0.38, 0.85, 1.0), bleu = vec3(0.12, 0.3, 0.95), blanc = vec3(0.95, 0.98, 1.0), violet = vec3(0.62, 0.42, 1.0);
+  vec3 nuit = vec3(0.012, 0.022, 0.06);
   float teinte = 0.5 + 0.5 * sin(u * 6.28318 * 2.0 + zw * 0.05 + uT * 0.4);
-  vec3 paroi = mix(bleu * 0.25, violet * 0.35, teinte) * plaque;
-  vec3 col = paroi * (0.35 + 0.65 * brouillard);
-  col += cyan * joint * 0.55 * brouillard;
-  col += mix(cyan, blanc, 0.4) * anneau * brouillard * (0.7 + uVitesse);
-  col += violet * arc * brouillard;
-  col += mix(blanc, cyan, h21(vec2(floor(u * 60.0), 3.0))) * part * (0.35 + 1.2 * uVitesse) * (0.4 + 0.6 * brouillard);
-  // Le cœur du tunnel : une lumière blanche au loin, qui pulse avec la vitesse.
-  float coeur = exp(-r * (5.0 - 2.5 * uVitesse));
-  col += mix(violet, blanc, 0.6) * coeur * (0.6 + 0.8 * uVitesse);
+  // La paroi : des plaques de métal sombre, éclairées par le cœur (plus clair près de la caméra, où la
+  // lumière du tunnel les frappe de biais) ; un léger reflet qui suit la vitesse.
+  float eclairage = 0.25 + 0.75 * smoothstep(0.1, 1.1, r);
+  vec3 paroi = mix(vec3(0.04, 0.08, 0.2), vec3(0.11, 0.07, 0.24), teinte) * plaque * eclairage;
+  paroi += vec3(0.05, 0.1, 0.2) * pow(1.0 - abs(fract(g.x) - 0.5) * 2.0, 6.0) * uVitesse * 0.6;
+  vec3 col = mix(nuit, paroi, 0.25 + 0.75 * brouillard);
+  col += cyan * joint * 0.4 * brouillard;
+  col += mix(cyan, blanc, 0.45) * anneau * brouillard * (0.6 + uVitesse);
+  col += mix(violet, cyan, teinte) * arc * brouillard * 0.7;
+  col += mix(cyan, violet, step(0.5, fract(u * 2.0))) * rail * (0.25 + 0.75 * brouillard) * (0.7 + 0.8 * uVitesse);
+  col += mix(blanc, cyan, h21(vec2(floor(u * 60.0), 3.0))) * part * (0.3 + 1.1 * uVitesse) * (0.4 + 0.6 * brouillard);
+  // Le cœur du tunnel : une lumière blanche au loin, entourée d'un tourbillon violet qui tourne.
+  float spirale = (0.5 + 0.5 * sin(ang * 3.0 + log(r) * 7.0 - uT * 5.0)) * smoothstep(0.015, 0.09, r);
+  float halo = exp(-r * (7.0 - 3.5 * uVitesse));
+  col += mix(violet, cyan, 0.3) * halo * spirale * (0.35 + 0.5 * uVitesse);
+  col += blanc * exp(-r * (16.0 - 8.0 * uVitesse)) * (0.7 + 0.6 * uVitesse);
   // Un voile de bruit qui file (l'espace qui se déforme).
-  col += bleu * 0.12 * bruit(vec2(u * 8.0, zw * 0.08 - uT)) * brouillard;
+  col += bleu * 0.08 * bruit(vec2(u * 8.0, zw * 0.08 - uT)) * brouillard;
+  // Le vignetage : les bords de l'image s'assombrissent, le regard file vers le centre.
+  vec2 pv = (frag / uRes) - 0.5;
+  col *= 1.0 - 0.55 * dot(pv, pv) * 2.0;
   // Le bord de l'ouverture : un liseré d'énergie.
   float bord = smoothstep(0.08, 0.0, abs(dOuv - rayonOuv + 0.03)) * step(0.001, uOuverture) * (1.0 - smoothstep(0.85, 1.0, uOuverture));
   col += mix(cyan, blanc, 0.5) * bord * 1.6;
@@ -387,8 +405,9 @@ export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter
 
   let profondeur = 0;
   let vitesse = 0;
-  const t0 = performance.now();
-  let tPrec = t0;
+  // (L'horloge part de la première image affichée : une machine lente ne doit pas sauter la charge.)
+  let t0 = -1;
+  let tPrec = 0;
   let id = 0;
   let tPasse = -1;
 
@@ -397,7 +416,8 @@ export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter
     fini = true;
     cancelAnimationFrame(id);
     effacerFissures();
-    bouton?.classList.remove('est-fissure');
+    // (Le Hub retrouve son bouton intact : il était caché sous le jeu depuis l'arrivée.)
+    bouton?.classList.remove('est-fissure', 'est-brise');
     voile.remove();
     if (gl) gl.getExtension('WEBGL_lose_context')?.loseContext();
     o.fin();
@@ -410,6 +430,10 @@ export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter
   };
 
   const image = (maintenant: number) => {
+    if (t0 < 0) {
+      t0 = maintenant;
+      tPrec = maintenant;
+    }
     const dt = Math.min(0.05, (maintenant - tPrec) / 1000);
     tPrec = maintenant;
     let t = (maintenant - t0) / 1000;

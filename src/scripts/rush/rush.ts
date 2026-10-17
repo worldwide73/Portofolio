@@ -24,7 +24,7 @@ import type { Contenu } from '../../contenu/types';
 import { revenirAccueil } from '../voyage';
 import { mouvementReduit } from '../outils';
 import { regler, reglages as reglagesSite } from '../reglages';
-import { arreterMoteurRush, moteurRush, reglerVolumeRush, sonRush } from '../sons';
+import { arreterMoteurRush, couperEffets, moteurRush, moteurRushActif, reglerVolumeRush, sonRush, sonVoyageTemporel } from '../sons';
 import { dreamRadio } from '../audio/dream';
 import { creerRushRadio } from '../audio/rush-radio';
 import { tamponPret } from '../audio/moteur';
@@ -34,16 +34,21 @@ import { ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from './equilibrage';
 import { Partie, type ObjectifAtteint } from './moteur';
 import { creerRendu, dessinerVaisseau } from './rendu';
 import type { RenduJeu } from './scene/scene';
-import { avancement, cauchemarOuvert, charger, difficulteJouable, difficulteOuverte, enregistrer, etoilesDe, paradoxeOuvert, prochainePiece, ranger, totalEtoiles, type Bilan, type Sauvegarde } from './sauvegarde';
+import { avancement, cauchemarOuvert, charger, difficulteJouable, difficulteOuverte, enregistrer, etoilesDe, noterTutoriel, paradoxeOuvert, prochainePiece, ranger, totalEtoiles, tutorielAFaire, type Bilan, type Sauvegarde } from './sauvegarde';
+import { voyageTemporel } from './tunnel';
+import { Tutoriel } from './tutoriel';
 
 type Ecran = 'accueil' | 'campagne' | 'infini' | 'defi' | 'records' | 'garage' | 'pause' | 'fin' | 'victoire' | '';
 type Textes = Contenu['rush'];
-type Ouverture = Ecran | 'reglages' | 'commandes';
+type Ouverture = Ecran | 'reglages' | 'commandes' | 'tutoriel';
 type Confirmation = '' | 'recommencer' | 'menu' | 'quitter';
 
-let api: { ouvrir: (ecran?: Ouverture, origine?: HTMLElement | null) => void; pause: () => boolean } | null = null;
-/** Ouvre le jeu (sur son menu, ou un autre écran ; « commandes » : les réglages, page des commandes). */
-export const ouvrirRush = (ecran: Ouverture = 'accueil') => api?.ouvrir(ecran);
+let api: { ouvrir: (ecran?: Ouverture, origine?: HTMLElement | null, point?: { x: number; y: number } | null) => void; pause: () => boolean } | null = null;
+/**
+ * Ouvre le jeu (sur son menu, ou un autre écran ; « commandes » : les réglages, page des commandes).
+ * « origine » : l'élément qui a lancé le jeu (le bouton Portal Rush du Hub) ; il se fissure et se brise (V4).
+ */
+export const ouvrirRush = (ecran: Ouverture = 'accueil', origine: HTMLElement | null = null, point: { x: number; y: number } | null = null) => api?.ouvrir(ecran, origine, point);
 /** Met la partie en pause si elle est en cours. Renvoie vrai si c'était le cas. */
 export const pauseRush = () => api?.pause() ?? false;
 
@@ -714,10 +719,127 @@ export function initRush(): void {
     montrer('');
   };
   const menu = () => {
+    // (Quitter l'entraînement en plein milieu : il reprendra à la même étape la prochaine fois.)
+    if (partie?.scriptee) quitterTutoriel();
     partie = null;
     enPause = false;
     fenetre.classList.remove('en-overdrive', 'od-pret', 'bat-record');
     montrer('accueil');
+  };
+
+  // ==========================================================================
+  // LE TUTORIEL IMMERSIF (V4) : voir tutoriel.ts
+  // ==========================================================================
+  const panneauTuto = $('[data-tuto]');
+  const passerTuto = $<HTMLButtonElement>('[data-rush="passer-tuto"]');
+  const finTuto = $('[data-tuto="fin"]');
+  let minuterieTuto = 0;
+  /** Range l'interface du tutoriel (sans toucher à la partie). */
+  const rangerTutoriel = () => {
+    window.clearTimeout(minuterieTuto);
+    minuterieTuto = 0;
+    fenetre.classList.remove('en-tutoriel', 'tuto-fin');
+    panneauTuto.hidden = true;
+    passerTuto.hidden = true;
+    finTuto.hidden = true;
+  };
+  const tuto = new Tutoriel({
+    partie: (p) => {
+      if (!p) {
+        partie = null;
+        rangerTutoriel();
+        return;
+      }
+      window.clearTimeout(finCine);
+      finCine = 0;
+      fermerPanneau();
+      partie = p;
+      enPause = false;
+      confirmer = '';
+      reste = 0;
+      // Pas de compte à rebours : on arrive du voyage directement dans la course.
+      compte = 0;
+      recordAnnonce = true;
+      fenetre.classList.remove('est-cinematique', 'est-cinematique-victoire', 'en-overdrive', 'od-pret', 'bat-record', 'tuto-fin');
+      fenetre.classList.add('en-tutoriel');
+      fenetre.classList.toggle('sans-aide', false);
+      $('.rush__conseil').hidden = true;
+      $('[data-hud="secteur"]').textContent = textes.tutoriel.titre;
+      $('[data-hud="boss"]').hidden = true;
+      $('[data-hud="reperes"]').replaceChildren();
+      $('[data-hud="boucliers"]').replaceChildren(...Array.from({ length: p.bouclierMax }, () => document.createElement('i')));
+      $('[data-hud="record"]').textContent = '—';
+      panneauTuto.hidden = false;
+      passerTuto.hidden = false;
+      finTuto.hidden = true;
+      montrer('');
+      majHud();
+    },
+    vehicule: () => s.vehicule,
+    textes: () => textes.tutoriel,
+    tactile,
+    afficher: (e) => {
+      panneauTuto.dataset.phase = String(e.phase);
+      $('[data-tuto="etape"]').textContent = remplir(textes.tutoriel.etape, { n: e.phase + 1 });
+      $('[data-tuto="titre"]').textContent = e.titre;
+      $('[data-tuto="consigne"]').textContent = e.consigne;
+      $$('.tuto__touche, .tuto__tactile i').forEach((k) => k.classList.toggle('est-attendue', e.touches.includes(k.dataset.touche as 'gauche' | 'droite')));
+      panneauTuto.classList.toggle('sans-touches', !e.touches.length);
+      $$('.tuto__progres li').forEach((li, k) => {
+        li.classList.toggle('est-fait', k < e.phase || (k === e.phase && e.genre === 'ok' && e.consigne === textes.tutoriel.bravo));
+        li.classList.toggle('est-actif', k === e.phase);
+      });
+      const ok = $('[data-tuto="ok"]');
+      ok.textContent = e.message ?? '';
+      ok.dataset.genre = e.genre ?? '';
+      ok.classList.remove('est-vu');
+      if (e.message) {
+        void ok.offsetWidth;
+        ok.classList.add('est-vu');
+      }
+    },
+    finale: (lignes) => {
+      // La courte finale : un éclair, le texte de fin, puis le menu principal s'ouvre de lui-même.
+      $('.tuto__fin-titre').textContent = lignes[0];
+      $('.tuto__fin-sous').textContent = lignes[1];
+      panneauTuto.hidden = true;
+      passerTuto.hidden = true;
+      finTuto.hidden = false;
+      fenetre.classList.add('tuto-fin');
+      if (!effetsReduits()) rendu.flasher('236, 244, 255', 0.5);
+      minuterieTuto = window.setTimeout(() => {
+        arreterMoteurRush();
+        partie = null;
+        rangerTutoriel();
+        montrer('accueil');
+      }, animationsCoupees() ? 1800 : 3200);
+    },
+    son: (quoi) => sonRush(quoi),
+    noter: (etat, phase) => noterTutoriel(s, etat, phase),
+    menu: () => {
+      arreterMoteurRush();
+      couperEffets();
+      partie = null;
+      enPause = false;
+      rangerTutoriel();
+      montrer('accueil');
+    },
+  });
+  /** Lance l'entraînement (à une étape : celle où l'on s'était arrêté, ou le début). */
+  const lancerTutoriel = (phase = 0) => {
+    rangerTutoriel();
+    tuto.demarrer(phase);
+  };
+  /** Recommencer (pause) : la partie, ou, pendant l'entraînement, l'étape en cours (jamais une vraie partie). */
+  const recommencerPartie = () => {
+    if (partie?.scriptee) lancerTutoriel(Math.floor(tuto.phase));
+    else demarrer(choix.mode, choix.difficulte, choix.niveau);
+  };
+  /** Sortie du jeu ou du menu de pause pendant l'entraînement : l'état reste « commencé » à cette étape. */
+  const quitterTutoriel = () => {
+    tuto.arreter();
+    arreterMoteurRush();
+    rangerTutoriel();
   };
 
   const annoncer = (texte: string, genre = '') => {
@@ -743,12 +865,13 @@ export function initRush(): void {
     if (!partie) return;
     const p = partie;
     $('[data-hud="score"]').textContent = nombre(p.score);
-    $('[data-hud="phase"]').textContent = textes.phases[p.phaseCourante.nom];
-    $('[data-hud="progression"]').style.transform = `scaleX(${p.avancement.toFixed(3)})`;
+    $('[data-hud="phase"]').textContent = p.scriptee ? '' : textes.phases[p.phaseCourante.nom];
+    $('[data-hud="progression"]').style.transform = `scaleX(${(p.scriptee ? Math.min(1, tuto.phase / 5) : p.avancement).toFixed(3)})`;
     const o = p.niveauBase.objectif;
     const mesure = o.type === 'fragments' ? p.fragments : o.type === 'parfaits' ? p.parfaits : o.type === 'portails' ? p.portails : 0;
-    $('[data-hud="objectif"]').textContent =
-      p.mode === 'infini'
+    $('[data-hud="objectif"]').textContent = p.scriptee
+      ? remplir(textes.tutoriel.etape, { n: Math.min(5, Math.floor(tuto.phase) + 1) })
+      : p.mode === 'infini'
         ? `${nombre(p.distance)} m · ${Math.round(p.vitesse * 3.6)} km/h`
         : p.mode === 'defi' || o.type === 'fin'
           ? `${nombre(p.distance)} / ${nombre(p.longueur)} m`
@@ -815,6 +938,7 @@ export function initRush(): void {
     const peu = effetsReduits();
     for (const e of p.evenements) {
       const voie = e.voie ?? p.voieOccupee;
+      if (p.scriptee) tuto.surEvenement(e);
       switch (e.type) {
         case 'deplacement':
           sonRush('deplacement');
@@ -852,7 +976,7 @@ export function initRush(): void {
           sonRush('pret');
           break;
         case 'choc':
-          annoncer((e.valeur ?? 0) === 1 ? textes.annonces.dernier : textes.annonces.choc, 'choc');
+          if (!p.scriptee) annoncer((e.valeur ?? 0) === 1 ? textes.annonces.dernier : textes.annonces.choc, 'choc');
           if (s.reglages.secousses && !peu) rendu.secouer(1);
           rendu.alerter();
           rendu.eclater(voie, '255, 150, 140', peu ? 6 : 20);
@@ -1106,6 +1230,7 @@ export function initRush(): void {
           reste -= PAS;
         }
         evenements();
+        if (partie?.scriptee) tuto.tic();
       }
     } else if (partie?.termine && partie.evenements.length) evenements();
     temps += actif ? dt : dt * 0.35;
@@ -1137,82 +1262,6 @@ export function initRush(): void {
   // ==========================================================================
   // L'OUVERTURE ET LA FERMETURE
   // ==========================================================================
-  /** Le passage côté portfolio : une onde depuis l'Orbital Hub, des particules qui convergent, l'aspiration du tunnel. */
-  const passage = (origine: { x: number; y: number }, duree: number, particules: boolean) => {
-    const voile = document.createElement('div');
-    voile.className = 'passage-rush';
-    voile.setAttribute('aria-hidden', 'true');
-    const toilePassage = document.createElement('canvas');
-    voile.append(toilePassage);
-    document.body.append(voile);
-    const L = (toilePassage.width = window.innerWidth);
-    const H = (toilePassage.height = window.innerHeight);
-    const c = toilePassage.getContext('2d')!;
-    const cx = L / 2,
-      cy = H / 2;
-    const grains = Array.from({ length: particules ? 150 : 0 }, () => {
-      const a = Math.random() * Math.PI * 2;
-      const d = Math.hypot(L, H) * (0.35 + Math.random() * 0.4);
-      return { x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, v: 0.5 + Math.random() * 0.8, retard: Math.random() * 0.25 };
-    });
-    const t0 = performance.now();
-    const pas = (maintenant: number) => {
-      // (L'horodatage de la première image peut précéder t0 : on borne à 0, sinon l'onde aurait un rayon négatif.)
-      const t = Math.min(1, Math.max(0, (maintenant - t0) / duree));
-      c.clearRect(0, 0, L, H);
-      // L'aspiration : le portfolio s'assombrit depuis les bords vers le centre.
-      const fond = Math.min(1, Math.max(0, (t - 0.18) / 0.55));
-      const rayon = Math.hypot(L, H) * (0.75 - fond * 0.62);
-      const g = c.createRadialGradient(cx, cy, Math.max(1, rayon * 0.15), cx, cy, rayon);
-      g.addColorStop(0, 'rgba(3, 6, 12, 0)');
-      g.addColorStop(1, `rgba(3, 6, 12, ${(0.25 + fond * 0.75).toFixed(3)})`);
-      c.fillStyle = g;
-      c.fillRect(0, 0, L, H);
-      if (fond > 0.92) {
-        c.fillStyle = `rgba(3, 6, 12, ${((fond - 0.92) / 0.08).toFixed(3)})`;
-        c.fillRect(0, 0, L, H);
-      }
-      // L'onde : un anneau de lumière qui part de l'icône de l'Orbital Hub.
-      const onde = Math.min(1, t / 0.5);
-      if (onde < 1) {
-        c.strokeStyle = `rgba(168, 236, 255, ${(0.9 * (1 - onde)).toFixed(3)})`;
-        c.lineWidth = 2 + 6 * (1 - onde);
-        c.beginPath();
-        c.arc(origine.x, origine.y, 10 + onde * Math.hypot(L, H), 0, Math.PI * 2);
-        c.stroke();
-      }
-      // Les particules : elles convergent vers le centre en laissant une traînée.
-      for (const p of grains) {
-        const k = Math.min(1, Math.max(0, (t - p.retard) / (0.75 - p.retard)));
-        const e = k * k * k * p.v + k * (1 - p.v) * 0.6;
-        const x = p.x + (cx - p.x) * Math.min(1, e);
-        const y = p.y + (cy - p.y) * Math.min(1, e);
-        const x0 = p.x + (cx - p.x) * Math.max(0, Math.min(1, e - 0.08));
-        const y0 = p.y + (cy - p.y) * Math.max(0, Math.min(1, e - 0.08));
-        c.strokeStyle = `rgba(190, 240, 255, ${(0.85 * k * (1 - k * 0.3)).toFixed(3)})`;
-        c.lineWidth = 1.4;
-        c.beginPath();
-        c.moveTo(x0, y0);
-        c.lineTo(x, y);
-        c.stroke();
-      }
-      // Le cœur du portail, au centre, qui s'embrase juste avant l'ouverture.
-      const coeur = Math.max(0, (t - 0.35) / 0.4);
-      if (coeur > 0) {
-        const r = 6 + coeur * 46;
-        const gc = c.createRadialGradient(cx, cy, 0, cx, cy, r * 3);
-        gc.addColorStop(0, `rgba(235, 250, 255, ${Math.min(1, coeur).toFixed(3)})`);
-        gc.addColorStop(0.3, `rgba(120, 220, 255, ${(0.6 * Math.min(1, coeur)).toFixed(3)})`);
-        gc.addColorStop(1, 'rgba(98, 217, 255, 0)');
-        c.fillStyle = gc;
-        c.fillRect(cx - r * 3, cy - r * 3, r * 6, r * 6);
-      }
-      if (t < 1) requestAnimationFrame(pas);
-      else window.setTimeout(() => voile.remove(), 260);
-    };
-    requestAnimationFrame(pas);
-  };
-
   const demarrerFenetre = (e: Ouverture) => {
     s = charger();
     textes = lire();
@@ -1223,16 +1272,45 @@ export function initRush(): void {
     dimensionner();
     avant = performance.now();
     if (!boucle) boucle = requestAnimationFrame(image);
-    if (e === 'reglages' || e === 'commandes') {
+    if (e === 'tutoriel') {
+      // Le premier lancement : directement dans la course, à l'étape où l'on s'était arrêté (ou au début).
+      montrer('accueil', false);
+      lancerTutoriel(s.tutoriel.etat === 'commence' ? s.tutoriel.phase : 0);
+    } else if (e === 'reglages' || e === 'commandes') {
       montrer('accueil', false);
       ouvrirPanneau(e === 'commandes' ? 'commandes' : 'audio');
     } else montrer(e);
   };
 
-  const ouvrir = (e: Ouverture = 'accueil', depuis: HTMLElement | null = null) => {
-    if (transition) return;
+  /** Le voyage temporel en cours (entrée dans le jeu), et son son : de quoi les passer. */
+  let voyage: ReturnType<typeof voyageTemporel> = null;
+  let sonVoyage: ReturnType<typeof sonVoyageTemporel> = null;
+  /** Passer le voyage (Échap, Entrée, Espace, un clic) : on arrive tout de suite. */
+  const passerVoyage = () => {
+    if (!voyage) return;
+    sonVoyage?.arreter(true);
+    sonVoyage = null;
+    voyage.passer();
+  };
+  // (Pendant le voyage, la fenêtre du jeu n'est pas encore ouverte : ces touches sont prises ici, en premier.)
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (!voyage) return;
+      if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!e.repeat) passerVoyage();
+      } else if (!e.ctrlKey && !e.metaKey) e.preventDefault();
+    },
+    true,
+  );
+
+  const ouvrir = (e: Ouverture = 'accueil', depuis: HTMLElement | null = null, point: { x: number; y: number } | null = null) => {
+    if (transition || voyage) return;
     if (fenetre.open) {
       if (e === 'reglages' || e === 'commandes') ouvrirPanneau(e === 'commandes' ? 'commandes' : 'audio');
+      else if (e === 'tutoriel') lancerTutoriel(0);
       else if (!partie) montrer(e);
       return;
     }
@@ -1242,41 +1320,48 @@ export function initRush(): void {
     s = charger();
     rushRadio.relirePreferences();
     tamponPret('/audio/effets/moteur.mp3');
+    tamponPret('/audio/effets/bris.mp3');
     majRadio();
-    if (s.reglages.musique) window.setTimeout(() => fenetre.open && rushRadio.jouer(), animationsCoupees() ? 100 : 700);
-    const icone = document.querySelector<HTMLElement>('.jeu-bouton');
-    icone?.classList.add('est-lance');
-    window.setTimeout(() => icone?.classList.remove('est-lance'), 700);
-    sonRush('ouverture');
-    if (animationsCoupees()) {
-      fenetre.classList.add('est-entree-douce');
-      demarrerFenetre(e);
-      window.setTimeout(() => fenetre.classList.remove('est-entree-douce'), 260);
-      return;
-    }
-    // Onde, particules et aspiration côté portfolio ; puis le portail s'ouvre au centre et le monde apparaît.
-    transition = 'entree';
-    const b = (depuis ?? icone)?.getBoundingClientRect();
-    const origine = b && b.width ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    // Le premier lancement (une fois par profil) mène droit au tutoriel ; sinon, le menu (ou l'écran demandé).
+    const arrivee: Ouverture = e === 'accueil' && tutorielAFaire(s) ? 'tutoriel' : e;
+    const court = animationsCoupees();
     const allege = reglagesSite.animations < 1;
-    passage(origine, allege ? 520 : 720, !allege);
-    window.setTimeout(
-      () => {
+    const duree = allege ? 2.6 : 4.6;
+    const CHARGE = 0.5,
+      BRIS = 0.85;
+    transition = 'entree';
+    sonVoyage = court ? null : sonVoyageTemporel(CHARGE, BRIS, duree);
+    if (court) sonRush('ouverture');
+    // Le bouton qui lance le jeu (le Hub, ou un bouton « Jouer » du portfolio) se fissure et se brise.
+    const source = depuis ?? null;
+    voyage = voyageTemporel({
+      source,
+      point,
+      duree,
+      court,
+      // (Aux lancements suivants, « Passer » paraît tout de suite ; la première fois, après une seconde.)
+      passerVisibleTout: s.tutoriel.etat !== 'nouveau' || s.totaux.parties > 0,
+      texte: { passer: textes.voyage.passer },
+      // (En développement, les recettes lisent les temps forts du voyage : charge, bris, tunnel, arrivée.)
+      moment: import.meta.env.DEV ? (m) => ((window as unknown as { __voyage: [string, number][] }).__voyage ??= []).push([m, performance.now()]) : undefined,
+      arrivee: () => {
+        // Le Hub se range ; le jeu s'ouvre sous l'éclair, qui repasse par-dessus pour finir.
+        document.querySelectorAll<HTMLElement>('#hub:popover-open').forEach((h) => h.hidePopover());
         fenetre.style.setProperty('--ox', '50%');
         fenetre.style.setProperty('--oy', '50%');
-        fenetre.classList.add('est-entree');
-        demarrerFenetre(e);
+        fenetre.classList.add(court ? 'est-entree-douce' : 'est-entree');
+        demarrerFenetre(arrivee);
+        voyage?.remonter();
         rendu.cinematique?.('entree');
+        if (s.reglages.musique) window.setTimeout(() => fenetre.open && rushRadio.jouer(), court ? 100 : 400);
       },
-      allege ? 240 : 380,
-    );
-    window.setTimeout(
-      () => {
-        fenetre.classList.remove('est-entree');
+      fin: () => {
+        voyage = null;
+        sonVoyage = null;
         transition = null;
+        window.setTimeout(() => fenetre.classList.remove('est-entree', 'est-entree-douce'), 400);
       },
-      allege ? 1150 : 1500,
-    );
+    });
   };
 
   /**
@@ -1343,7 +1428,8 @@ export function initRush(): void {
     if (!bouton || e.defaultPrevented) return;
     e.preventDefault();
     void chargerScene();
-    ouvrir('accueil', bouton);
+    const souris = e instanceof MouseEvent && e.detail > 0;
+    ouvrir('accueil', bouton, souris ? { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null);
   });
   document.addEventListener('pointerover', (e) => (e.target as Element).closest?.('[data-jouer-rush]') && void chargerScene(), { passive: true });
 
@@ -1386,6 +1472,11 @@ export function initRush(): void {
         return;
       }
       if (ecran === '' && partie) {
+        if (actif === passerTuto && !e.repeat) {
+          e.preventDefault();
+          tuto.passer();
+          return;
+        }
         if (e.key === 'Enter') e.preventDefault();
       } else {
         const commande = actif instanceof HTMLElement && actif !== toile && fenetre.contains(actif) && actif.matches('button, a, input, select, textarea');
@@ -1426,7 +1517,7 @@ export function initRush(): void {
     if (e.code === 'KeyR' && partie && !panneau && (ecran === 'fin' || ecran === 'victoire' || ecran === 'pause')) {
       e.preventDefault();
       if (ecran === 'pause') {
-        confirmerPuis('recommencer', () => demarrer(choix.mode, choix.difficulte, choix.niveau));
+        confirmerPuis('recommencer', recommencerPartie);
         $('[data-rush="recommencer"]').focus();
       } else demarrer(choix.mode, choix.difficulte, choix.niveau);
       return;
@@ -1456,6 +1547,8 @@ export function initRush(): void {
   });
   fenetre.addEventListener('close', () => {
     // Le son du jeu s'arrête ; DREAM RADIO reprend seulement si elle jouait avant l'entrée.
+    if (partie?.scriptee) quitterTutoriel();
+    rangerTutoriel();
     rushRadio.arreter();
     rushRadio.adapter(null);
     cleAdaptation = '';
@@ -1620,7 +1713,8 @@ export function initRush(): void {
         demarrer('defi', 'as');
         break;
       case 'menu':
-        if (ecran === 'pause') confirmerPuis('menu', menu);
+        // (Pendant l'entraînement, rien ne se perd : l'étape est sauvegardée, pas besoin de confirmer.)
+        if (ecran === 'pause' && !partie?.scriptee) confirmerPuis('menu', menu);
         else menu();
         break;
       case 'quitter':
@@ -1630,6 +1724,12 @@ export function initRush(): void {
       case 'pause':
         pause();
         break;
+      case 'passer-tuto':
+        tuto.passer();
+        break;
+      case 'tutoriel':
+        lancerTutoriel(0);
+        break;
       case 'overdrive':
         if (partie && compte <= 0) partie.declencher();
         toile.focus({ preventScroll: true });
@@ -1638,7 +1738,7 @@ export function initRush(): void {
         reprendre();
         break;
       case 'recommencer':
-        confirmerPuis('recommencer', () => demarrer(choix.mode, choix.difficulte, choix.niveau));
+        confirmerPuis('recommencer', recommencerPartie);
         break;
       case 'rejouer':
         demarrer(choix.mode, choix.difficulte, choix.niveau);
@@ -1732,6 +1832,7 @@ export function initRush(): void {
       radio: rushRadio,
       demarrer,
       terminer,
+      tutoriel: () => ({ actif: tuto.actif, phase: tuto.phase, scriptee: !!partie?.scriptee, voyage: !!voyage, moteur: moteurRushActif(), sonVoyage: !!sonVoyage }),
       etat: () => ({ ecran, panneau, transition, enPause, compte, sauvegarde: s, choix, secteur, confirmer, troisD: rendu.troisD, distanceAffichee: partie ? partie.distance + (partie && !enPause && ecran === '' && compte <= 0 ? reste * partie.vitesse : 0) : 0 }),
     };
   }

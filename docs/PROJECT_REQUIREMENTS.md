@@ -1,4 +1,4 @@
-## Portal Rush V4 et le son (16 octobre 2026, en cours)
+## Portal Rush V4 et le son (16–17 octobre 2026, en cours)
 
 | Demande | État | Preuve |
 |---|---|---|
@@ -14,7 +14,12 @@
 | RUSH RADIO : lecteur compact en bas à droite du menu, caché en course | V | recette (position, liste, Échap, course) + capture |
 | Musique adaptative par couches réelles (vitesse, danger, Overdrive, pause, défaite, victoire), sans changement de tempo | V (couches mesurées, pas écoutées) | recette (menu → course → pause) ; morceaux enregistrés : filtre seulement, dit dans la liste |
 | Son moteur synchronisé à la vitesse | V (code), non écouté | `sons.ts` `moteurRush` |
-| Entrée cinématique, tunnel 3D, tutoriel | À faire | — |
+| Entrée cinématique : bouton du Hub qui s'illumine, vibre, se fissure depuis le point touché, se brise en éclats 3D ; Hub intact au retour | V (rendu logiciel) | recette `portal-rush-v4c.mjs` (classes, toile de fissures, couche au premier plan, moments charge → bris → tunnel → arrivée, Hub inchangé) + captures |
+| Tunnel temporel 3D (4–7 s), passable, version réduite, son synchronisé | V (rendu logiciel ; son non écouté) | recette (≈ 6 s, Échap au 2ᵉ lancement, fondu de 0,35 s en mouvement réduit) + captures du shader |
+| Premier lancement → directement dans la course (ni menu, ni Commencer, ni 3-2-1) | V | recette (3D et 2D, Hub et bouton « Jouer ») |
+| Tutoriel 5 étapes, vraies actions, assistance, échec = l'étape recommence, finale puis menu | V | recette : tutoriel joué en entier au clavier par un pilote qui lit la piste |
+| « PASSER LE TUTORIEL » en bas à droite : arrêt propre (moteur, sons), menu | V | recette (position, moteur coupé, état « passé ») |
+| Une fois par profil ; « Refaire l'entraînement » ; reprise à la même étape ; aucun record | V | recette (état sauvegardé, refaire ne rétrograde pas, reprise à l'étape 2, 0 partie, 0 record) |
 | Overdrive extrêmement rare (1 fois, pas au départ, exigeant, non rechargeable, on finit sans) | V | recette (3 contrôles) + simulation |
 | Nouvelle difficulté au-dessus de Nightmare (Paradoxe), extrêmement dure mais jouable | V (simulation) | recette ; simulation : secteurs 1–3, 6, 7 réussis par le pilote automatique |
 | Difficulté qui monte dans chaque niveau | V | `moteur.ts` (complexité + avancée), vitesse et écarts existants |
@@ -23,7 +28,8 @@
 | Vaisseaux aux vraies statistiques, sauvegardés | V | recette ; garage (captures) |
 | Séquence de fin raccourcissable | V | réglage Complète / Courte |
 | Piste qui monte, descend, tourne, s'incline (par monde) | V (existant, conservé) | `scene/parcours.ts` (virages, reliefs, dévers par monde, bornés pour l'équité) ; pas de nouvelle déformation ajoutée |
-| Interface AAA | À faire | — |
+| Interface AAA (V4-F) | À faire (après V4-H) | — |
+| Refonte graphique 3D du jeu (V4-H) : textures, ombres, lumières, post-traitement, dégâts, VFX, qualité adaptative | En cours | inspection et plan : `docs/RUSH_3D.md` |
 
 ## Retours du 16 octobre 2026 (4ᵉ lot) — remplacent la ligne « Animation du portail = celle de l'accueil » du 2ᵉ lot
 

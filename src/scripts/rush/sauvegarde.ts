@@ -323,6 +323,10 @@ export function enregistrer(s: Sauvegarde): void {
 /** Le tutoriel doit-il se lancer seul ? Une seule fois par profil : ni terminé ni passé. */
 export const tutorielAFaire = (s: Sauvegarde) => s.tutoriel.etat === 'nouveau' || s.tutoriel.etat === 'commence';
 export function noterTutoriel(s: Sauvegarde, etat: Tutoriel['etat'], phase = s.tutoriel.phase): void {
+  // (Une fois terminé ou passé, l'entraînement ne redevient jamais « à faire » : le refaire depuis le menu ne
+  // peut que mener de « passé » à « terminé ».)
+  const avant = s.tutoriel.etat;
+  if (avant === 'termine' || (avant === 'passe' && etat !== 'termine')) return;
   s.tutoriel = { etat, phase, date: aujourdhui() };
   enregistrer(s);
 }

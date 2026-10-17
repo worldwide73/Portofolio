@@ -64,6 +64,8 @@ export class Tutoriel {
   private termineLe = 0;
   /** Les drones déjà posés sur la voie du vaisseau (phase 4). */
   private poses = new WeakSet<Objet>();
+  /** La minuterie entre deux étapes (annulée si l'on relance, passe ou quitte entre-temps). */
+  private minuterie = 0;
 
   constructor(hote: HoteTutoriel) {
     this.hote = hote;
@@ -71,6 +73,7 @@ export class Tutoriel {
 
   /** Lance le tutoriel à une phase (0 : depuis le début). */
   demarrer(phase = 0): void {
+    window.clearTimeout(this.minuterie);
     const p = new Partie('campagne', 'pilote', 1, 20261016, this.hote.vehicule() as never);
     p.scriptee = true;
     p.boucliers = p.bouclierMax;
@@ -171,7 +174,7 @@ export class Tutoriel {
     const ph = this.t.phases[n];
     this.hote.afficher({ phase: n, titre: ph.titre, consigne: this.t.bravo, touches: [], message: '✓', genre: 'ok' });
     this.phase = n + 0.5; // (entre deux phases : rien ne compte)
-    window.setTimeout(() => this.actif && this.entrer(n + 1), n === 2 ? 2600 : 900);
+    this.minuterie = window.setTimeout(() => this.actif && this.partie === p && this.entrer(n + 1), n === 2 ? 2600 : 900);
   }
 
   private recommencer(): void {
@@ -179,8 +182,9 @@ export class Tutoriel {
     const ph = this.t.phases[n];
     this.hote.afficher({ phase: n, titre: ph.titre, consigne: this.t.rate, touches: [], message: '↺', genre: 'rate' });
     this.phase = n + 0.5;
-    this.partie?.vider();
-    window.setTimeout(() => this.actif && this.entrer(n), 1100);
+    const p = this.partie;
+    p?.vider();
+    this.minuterie = window.setTimeout(() => this.actif && this.partie === p && this.entrer(n), 1100);
   }
 
   /** À chaque image : l'avancée des phases, l'assistance (ralentir et attendre), la fin. */
@@ -239,6 +243,7 @@ export class Tutoriel {
 
   /** Passer le tutoriel : tout s'arrête proprement, le menu s'ouvre. */
   passer(): void {
+    window.clearTimeout(this.minuterie);
     this.actif = false;
     this.partie = null;
     this.hote.noter('passe', Math.floor(this.phase));
@@ -248,6 +253,7 @@ export class Tutoriel {
 
   /** Quitter en plein milieu (sortie du jeu, menu de pause) : l'état reste « commencé » à cette phase. */
   arreter(): void {
+    window.clearTimeout(this.minuterie);
     this.actif = false;
     this.partie = null;
   }
