@@ -29,7 +29,11 @@
 | Séquence de fin raccourcissable | V | réglage Complète / Courte |
 | Piste qui monte, descend, tourne, s'incline (par monde) | V (existant, conservé) | `scene/parcours.ts` (virages, reliefs, dévers par monde, bornés pour l'équité) ; pas de nouvelle déformation ajoutée |
 | Interface AAA (V4-F) | À faire (après V4-H) | — |
-| Refonte graphique 3D du jeu (V4-H) : textures, ombres, lumières, post-traitement, dégâts, VFX, qualité adaptative | En cours | inspection et plan : `docs/RUSH_3D.md` |
+| Refonte graphique 3D du jeu (V4-H) : inspection précise (existant, manques, changements) | V | `docs/RUSH_3D.md` §1–3 |
+| V4-H : textures réelles, ombres, lumières, HDR + post-traitement, reflets | V (rendu logiciel) | captures avant/après dans 6 mondes ; A/B par effet (`rush-3d-ab.mjs`) ; banc des modèles |
+| V4-H : dégâts, débris, collectes lumineuses, mécanismes animés, roches | V (rendu logiciel) | banc (dégâts), choc réel déclenché par le moteur et capturé, captures en course |
+| V4-H : fluidité préservée (qualité adaptative, variantes de shader) | Partiel | coût relatif mesuré dans l'émulateur (`rush-3d-perf.mjs`) ; **pas de mesure sur vraie carte graphique** |
+| V4-H : vaisseaux encore plus détaillés, collectables retravaillés | À faire | — |
 
 ## Retours du 16 octobre 2026 (4ᵉ lot) — remplacent la ligne « Animation du portail = celle de l'accueil » du 2ᵉ lot
 

@@ -631,7 +631,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       const v = 2.5 + Math.random() * 4;
       d.e.vie = 1.3 + Math.random() * 0.6;
       d.e.pos = [x + (Math.random() - 0.5) * 0.6, y + Math.random() * 0.3, z];
-      d.e.vit = [Math.cos(a) * v, 2 + Math.random() * 4, Math.sin(a) * v * 0.5 + 2];
+      d.e.vit = [Math.cos(a) * v, 2 + Math.random() * 4, Math.sin(a) * v * 0.4 - 1];
       const ax = [Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5];
       const l = Math.hypot(ax[0], ax[1], ax[2]) || 1;
       d.e.axe = ax.map((c) => c / l);
@@ -1366,7 +1366,8 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       e.vit[1] -= 9.8 * dt;
       e.pos[0] += e.vit[0] * dt;
       e.pos[1] += e.vit[1] * dt;
-      e.pos[2] += (e.vit[2] + vitesse) * dt;
+      // (Arrachés au vaisseau, ils gardent d'abord son élan, puis décrochent : on les voit tournoyer autour de lui.)
+      e.pos[2] += (e.vit[2] + vitesse * Math.min(1, (1.9 - e.vie) * 0.6)) * dt;
       if (e.pos[1] < 0.06 && Math.abs(e.pos[0]) < 4.1) {
         e.pos[1] = 0.06;
         e.vit[1] = Math.abs(e.vit[1]) * 0.35;
@@ -1933,7 +1934,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     eclater: (voie, couleur, nombre = 12) => lancerParticules(xVoie(voie), Mo.HAUTEUR_VOL, -0.6, rgb(couleur), nombre),
     debris: (voie) => {
       const x = xVoie(voie);
-      if (!reduitCourant) lancerDebris(x, Mo.HAUTEUR_VOL, -0.9, 6);
+      if (!reduitCourant) lancerDebris(x, Mo.HAUTEUR_VOL + 0.1, -0.5, 7);
       eclairer(x, Mo.HAUTEUR_VOL + 0.4, -1.2, [3.2, 1.2, 0.35], 9, 0.45);
     },
     flotter: (voie, texte, couleur = '236, 244, 255') => textes.push({ texte, x: xVoie(voie), y: 1.9, z: -0.8, vie: 1, couleur, dy: 0 }),
