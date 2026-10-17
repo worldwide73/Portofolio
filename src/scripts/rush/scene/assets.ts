@@ -122,18 +122,26 @@ export function chargerModeles(fichier: string): Promise<MaillageImporte[]> {
 /** Les fichiers des quatre vaisseaux (0 Aube, 1 Faucon, 2 Bastion, 3 Spectre). */
 export const FICHIERS_VAISSEAUX = ['aube.prm', 'faucon.prm', 'bastion.prm', 'spectre.prm'];
 
-/** (V4-H7) Les modules du décor (bordure, chevron, portique…), une fois chargés ; vide avant. */
+/**
+ * (V4-H7) Les modules importés, par nom : décor des tronçons (bordure, chevron, portique…), obstacles (barriere,
+ * drone…). Vide tant qu'ils ne sont pas chargés : le jeu garde alors ses modèles procéduraux.
+ */
 export const decor: Record<string, MaillageImporte> = {};
-let decorPromesse: Promise<boolean> | null = null;
-/** Charge les modules du décor (une fois). Vrai s'ils sont disponibles. */
-export function chargerDecor(): Promise<boolean> {
-  return (decorPromesse ??= chargerModeles('decor.prm')
-    .then((ms) => {
-      for (const m of ms) decor[m.nom] = m;
-      return true;
-    })
-    .catch(() => {
-      decorPromesse = null;
-      return false;
-    }));
+const promesses = new Map<string, Promise<string[]>>();
+/** Charge un fichier de modules (une fois) ; renvoie les noms des modules reçus (vide si échec). */
+export function chargerDecor(fichier = 'decor.prm'): Promise<string[]> {
+  let p = promesses.get(fichier);
+  if (!p) {
+    p = chargerModeles(fichier)
+      .then((ms) => {
+        for (const m of ms) decor[m.nom] = m;
+        return ms.map((m) => m.nom);
+      })
+      .catch(() => {
+        promesses.delete(fichier);
+        return [] as string[];
+      });
+    promesses.set(fichier, p);
+  }
+  return p;
 }

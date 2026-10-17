@@ -28,7 +28,7 @@ import { creerPli, majPli, plier, type Pli } from './parcours';
 import { Ombres } from './ombres';
 import { Post } from './post';
 import { creerTextures } from './textures';
-import { chargerDecor, chargerModeles, FICHIERS_VAISSEAUX, geometrieImportee, type MaillageImporte } from './assets';
+import { chargerDecor, chargerModeles, decor, FICHIERS_VAISSEAUX, geometrieImportee, type MaillageImporte } from './assets';
 
 export interface RenduJeu {
   troisD: boolean;
@@ -151,15 +151,28 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
 
   // ---- Le cache des géométries ----
   const geos = new Map<string, Geometry | null>();
+  // (V4-H7) Un modèle importé du même nom (outils/assets → public/rush/modeles) remplace le modèle procédural ;
+  // ses halos viennent de ses points « halos » ([x, y, z, rayon, r, v, b, intensité]) s'il en a.
+  const halosImportes = (pts: number[][]) => {
+    const h = new Halos();
+    for (const [x, y, z, r, cr, cv, cb, i] of pts) h.ajouter(x, y, z, r, [cr, cv, cb], i ?? 1);
+    return h.geometrie(gl);
+  };
   const geo = (cle: string, f: () => Assembleur | Halos): Geometry | null => {
-    if (!geos.has(cle)) geos.set(cle, f().geometrie(gl));
+    if (!geos.has(cle)) geos.set(cle, decor[cle] ? geometrieImportee(gl, decor[cle]) : f().geometrie(gl));
     return geos.get(cle) ?? null;
   };
   const double = (cle: string, f: () => { solide: Assembleur; halos: Halos }) => {
     if (!geos.has(cle + ':s')) {
-      const r = f();
-      geos.set(cle + ':s', r.solide.geometrie(gl));
-      geos.set(cle + ':h', r.halos.geometrie(gl));
+      const im = decor[cle];
+      if (im) {
+        geos.set(cle + ':s', geometrieImportee(gl, im));
+        geos.set(cle + ':h', im.points.halos ? halosImportes(im.points.halos) : f().halos.geometrie(gl));
+      } else {
+        const r = f();
+        geos.set(cle + ':s', r.solide.geometrie(gl));
+        geos.set(cle + ':h', r.halos.geometrie(gl));
+      }
     }
     return { solide: geos.get(cle + ':s') ?? null, halos: geos.get(cle + ':h') ?? null };
   };
@@ -465,8 +478,8 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   };
   // (V4-H7) Les modules du décor (bordures, portiques…) arrivent après coup : les tronçons déjà construits sans
   // eux sont refaits (une fois, en général pendant les menus).
-  void chargerDecor().then((ok) => {
-    if (!ok) return;
+  void chargerDecor().then((noms) => {
+    if (!noms.length) return;
     for (const [, t] of troncons) t.racine.setParent(null);
     troncons.clear();
     for (const [cle, g] of geos)
@@ -896,6 +909,21 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     reserve.get(v.type)!.push(v);
   };
   const vus = new Set<string>();
+  // (V4-H7) Les obstacles modélisés dans Blender : à leur arrivée, les géométries procédurales du même nom sont
+  // oubliées et les visuels refaits (les objets à l'écran sont recréés à l'image suivante).
+  void chargerDecor('objets.prm').then((noms) => {
+    if (!noms.length) return;
+    for (const n of noms)
+      for (const suf of ['', ':s', ':h']) {
+        geos.get(n + suf)?.remove();
+        geos.delete(n + suf);
+      }
+    for (const [cle, v] of visuels) {
+      v.racine.setParent(null);
+      visuels.delete(cle);
+    }
+    reserve.clear();
+  });
   const xVoie = (v: number) => (v - 1) * Mo.VOIE;
 
   /** La voie affichée d'un obstacle mobile : il glisse d'une configuration à la suivante (comme la version 2D). */
