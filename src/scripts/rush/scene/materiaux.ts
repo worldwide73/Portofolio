@@ -134,7 +134,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(vPlie, 1.0);
 }`;
 
-const SURFACE_FRAG = /* glsl */ `${ENTETE}
+const SURFACE_FRAG = /* glsl */ `${ENTETE}/*VARIANTE*/
 ${COMMUN}
 in vec3 vMonde; in vec3 vNormale; in vec3 vCouleur; in vec4 vMatiere; in vec3 vLocal; in vec3 vPlie; in vec3 vNLocale;
 uniform vec3 cameraPosition;
@@ -159,6 +159,9 @@ out vec4 sortie;
 
 // L'ombre du soleil : la carte, lue en 3 × 3 points (bords adoucis), fondue en bordure de zone.
 float ombreSoleil(float nl) {
+#ifndef AVEC_OMBRES
+  return 1.0;
+#else
   if (uOmbre < 0.5) return 1.0;
   vec4 l = uMatOmbre * vec4(vPlie, 1.0);
   vec3 c = l.xyz / l.w * 0.5 + 0.5;
@@ -170,11 +173,16 @@ float ombreSoleil(float nl) {
   s /= 9.0;
   vec2 e = smoothstep(0.0, 0.07, c.xy) * smoothstep(1.0, 0.93, c.xy);
   return mix(1.0, s, e.x * e.y);
+#endif
 }
 
 // Le reflet de l'environnement : la voûte et l'horizon du monde, deux grandes sources douces (elles dessinent
 // le métal), et, vers le bas, les lignes lumineuses de la piste qui défilent.
 vec3 environnement(vec3 R, float rugo, float ombre) {
+#ifndef AVEC_TEXTURES
+  // (Économie : le reflet d'avant V4-H, un simple dégradé.)
+  return mix(uSol * 1.5, uCiel * 2.2, smoothstep(-0.25, 0.55, R.y)) + uAccent * 0.08 * (1.0 - abs(R.y));
+#endif
   vec3 c = mix(uSol * 1.4, uCiel * 2.0, smoothstep(-0.3, 0.5, R.y));
   c += uCiel * 1.6 * exp(-abs(R.y - 0.04) * mix(26.0, 5.0, rugo)); // l'horizon, plus clair
   float boite1 = smoothstep(0.62, 0.9, dot(R, normalize(vec3(-0.5, 0.75, -0.42))));
@@ -212,6 +220,7 @@ void main() {
   // ---- Les textures (projection triplanaire dans le repère de l'objet) ----
   float cavite = 1.0;
   float d = length(vPlie - cameraPosition);
+#ifdef AVEC_TEXTURES
   if (uTextures > 0.5 && uDetail > 0.0 && emi == 0.0) {
     vec3 nl = normalize(vNLocale) * face;
     vec3 w = pow(abs(nl), vec3(6.0));
@@ -234,7 +243,9 @@ void main() {
     base *= mix(1.0, dt.r * 1.5, k * (peint ? 0.6 : 1.0));
     rugo = clamp(rugo + (dt.g - 0.5) * 0.9 * k, 0.04, 1.0);
     cavite = mix(1.0, dt.b, k);
-  } else if (emi == 0.0) {
+  } else
+#endif
+  if (emi == 0.0) {
     // Sans textures : le grain très léger d'avant (usure, reprises de peinture).
     base *= 0.93 + 0.14 * bruit(vLocal * 7.0 + 3.1);
   }
@@ -242,17 +253,24 @@ void main() {
   // ---- Les dégâts (le vaisseau) : des brûlures qui gagnent la coque à chaque bouclier perdu, et, vers la
   // fin, des fissures incandescentes qui palpitent dans les zones brûlées ----
   vec3 incandescence = vec3(0.0);
+#ifdef AVEC_DEGATS
   if (uDegats > 0.01 && emi == 0.0) {
     float nb = fbm(vLocal * 2.6 + 11.0);
     float seuil = 1.0 - uDegats * 0.62;
-    float brule = smoothstep(seuil, seuil + 0.1, nb);
-    base = mix(base, base * 0.14 + vec3(0.025, 0.018, 0.012), brule * 0.9);
-    rugo = mix(rugo, 0.92, brule);
-    metal = mix(metal, 0.15, brule);
-    float f = abs(fract(nb * 11.0 + bruit(vLocal * 9.0) * 0.6) - 0.5);
-    float fente = (1.0 - smoothstep(0.0, 0.05, f)) * smoothstep(seuil + 0.05, seuil + 0.16, nb) * smoothstep(0.4, 0.75, uDegats);
-    incandescence = vec3(1.0, 0.32, 0.06) * fente * (0.55 + 0.45 * sin(uTemps * 11.0 + nb * 30.0)) * 2.4;
+    // La brûlure : un cœur noirci, une auréole de suie qui s'estompe.
+    float brule = smoothstep(seuil - 0.03, seuil + 0.16, nb);
+    float coeur = smoothstep(seuil + 0.08, seuil + 0.22, nb);
+    base = mix(base, base * 0.35 + vec3(0.02, 0.016, 0.012), brule * 0.75);
+    base = mix(base, vec3(0.012, 0.01, 0.009), coeur * 0.8);
+    rugo = mix(rugo, 0.95, brule);
+    metal = mix(metal, 0.1, brule);
+    // Les fentes : des lignes de crête fines (bruit « ridged »), seulement au cœur des brûlures, qui palpitent.
+    float crete = 1.0 - abs(bruit(vLocal * 6.5 + 3.0) * 2.0 - 1.0);
+    crete = max(crete, 1.0 - abs(bruit(vLocal * 13.0 + 9.0) * 2.0 - 1.0) * 1.15);
+    float fente = smoothstep(0.92, 0.985, crete) * coeur * smoothstep(0.4, 0.75, uDegats);
+    incandescence = vec3(1.0, 0.3, 0.05) * fente * (0.6 + 0.4 * sin(uTemps * 9.0 + nb * 25.0)) * 3.0;
   }
+#endif
 
   // ---- La lumière : soleil (et son ombre), ciel/sol, reflets, lumières ponctuelles ----
   float nl = max(dot(N, L), 0.0);
@@ -277,11 +295,14 @@ void main() {
   couleur += env * mix(f0, vec3(1.0), fresnel) * (1.0 - rugo * 0.75) * cavite * voile;
   couleur += uSoleil * spec * mix(vec3(0.5), base + 0.3, metal) * nl * ombre * mix(1.0, cavite, 0.6);
   // Le vernis des peintures : un second reflet, net, par-dessus la couleur.
+#ifdef AVEC_TEXTURES
   if (peint) {
     float verni = pow(max(dot(N, H), 0.0), 600.0) * 6.0;
     couleur += uSoleil * verni * nl * ombre * 0.5 + env * 0.06 * (0.25 + fresnel * 3.0) * cavite;
   }
+#endif
   // Les lumières ponctuelles (réacteurs, fragments, feux de danger, portails).
+#ifdef AVEC_LUMIERES
   for (int i = 0; i < 8; i++) {
     if (i >= uNbLum) break;
     vec4 lp = uLumPos[i];
@@ -296,6 +317,7 @@ void main() {
     float sl = pow(max(dot(N, Hl), 0.0), brillance) * (1.0 - rugo * 0.8) * (brillance + 8.0) / 60.0;
     couleur += uLumCoul[i] * att * (base * (1.0 - metal) * ndl + mix(vec3(0.4), base + 0.3, metal) * sl * ndl) * cavite;
   }
+#endif
   // Un peu de lumière de la piste sur ce qui est proche du sol (la piste éclaire les flancs).
   couleur += uAccent * 0.05 * exp(-abs(vMonde.y) * 0.9) * (1.0 - metal * 0.5) * (0.6 + uIntensite);
 
@@ -335,16 +357,40 @@ void main() {
   sortie = vec4(ecran(couleur * uExposition), uOpacite);
 }`;
 
-/** Un programme de surface (solide). « transparent » : verre, bulles. */
-export function surface(gl: Gl, monde: Monde, options: { transparent?: boolean; profondeur?: boolean; echelle?: number; detail?: number } = {}) {
+/**
+ * Les variantes du shader de surface. Un rendu logiciel (sans carte graphique) exécute toutes les branches,
+ * même celles qu'un réglage désactive : la qualité « Économie » compile donc un shader sans textures, sans
+ * ombres et sans lumières ponctuelles (aussi léger que celui d'avant V4-H), et les autres qualités le shader complet.
+ */
+export interface VarianteSurface {
+  textures: boolean;
+  ombres: boolean;
+  lumieres: boolean;
+}
+const fragmentSurface = (v: VarianteSurface, degats: boolean) =>
+  SURFACE_FRAG.replace('/*VARIANTE*/', [v.textures && '#define AVEC_TEXTURES', v.ombres && '#define AVEC_OMBRES', v.lumieres && '#define AVEC_LUMIERES', degats && '#define AVEC_DEGATS'].filter(Boolean).join('\n') + '\n');
+const variantes = new WeakMap<Program, { degats: boolean; cle: string }>();
+/** Recompile un programme de surface dans une autre variante (les maillages qui l'utilisent n'ont rien à faire). */
+export function varianteSurface(p: Program, v: VarianteSurface): void {
+  const info = variantes.get(p);
+  const cle = `${+v.textures}${+v.ombres}${+v.lumieres}`;
+  if (!info || info.cle === cle) return;
+  info.cle = cle;
+  p.setShaders({ vertex: SURFACE_VERT, fragment: fragmentSurface(v, info.degats) });
+}
+
+/** Un programme de surface (solide). « transparent » : verre, bulles. « degats » : le vaisseau (brûlures). */
+export function surface(gl: Gl, monde: Monde, options: { transparent?: boolean; profondeur?: boolean; echelle?: number; detail?: number; degats?: boolean } = {}) {
+  const complet: VarianteSurface = { textures: true, ombres: true, lumieres: true };
   const p = new Program(gl, {
     vertex: SURFACE_VERT,
-    fragment: SURFACE_FRAG,
+    fragment: fragmentSurface(complet, !!options.degats),
     uniforms: { uPlie: { value: 1 }, ...monde, uTeinte: { value: [1, 1, 1] }, uEmission: { value: 1 }, uOpacite: { value: 1 }, uImpact: { value: 0 }, uImpactCouleur: { value: [1, 0.2, 0.15] }, uDegats: { value: 0 }, uEchelleTex: { value: options.echelle ?? 0.5 }, uDetail: { value: options.detail ?? 1 } },
     transparent: !!options.transparent,
     depthWrite: options.profondeur ?? !options.transparent,
     cullFace: false,
   });
+  variantes.set(p, { degats: !!options.degats, cle: '111' });
   return p;
 }
 

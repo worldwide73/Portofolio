@@ -356,6 +356,12 @@ export function vaisseau(modele = 0): Assembleur {
   a.boite(0, -0.18, -0.95, 0.06, 0.004, 0.2, M.joint);
   for (const s of [1, -1]) a.boite(0.05 * s, -0.12, -1.0, 0.025, 0.02, 0.02, M.fenetre);
   a.boite(0, -0.235, 0.5, 0.025, 0.02, 0.025, M.eclatRouge);
+  // (V4-H) Les émetteurs anti-gravité, sous le ventre : quatre patins lumineux, de la couleur de la traînée
+  // (leur lumière éclaire la piste sous le vaisseau, voir scene.ts).
+  for (const [x, z] of [[0.15, -0.5], [-0.15, -0.5], [0.21, 0.78], [-0.21, 0.78]] as const) {
+    a.boite(x, -0.212, z, 0.11, 0.03, 0.2, M.metalSombre, 0.01);
+    a.boite(x, -0.229, z, 0.075, 0.006, 0.15, M.accent);
+  }
   return a;
 }
 

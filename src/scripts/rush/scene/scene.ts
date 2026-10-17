@@ -20,7 +20,7 @@ import { apparition } from '../equilibrage';
 import { estObstacle, type Objet, type Partie } from '../moteur';
 import { couleurPiece, type Vue } from '../rendu';
 import { Assembleur, Halos, hex, lineaire, type RGB } from './geometrie';
-import { anneau, ciel, energie, halo, planete, points, surface, traits, uniformesMonde } from './materiaux';
+import { anneau, ciel, energie, halo, planete, points, surface, traits, uniformesMonde, varianteSurface } from './materiaux';
 import * as Mo from './modeles';
 import { kitDe } from './kits';
 import { TRONCON, type Palette } from './mondes';
@@ -90,7 +90,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   // (Les objets ont leur propre brouillard : ils émergent de la brume au loin, au lieu d'apparaître d'un coup.)
   const pObjet = surface(gl, { ...monde, uCoeur: { value: [1, 1, 1] }, uBrume: { value: [60, 120] } }, { echelle: 0.55 });
   const uVaisseau = { uPeinture: { value: [0.85, 0.88, 0.92] }, uAccent: { value: [0.3, 0.55, 1] }, uAccent2: { value: [0.9, 0.9, 1] }, uCoeur: { value: [1, 1, 1] } };
-  const pVaisseau = surface(gl, { ...monde, ...uVaisseau }, { echelle: 0.78 });
+  const pVaisseau = surface(gl, { ...monde, ...uVaisseau }, { echelle: 0.78, degats: true });
   const pHalo = halo(gl, monde);
   const pHaloLoin = halo(gl, { ...monde, uBrume: { value: [3000, 14000] } });
   pHaloLoin.uniforms.uPlie.value = 0;
@@ -134,6 +134,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   })();
   const qualite = { voulue: 'auto' as Niveau | 'auto', auto: (logiciel ? 'economie' : fin ? 'equilibree' : 'elevee') as Niveau, mesures: [] as number[], derniere: 0 };
   const niveau = (): Niveau => (qualite.voulue === 'auto' ? qualite.auto : qualite.voulue);
+  let varianteCourante: Niveau | '' = 'elevee';
   let textures: ReturnType<typeof creerTextures> | 'attente' | null = null;
   let post: Post | null = null;
   try {
@@ -362,6 +363,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const poserMecanismes = (racine: Transform, i: number, theme: Theme): Troncon['mobiles'] => {
     const mobiles: Troncon['mobiles'] = [];
     if (hacher(i, 1) > 0.55) return mobiles;
+    if (import.meta.env.DEV && (window as unknown as { __rushSans?: Record<string, boolean> }).__rushSans?.mecanismes) return mobiles;
     const liste = MECAS[theme] ?? MECAS.lancement;
     const genre = liste[Math.floor(hacher(i, 2) * liste.length)];
     const cote = hacher(i, 3) < 0.5 ? -1 : 1;
@@ -1204,6 +1206,8 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     const acc = uVaisseau.uAccent.value as number[];
     const f = 1.4 + boost * 1.4;
     for (const s of [1, -1]) candidats.push({ x: xv + 0.27 * s, y: Mo.HAUTEUR_VOL - 0.1, z: 2.0, c: acc.map((v) => v * f), r: 5.5 + boost * 2, d: -1 });
+    // La lueur anti-gravité, sous la coque : elle éclaire la piste juste sous le vaisseau.
+    candidats.push({ x: xv, y: 0.32, z: -0.2, c: acc.map((v) => v * (0.9 + boost * 0.6)), r: 3.4, d: -1 });
     for (const e of eclairs) {
       const k = e.vie / e.duree;
       candidats.push({ x: e.x, y: e.y, z: e.z, c: e.c.map((v) => v * k * k), r: e.r, d: -2 });
@@ -1638,6 +1642,12 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     qualite.voulue = vue.qualite ?? 'auto';
     const n = niveau();
     const actifQ = !!p && !p.termine;
+    // La variante des shaders suit la qualité (Économie : le shader léger ; les autres : le complet).
+    if (n !== varianteCourante) {
+      varianteCourante = n;
+      const v = { textures: n !== 'economie', ombres: n !== 'economie', lumieres: n !== 'economie' };
+      for (const prog of [pMonde, pLoin, pObjet, pVaisseau]) varianteSurface(prog, v);
+    }
     // (Développement) Couper un effet pour le comparer : window.__rushSans = { ombres, textures, halo, lumieres }.
     const sans = (import.meta.env.DEV ? (window as unknown as { __rushSans?: Record<string, boolean> }).__rushSans : undefined) ?? {};
     // Les textures : calculées une fois, au premier moment calme (pas pendant l'ouverture).

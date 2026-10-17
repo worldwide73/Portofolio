@@ -75,3 +75,27 @@ sur la machine de Mathéo ; la qualité adaptative est là pour la garantir.
 | H6 | **Qualité graphique** : réglage Auto / Élevée / Équilibrée / Économie (Réglages du jeu → Affichage), sauvegardé ; l'automatique part en Élevée (Équilibrée au doigt, **Économie sans carte graphique**), et descend d'un cran si la moyenne dépasse 21 ms par image sur 180 images de course (jamais de remontée seule : pas de va-et-vient) | `scene/scene.ts`, `rush.ts`, `sauvegarde.ts`, `PortalRush.astro` | sauvegarde validée ; détection du rendu logiciel vérifiée ici |
 
 Inchangés : `moteur.ts` (collisions, difficulté, obstacles), le pli du parcours, les sons, l'interface (V4-F).
+
+## 6. Mesures (17 octobre 2026, conteneur sans carte graphique)
+
+Recette `outils/recettes/rush-3d-perf.mjs` : même image de course figée (secteur 1, 960 × 540), 15 s par niveau.
+Le rendu est émulé par le processeur (SwiftShader) : les chiffres absolus ne disent rien de la fluidité sur une
+vraie carte graphique ; seuls les **rapports** renseignent sur le travail demandé au GPU.
+
+| Version | Images/s (émulateur) | JavaScript par image |
+|---|---|---|
+| Avant V4-H (référence, même scène) | 1,7 à 1,9 | — |
+| V4-H, Économie (shader léger compilé à part) | 1,5 à 1,6 | ~1,5–3 ms |
+| V4-H, Équilibrée | 0,53 | ~1,5–2 ms |
+| V4-H, Élevée | 0,53 | ~1,5–2 ms |
+
+- Le coût est entièrement côté GPU (le JavaScript reste à 1,5–3 ms par image) : textures triplanaires (6 lectures),
+  ombres (9 lectures + un passage de profondeur), lumières (boucle), post-traitement (6 passes).
+- **Variantes de shader** : un rendu logiciel exécute toutes les branches, même désactivées ; « Économie »
+  compile donc un shader sans textures, ombres ni lumières (recompilé à chaud quand la qualité change). Reste
+  ~15 % d'écart avec la référence dans l'émulateur (ombre de contact, mécanismes : ~5 %).
+- **Qualité automatique** : Élevée par défaut sur ordinateur, Équilibrée au doigt, **Économie si le navigateur
+  n'a pas d'accélération graphique** (détection « SwiftShader / llvmpipe / software ») ; descend d'un cran si la
+  moyenne dépasse 21 ms par image en course.
+- **Non mesuré** : la fluidité sur une vraie carte graphique (à vérifier sur la machine de Mathéo, réglage
+  « Élevée » et « Auto »).
