@@ -41,7 +41,7 @@ for (const c of cas) {
   await p.evaluate((c) => (window.__rushSans = c === 'tout' ? {} : c === 'rien' ? { ombres: true, textures: true, halo: true, lumieres: true } : { [c]: true }), c);
   await p.evaluate(() => (window.__images = 0));
   await p.waitForFunction(() => window.__images >= 3, null, { timeout: 120000, polling: 250 });
-  await p.screenshot({ path: `${SORTIE}/ab-${info.theme}-${c === 'tout' ? 'tout' : 'sans-' + c}.png` });
+  await p.screenshot({ timeout: 240000, path: `${SORTIE}/ab-${info.theme}-${c === 'tout' ? 'tout' : 'sans-' + c}.png` });
   console.log('capture', c);
 }
 await nav.close();

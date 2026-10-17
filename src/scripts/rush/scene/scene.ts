@@ -28,7 +28,7 @@ import { creerPli, majPli, plier, type Pli } from './parcours';
 import { Ombres } from './ombres';
 import { Post } from './post';
 import { creerTextures } from './textures';
-import { chargerModeles, FICHIERS_VAISSEAUX, geometrieImportee, type MaillageImporte } from './assets';
+import { chargerDecor, chargerModeles, FICHIERS_VAISSEAUX, geometrieImportee, type MaillageImporte } from './assets';
 
 export interface RenduJeu {
   troisD: boolean;
@@ -463,6 +463,18 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       t.racine.position.set(0, 0, distance - i * TRONCON);
     }
   };
+  // (V4-H7) Les modules du décor (bordures, portiques…) arrivent après coup : les tronçons déjà construits sans
+  // eux sont refaits (une fois, en général pendant les menus).
+  void chargerDecor().then((ok) => {
+    if (!ok) return;
+    for (const [, t] of troncons) t.racine.setParent(null);
+    troncons.clear();
+    for (const [cle, g] of geos)
+      if (cle.startsWith('troncon-')) {
+        g?.remove();
+        geos.delete(cle);
+      }
+  });
   /** Libère les géométries des mondes qui ne servent plus (la mémoire du téléphone compte). */
   const libererMondes = (garder: Set<Theme>) => {
     for (const [cle, g] of geos)
@@ -1403,7 +1415,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       const tu = vaisseau.ancres.tuyeres[r.s];
       r.m.visible = !!tu;
       if (!tu) continue;
-      const largeur = tu[3] / 0.12;
+      const largeur = Math.sqrt(tu[3] / 0.12);
       for (let i = 0; i < POINTS_TRAINEE; i++) {
         const t = i / (POINTS_TRAINEE - 1);
         const z = tu[2] + 0.05 + i * (0.32 + vitesse * 0.006);

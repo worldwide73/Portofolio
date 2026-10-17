@@ -134,6 +134,29 @@ export class Assembleur {
     this.m.push(q.m, q.r, q.e, q.k ?? 0);
   }
 
+  /**
+   * (V4-H7) Ajoute un maillage importé (modèle Blender, voir assets.ts) dans le repère courant. Un repère en miroir
+   * (échelle négative) retourne l'ordre des sommets pour garder les faces vers l'extérieur.
+   */
+  importer(m: { attributs: { position: Float32Array; normal: Float32Array; couleur: Float32Array; matiere: Float32Array; index: ArrayLike<number> } }): this {
+    const a = m.attributs;
+    const t = this.t;
+    const det = t[0] * (t[5] * t[10] - t[9] * t[6]) - t[4] * (t[1] * t[10] - t[9] * t[2]) + t[8] * (t[1] * t[6] - t[5] * t[2]);
+    const ordre = det < 0 ? [0, 2, 1] : [0, 1, 2];
+    const idx = a.index;
+    for (let f = 0; f < idx.length; f += 3)
+      for (const o of ordre) {
+        const i = idx[f + o];
+        const p = this.point([a.position[i * 3], a.position[i * 3 + 1], a.position[i * 3 + 2]]);
+        const n = this.direction([a.normal[i * 3], a.normal[i * 3 + 1], a.normal[i * 3 + 2]]);
+        this.p.push(p[0], p[1], p[2]);
+        this.n.push(n[0], n[1], n[2]);
+        this.c.push(a.couleur[i * 3], a.couleur[i * 3 + 1], a.couleur[i * 3 + 2]);
+        this.m.push(a.matiere[i * 4], a.matiere[i * 4 + 1], a.matiere[i * 4 + 2], a.matiere[i * 4 + 3]);
+      }
+    return this;
+  }
+
   // ---- Les faces ----
   /** Un triangle à facette nette (la normale suit la facette). */
   tri(a: V3, b: V3, c: V3, q: Matiere): this {

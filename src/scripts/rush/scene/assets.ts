@@ -121,3 +121,19 @@ export function chargerModeles(fichier: string): Promise<MaillageImporte[]> {
 
 /** Les fichiers des quatre vaisseaux (0 Aube, 1 Faucon, 2 Bastion, 3 Spectre). */
 export const FICHIERS_VAISSEAUX = ['aube.prm', 'faucon.prm', 'bastion.prm', 'spectre.prm'];
+
+/** (V4-H7) Les modules du décor (bordure, chevron, portique…), une fois chargés ; vide avant. */
+export const decor: Record<string, MaillageImporte> = {};
+let decorPromesse: Promise<boolean> | null = null;
+/** Charge les modules du décor (une fois). Vrai s'ils sont disponibles. */
+export function chargerDecor(): Promise<boolean> {
+  return (decorPromesse ??= chargerModeles('decor.prm')
+    .then((ms) => {
+      for (const m of ms) decor[m.nom] = m;
+      return true;
+    })
+    .catch(() => {
+      decorPromesse = null;
+      return false;
+    }));
+}

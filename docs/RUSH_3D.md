@@ -99,3 +99,69 @@ vraie carte graphique ; seuls les **rapports** renseignent sur le travail demand
   moyenne dépasse 21 ms par image en course.
 - **Non mesuré** : la fluidité sur une vraie carte graphique (à vérifier sur la machine de Mathéo, réglage
   « Élevée » et « Auto »).
+
+## 7. V4-H7 — direction artistique et production d'assets (17 octobre 2026, en cours)
+
+Nouvelle demande de Mathéo : une vraie direction artistique de course futuriste à esthétique cyberpunk, des
+modèles 3D réellement détaillés (et non des primitives), des circuits qui paraissent construits, des mondes à
+l'identité forte. Ce chapitre suit cette refonte ; il ne la déclare pas terminée.
+
+### 7.1 Les références (ce qui a pu être vu, honnêtement)
+
+- **La vidéo `Sqq0Uz3Bd1w` n'a pas pu être regardée** : YouTube et la plupart des hébergeurs d'images sont
+  bloqués par le réseau de cet environnement (seuls GitHub, npm et PyPI répondent). Elle n'est pas analysée ici.
+- **Captures réelles étudiées** : deux captures d'écran d'un jeu de course anti-gravité en 3D (projet de
+  formation Unity « Hover Racer », dépôts publics `pale-cinder/Hover-Racer-Training` et
+  `maxi-jp/HoverRacer_UnityTraining`), récupérées par git et gardées hors du dépôt. Étudiées pour la densité et
+  les proportions, **rien n'en est repris** (ni modèle, ni texture, ni forme). Ce qu'elles montrent :
+  - une piste **continue et sombre** (pas un carrelage), lisible grâce à un **liseré blanc très lumineux** sur
+    l'arête de la bordure, des bandes de hachures jaunes le long des voies, des rainures et des plaques de service ;
+  - un **mur de bordure à chevrons blancs** tous les quelques mètres, qui donne la vitesse et le sens du virage ;
+  - un vaisseau aux **volumes épais et lisibles** (carénages en couches, entrées d'air, liserés lumineux sur les
+    jointures), des structures en **treillis** au-dessus de la piste, un post-traitement fort (aberration, grain).
+- La recherche de captures d'Antigraviator elle-même (presse, Steam) n'a renvoyé que du texte : aucune image
+  n'a pu être téléchargée. Les autres sources d'assets libres citées par Mathéo (Poly Haven, ambientCG,
+  Sketchfab, Kenney, OpenGameArt) sont également bloquées ici.
+
+### 7.2 Le choix technique : modéliser dans Blender, par scripts
+
+Faute d'accès aux bibliothèques d'assets, les modèles sont **construits dans Blender** (5.2, logiciel libre
+GPL ; utilisé comme module Python dans un environnement isolé, rien n'est installé dans le projet) par des
+scripts reproductibles (`outils/assets/`) : coques par sections lissées, plaques de blindage découpées sur la
+coque avec un jour régulier et une tranche de couleur, nacelles et tuyères de révolution à volets, ailes à
+profil, vérins, conduits, ouïes, feux. Chaque modèle est vérifié deux fois : un rendu Cycles de studio
+(`captures/v4h/modeles/`, hors dépôt) et un rendu dans le **vrai shader du jeu** (banc d'essai). Les modèles sont
+**originaux** (aucun asset d'un autre jeu) ; leur licence est celle du portfolio.
+
+Format d'export « PRM1 » (`outils/assets/commun.py` → `src/scripts/rush/scene/assets.ts`) : positions
+quantifiées sur 16 bits, normales sur 8 bits, un indice de matière par sommet (palette dans l'en-tête), index
+16/32 bits — ~11 octets par sommet. Les modèles passent par les mêmes shaders, ombres, textures triplanaires et
+variantes de qualité que le reste de la scène. Chargés à la demande ; la silhouette procédurale reste en repli.
+
+### 7.3 L'identité de chaque monde (direction artistique)
+
+Principe commun : **trois plans** (premier plan riche qui défile vite, plan moyen d'architecture, lointain
+monumental), une **lumière dominante** par monde et une couleur d'accent ; un contraste net entre zones sombres
+et sources lumineuses ; plus on avance dans la campagne, plus les mondes sont instables et dangereux.
+
+| Monde | Identité | Architecture et premier plan | Lointain monumental | Lumière, atmosphère |
+|---|---|---|---|---|
+| 1 Launch Protocol | Station de lancement militaire-industrielle, propre et fonctionnelle | Rail surélevé, portiques de lancement en treillis, anneaux de propulsion, tours de service, réservoirs | Planète bleue, lune, station orbitale annulaire | Soleil blanc froid, accent cyan ; peu de brume |
+| 2 Neon Drift | Mégapole verticale la nuit | Piste suspendue entre des tours, enseignes holographiques, passerelles, conduits | Forêt de gratte-ciel lumineux, trafic aérien | Nuit, magenta / cyan, brume basse, reflets humides |
+| 3 Shattered Belt | Chantier minier dans une ceinture d'astéroïdes | Piste posée sur des roches, échafaudages, câbles, foreuses, débris qui dérivent | Astéroïdes géants, station minière éventrée | Soleil rasant orange, ombres dures, poussière |
+| 4 Laser Matrix | Installation technologique fermée | Tunnels techniques, grilles, émetteurs, panneaux de contrôle, câbles en faisceaux | Salles immenses, cœurs de calcul | Lumière artificielle froide, rouge des lasers, contrastes forts |
+| 5 Quantum Rift | Monde instable, la réalité se déchire | Piste fragmentée, plaques qui flottent, portails, structures cristallines | Faille dimensionnelle, géométries impossibles | Violet / vert, lueurs pulsées, brume colorée |
+| 6 Voidstorm | Circuit suspendu dans une tempête | Piste battue par la pluie et les éclairs, pylônes, paratonnerres, structures arrachées | Nuages-orage, colonnes d'éclairs | Sombre, éclairs blancs, pluie et étincelles |
+| 7 Core Sentinel | Forteresse d'un gardien mécanique | Remparts, tourelles, blindages épais, portes lourdes | Le noyau de la Sentinelle, mégastructure armée | Rouge alarme, projecteurs, fumée |
+| 8 Singularity | Les abords d'un trou noir | Piste qui se tord, installations endommagées, débris aspirés | Disque d'accrétion, lentille gravitationnelle | Orange-blanc du disque, ombres profondes, distorsion |
+
+### 7.4 Le plan de production (sous-étape H7, avant de considérer V4-H terminée)
+
+| # | Contenu | État |
+|---|---|---|
+| H7.0 | Références, direction artistique par monde (ce chapitre) | fait (limites ci-dessus) |
+| H7.1 | Chaîne Blender → PRM1 → chargeur ; le vaisseau importé remplace la silhouette procédurale ; flammes, traînées et lumières sur les tuyères du modèle (2 à 4) | fait |
+| H7.2 | Quatre vaisseaux modélisés, silhouettes distinctes : **Aube** (trimaran : corps central, deux nacelles reliées par un pont en flèche, dérives inclinées ; 16,6 k triangles, 280 Ko / 158 Ko compressé) ; Faucon, Bastion, Spectre | Aube fait ; les trois autres en cours |
+| H7.3 | Piste construite : revêtement continu et marquages, bordures à liseré blanc et chevrons, structure porteuse, modules Blender | à faire |
+| H7.4 | Environnements par monde : modules d'architecture, lointain monumental, atmosphère | à faire |
+| H7.5 | Obstacles remodelés, effets, évaluation avant/après dans les mêmes conditions, mesures | à faire |
