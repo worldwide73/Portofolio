@@ -911,19 +911,24 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const vus = new Set<string>();
   // (V4-H7) Les obstacles modélisés dans Blender : à leur arrivée, les géométries procédurales du même nom sont
   // oubliées et les visuels refaits (les objets à l'écran sont recréés à l'image suivante).
-  void chargerDecor('objets.prm').then((noms) => {
-    if (!noms.length) return;
-    for (const n of noms)
-      for (const suf of ['', ':s', ':h']) {
-        geos.get(n + suf)?.remove();
-        geos.delete(n + suf);
+  // (Un fichier par famille d'objets ; un fichier absent est simplement ignoré.)
+  for (const fichier of ['objets.prm', 'objets-mobiles.prm', 'objets-mecanismes.prm', 'objets-collecte.prm'])
+    void chargerDecor(fichier).then((noms) => {
+      if (!noms.length) return;
+      for (const n of noms)
+        for (const suf of ['', ':s', ':h']) {
+          geos.get(n + suf)?.remove();
+          geos.delete(n + suf);
+        }
+      for (const [cle, v] of visuels) {
+        v.racine.setParent(null);
+        visuels.delete(cle);
       }
-    for (const [cle, v] of visuels) {
-      v.racine.setParent(null);
-      visuels.delete(cle);
-    }
-    reserve.clear();
-  });
+      reserve.clear();
+      // (Les mécanismes du bord de piste sont posés avec les tronçons : ceux-ci sont reposés, sans être refaits.)
+      for (const [, t] of troncons) t.racine.setParent(null);
+      troncons.clear();
+    });
   const xVoie = (v: number) => (v - 1) * Mo.VOIE;
 
   /** La voie affichée d'un obstacle mobile : il glisse d'une configuration à la suivante (comme la version 2D). */

@@ -131,8 +131,8 @@ def barriere(P):
 OBJETS = {'barriere': barriere}
 
 
-def construire(nom, P):
-    objets, points = OBJETS[nom](P)
+def construire(nom, fn, P):
+    objets, points = fn(P)
     for o in objets:
         appliquer(o)
     comptes = {}
@@ -146,21 +146,31 @@ def construire(nom, P):
     return ob, points
 
 
-if __name__ == '__main__':
+def executer(objets, fichier, cadrages=None):
+    """
+    Construit les obstacles du dictionnaire {nom: fonction(P) → (objets, points)}, les exporte dans
+    public/rush/modeles/<fichier>, et fait un aperçu Cycles de chacun (sauf --sans-apercu ; noms après « -- »
+    pour n'en prévisualiser que certains). « cadrages » : {nom: (cible, distance)} pour l'aperçu.
+    """
     vider()
     P = matieres_objets(palette())
     choix = [a for a in sys.argv[sys.argv.index('--') + 1:] if not a.startswith('--')] if '--' in sys.argv else []
     apercus = Path(__file__).resolve().parents[2] / 'captures' / 'v4h' / 'modeles'
     apercus.mkdir(parents=True, exist_ok=True)
     resultats = []
-    for nom in OBJETS:
-        ob, pts = construire(nom, P)
+    for nom, fn in objets.items():
+        ob, pts = construire(nom, fn, P)
         resultats.append((nom, ob, pts))
-    ecrire_prm(SORTIE / 'objets.prm', resultats)
+    ecrire_prm(SORTIE / fichier, resultats)
     if '--sans-apercu' not in sys.argv:
         for nom, ob, _ in resultats:
             if choix and nom not in choix:
                 continue
             for o in bpy.data.objects:
                 o.hide_render = o.type == 'MESH' and o != ob
-            apercu(apercus / f'objet-{nom}.png', cible=(0, 0, 0.8), distance=5.5, azimut=25, elevation=16, echantillons=16)
+            cible, distance = (cadrages or {}).get(nom, ((0, 0, 0.8), 5.5))
+            apercu(apercus / f'objet-{nom}.png', cible=cible, distance=distance, azimut=25, elevation=16, echantillons=16)
+
+
+if __name__ == '__main__':
+    executer(OBJETS, 'objets.prm')
