@@ -2394,6 +2394,22 @@ i.est-gagnee svg,
     color 0.18s;
 }
 
+/* (V4-H) Quatre choix (la qualité graphique) : un peu plus serrés, et sur deux lignes au téléphone. */
+.segments--quatre span {
+  padding: 6px 4px;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 520px) {
+  .segments--quatre {
+    flex-wrap: wrap;
+  }
+
+  .segments--quatre label {
+    flex: 1 1 45%;
+  }
+}
+
 .segments label:hover span {
   background: rgba(205, 224, 246, 0.12);
   color: var(--r-texte);

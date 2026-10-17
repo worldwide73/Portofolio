@@ -620,6 +620,7 @@ export function initRush(): void {
     v('aideCommandes').checked = s.reglages.aideCommandes;
     $$<HTMLInputElement>('[data-reglage="tactile"]').forEach((r) => (r.checked = r.value === s.reglages.tactile));
     $$<HTMLInputElement>('[data-reglage="sequenceFin"]').forEach((r) => (r.checked = r.value === s.reglages.sequenceFin));
+    $$<HTMLInputElement>('[data-reglage="qualite"]').forEach((r) => (r.checked = r.value === s.reglages.qualite));
     $$<HTMLInputElement>('.curseur-jeu input').forEach(peindreCurseur);
   };
   let retourFocus: HTMLElement | null = null;
@@ -980,6 +981,7 @@ export function initRush(): void {
           if (s.reglages.secousses && !peu) rendu.secouer(1);
           rendu.alerter();
           rendu.eclater(voie, '255, 150, 140', peu ? 6 : 20);
+          rendu.debris?.(voie);
           sonRush('choc');
           break;
         case 'combo-perdu':
@@ -1210,6 +1212,8 @@ export function initRush(): void {
     return b;
   };
 
+  /** (Développement) Une qualité imposée par une recette : window.__rushQualite. */
+  const qualiteForcee = (): 'auto' | 'elevee' | 'equilibree' | 'economie' | undefined => (import.meta.env.DEV ? (window as unknown as { __rushQualite?: 'auto' | 'elevee' | 'equilibree' | 'economie' }).__rushQualite : undefined);
   const PAS = 1 / 120;
   const image = (maintenant: number) => {
     boucle = requestAnimationFrame(image);
@@ -1241,7 +1245,7 @@ export function initRush(): void {
       const b = dimensionnerApercu();
       if (b && ctxApercu) rendu.garage(ctxApercu, b.width, b.height, s.equipement, temps, modele);
     }
-    const vue = { l, h, reduit: effetsReduits(), secousses: s.reglages.secousses, equipement: s.equipement, theme: theme(), brume: partie?.niveauBase.brume ?? 0, avance: actif && compte <= 0 ? reste : 0, modele };
+    const vue = { l, h, reduit: effetsReduits(), secousses: s.reglages.secousses, equipement: s.equipement, theme: theme(), brume: partie?.niveauBase.brume ?? 0, avance: actif && compte <= 0 ? reste : 0, modele, qualite: qualiteForcee() ?? s.reglages.qualite };
     rendu.dessiner(partie, vue, temps, actif ? dt : partie ? 0 : dt * 0.35);
     if (++images % 3 === 0) majHud();
     if (maintenant - dernierSuivi > 250) {
@@ -1776,6 +1780,7 @@ export function initRush(): void {
     else if (cle === 'animations') regler('animations', Number(champ.value));
     else if (cle === 'tactile') s.reglages.tactile = champ.value as 'toucher' | 'glisser';
     else if (cle === 'sequenceFin') s.reglages.sequenceFin = champ.value === 'courte' ? 'courte' : 'complete';
+    else if (cle === 'qualite') s.reglages.qualite = (['elevee', 'equilibree', 'economie'].includes(champ.value) ? champ.value : 'auto') as 'auto' | 'elevee' | 'equilibree' | 'economie';
     else if (cle === 'effetsReduits' || cle === 'secousses' || cle === 'aideCommandes') s.reglages[cle] = champ.checked;
     enregistrer(s);
     fenetre.classList.toggle('sans-aide', !s.reglages.aideCommandes);

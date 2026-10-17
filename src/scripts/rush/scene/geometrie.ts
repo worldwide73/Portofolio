@@ -263,9 +263,25 @@ export class Assembleur {
     }
     const rayon = v.map((p) => r * (relief ? relief(p) : 1));
     const pos = v.map((p, i): V3 => [p[0] * rayon[i], p[1] * rayon[i], p[2] * rayon[i]]);
+    // (V4-H) Un relief sans « net » est lissé : les normales de chaque sommet sont la moyenne de celles des faces
+    // qui le touchent (la roche paraît ronde ; la texture « brute » lui donne ensuite ses fissures).
+    let lisses: V3[] | null = null;
+    if (relief && !net) {
+      const somme = pos.map((): V3 => [0, 0, 0]);
+      for (const [a, b, c] of f) {
+        const n = croix(sous(pos[b], pos[a]), sous(pos[c], pos[a]));
+        for (const i of [a, b, c]) {
+          somme[i][0] += n[0];
+          somme[i][1] += n[1];
+          somme[i][2] += n[2];
+        }
+      }
+      lisses = somme.map((n) => normer(n));
+    }
     for (const [a, b, c] of f) {
       const qq = qRelief ? qRelief(normer([v[a][0] + v[b][0] + v[c][0], v[a][1] + v[b][1] + v[c][1], v[a][2] + v[b][2] + v[c][2]])) : q;
-      if (net || relief) this.tri(pos[a], pos[b], pos[c], qq);
+      if (net) this.tri(pos[a], pos[b], pos[c], qq);
+      else if (lisses) this.triLisse(pos[a], pos[b], pos[c], lisses[a], lisses[b], lisses[c], qq);
       else this.triLisse(pos[a], pos[b], pos[c], v[a], v[b], v[c], qq);
     }
     return this;

@@ -603,6 +603,16 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <span class="option__texte"><b>{r.reglages.secousses}</b></span>
         <input class="interrupteur" type="checkbox" role="switch" data-reglage="secousses" />
       </label>
+      <!-- La qualité graphique (V4-H) : automatique, ou fixée. -->
+      <fieldset class="option option--choix">
+        <legend class="option__texte"><b>{r.reglages.qualite}</b><small>{r.reglages.qualiteTexte}</small></legend>
+        <span class="segments segments--quatre">
+          <label><input type="radio" name="rush-qualite" value="auto" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.auto}</span></label>
+          <label><input type="radio" name="rush-qualite" value="elevee" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.elevee}</span></label>
+          <label><input type="radio" name="rush-qualite" value="equilibree" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.equilibree}</span></label>
+          <label><input type="radio" name="rush-qualite" value="economie" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.economie}</span></label>
+        </span>
+      </fieldset>
       <!-- La séquence de fin de secteur (V4) : complète, ou courte pour enchaîner les essais. -->
       <fieldset class="option option--choix">
         <legend class="option__texte"><b>{r.reglages.sequenceFin}</b><small>{r.reglages.sequenceFinTexte}</small></legend>

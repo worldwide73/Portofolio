@@ -14,7 +14,7 @@
 // Elle sert aussi à l'interface : la scène d'attente des menus, les aperçus des
 // mondes de la carte de campagne, et le vaisseau qui tourne dans le garage.
 
-import { Camera, Geometry, Mat4, Mesh, Renderer, Transform, Triangle, Vec3 } from 'ogl';
+import { Camera, Geometry, Mat4, Mesh, Renderer, Texture, Transform, Triangle, Vec3 } from 'ogl';
 import type { Equipement, Theme } from '../donnees';
 import { apparition } from '../equilibrage';
 import { estObstacle, type Objet, type Partie } from '../moteur';
@@ -25,6 +25,9 @@ import * as Mo from './modeles';
 import { kitDe } from './kits';
 import { TRONCON, type Palette } from './mondes';
 import { creerPli, majPli, plier, type Pli } from './parcours';
+import { Ombres } from './ombres';
+import { Post } from './post';
+import { creerTextures } from './textures';
 
 export interface RenduJeu {
   troisD: boolean;
@@ -47,6 +50,8 @@ export interface RenduJeu {
   cinematique?(type: 'entree' | 'sortie' | 'victoire' | 'defaite'): void;
   /** La position du noyau du vaisseau à l'écran (px). */
   centreVaisseau?(): { x: number; y: number };
+  /** (V4-H) Un choc : des débris arrachés, un éclair orange qui éclaire alentour. */
+  debris?(voie: number): void;
   /** La collecte d'un fragment : il est aspiré par le vaisseau ; une onde, des étincelles, un trait d'énergie vers la jauge (cible, en px). */
   capter?(voie: number, couleur: string, cible?: { x: number; y: number }): void;
 }
@@ -79,13 +84,13 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   // LES PROGRAMMES
   // ==========================================================================
   const monde = uniformesMonde();
-  const pMonde = surface(gl, { ...monde, uDecoupe: { value: 1 } });
+  const pMonde = surface(gl, { ...monde, uDecoupe: { value: 1 } }, { echelle: 0.34 });
   const trous = [monde.uTrou0, monde.uTrou1, monde.uTrou2, monde.uTrou3, monde.uTrou4, monde.uTrou5];
-  const pLoin = surface(gl, { ...monde, uBrume: { value: [2200, 12000] }, uPlie: { value: 0 } });
+  const pLoin = surface(gl, { ...monde, uBrume: { value: [2200, 12000] }, uPlie: { value: 0 } }, { echelle: 0.014, detail: 0.7 });
   // (Les objets ont leur propre brouillard : ils émergent de la brume au loin, au lieu d'apparaître d'un coup.)
-  const pObjet = surface(gl, { ...monde, uCoeur: { value: [1, 1, 1] }, uBrume: { value: [60, 120] } });
+  const pObjet = surface(gl, { ...monde, uCoeur: { value: [1, 1, 1] }, uBrume: { value: [60, 120] } }, { echelle: 0.55 });
   const uVaisseau = { uPeinture: { value: [0.85, 0.88, 0.92] }, uAccent: { value: [0.3, 0.55, 1] }, uAccent2: { value: [0.9, 0.9, 1] }, uCoeur: { value: [1, 1, 1] } };
-  const pVaisseau = surface(gl, { ...monde, ...uVaisseau });
+  const pVaisseau = surface(gl, { ...monde, ...uVaisseau }, { echelle: 0.78 });
   const pHalo = halo(gl, monde);
   const pHaloLoin = halo(gl, { ...monde, uBrume: { value: [3000, 14000] } });
   pHaloLoin.uniforms.uPlie.value = 0;
@@ -99,6 +104,45 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const pPlanete = planete(gl, monde);
   const pAnneau = anneau(gl, monde);
   const pPoints = points(gl, monde);
+
+  // ==========================================================================
+  // V4-H : TEXTURES, OMBRES, LUMIÈRES, POST-TRAITEMENT, QUALITÉ
+  // ==========================================================================
+  // (Une texture blanche 1 × 1 tient la place des textures et de la carte d'ombres tant qu'elles n'existent pas.)
+  const vide = new Texture(gl, { image: new Uint8Array([255, 255, 255, 255]), width: 1, height: 1, generateMipmaps: false, minFilter: gl.NEAREST, magFilter: gl.NEAREST, flipY: false });
+  monde.tPlaques.value = vide;
+  monde.tBrut.value = vide;
+  monde.tNormales.value = vide;
+  monde.tOmbre.value = vide;
+  /**
+   * La qualité graphique. « auto » commence en Élevée (Équilibrée au doigt) et descend d'un cran si les images
+   * sont trop lentes pendant la course (moyenne > 21 ms sur 3 s) ; elle ne remonte jamais seule (pas de va-et-vient).
+   *   Élevée : textures, ombres 2048², 8 lumières, halo, flou de vitesse, grain ; Équilibrée : ombres 1024²,
+   *   4 lumières, halo ; Économie : rien de tout cela (le rendu d'avant, avec une ombre de contact).
+   */
+  type Niveau = 'elevee' | 'equilibree' | 'economie';
+  const NIVEAUX: Niveau[] = ['elevee', 'equilibree', 'economie'];
+  // (Sans carte graphique — rendu logiciel « SwiftShader », « llvmpipe »… — l'automatique part en Économie.)
+  const logiciel = (() => {
+    try {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      const nom = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+      return /swiftshader|llvmpipe|software|basic render/i.test(nom);
+    } catch {
+      return false;
+    }
+  })();
+  const qualite = { voulue: 'auto' as Niveau | 'auto', auto: (logiciel ? 'economie' : fin ? 'equilibree' : 'elevee') as Niveau, mesures: [] as number[], derniere: 0 };
+  const niveau = (): Niveau => (qualite.voulue === 'auto' ? qualite.auto : qualite.voulue);
+  let textures: ReturnType<typeof creerTextures> | 'attente' | null = null;
+  let post: Post | null = null;
+  try {
+    post = new Post(gl);
+  } catch {
+    post = null;
+  }
+  const ombres: { carte: Ombres | null; taille: number } = { carte: null, taille: 0 };
+  const lumieres = { pos: monde.uLumPos.value as number[], coul: monde.uLumCoul.value as number[] };
 
   const scene = new Transform();
   const camera = new Camera(gl, { fov: 55, near: 0.3, far: 9000 });
@@ -294,7 +338,89 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     theme: Theme;
     variante: number;
     racine: Transform;
+    /** (V4-H) Les parties mobiles de ses mécanismes de bord de piste. */
+    mobiles: { t: Transform; genre: Meca; phase: number }[];
   }
+  // ---- (V4-H) Les mécanismes du bord de piste : turbines, radars, presses, balises, qui bougent vraiment ----
+  type Meca = 'turbine' | 'radar' | 'presse' | 'balise';
+  const MECAS: Record<Theme, Meca[]> = {
+    lancement: ['turbine', 'radar', 'balise'],
+    neon: ['balise', 'turbine', 'presse'],
+    debris: ['radar', 'presse'],
+    laser: ['presse', 'balise', 'turbine'],
+    rift: ['balise', 'radar'],
+    tempete: ['radar', 'turbine', 'balise'],
+    sentinelle: ['presse', 'radar'],
+    singularite: ['balise'],
+    infini: ['turbine', 'radar', 'balise'],
+    defi: ['turbine', 'radar', 'balise'],
+  };
+  /** Hauteur de chaque mécanisme au-dessus de son repère : sa base posée sur la plateforme (y = −0,5). */
+  const BASE_MECA: Record<Meca, number> = { turbine: 3.1, radar: 3.0, presse: 1.15, balise: 0.4 };
+  const hacher = (i: number, k: number) => (((i * 2654435761) ^ (k * 2246822519)) >>> 0) / 4294967296;
+  /** Pose, sur un tronçon, 0 ou 1 mécanisme (le même à chaque passage : il ne dépend que du numéro). */
+  const poserMecanismes = (racine: Transform, i: number, theme: Theme): Troncon['mobiles'] => {
+    const mobiles: Troncon['mobiles'] = [];
+    if (hacher(i, 1) > 0.55) return mobiles;
+    const liste = MECAS[theme] ?? MECAS.lancement;
+    const genre = liste[Math.floor(hacher(i, 2) * liste.length)];
+    const cote = hacher(i, 3) < 0.5 ? -1 : 1;
+    const support = new Transform();
+    support.setParent(racine);
+    support.position.set(cote * 11, 0, -(10 + hacher(i, 4) * 28));
+    support.rotation.y = cote > 0 ? 0 : Math.PI;
+    const pf = double('plateforme-meca', Mo.plateformeMeca);
+    maillage(pf.solide, pMonde, support);
+    maillage(pf.halos, pHalo, support);
+    const corps = new Transform();
+    corps.setParent(support);
+    corps.position.y = BASE_MECA[genre];
+    const mobile = new Transform();
+    mobile.setParent(corps);
+    if (genre === 'turbine') {
+      const c = double('turbine-cadre', Mo.turbineCadre);
+      maillage(c.solide, pMonde, corps);
+      maillage(c.halos, pHalo, corps);
+      mobile.position.set(0, 2.6, 0.1);
+      maillage(geo('turbine-rotor', Mo.turbineRotor), pMonde, mobile);
+      // (La turbine regarde la piste en biais : on voit tourner ses pales.)
+      corps.rotation.y = -0.9;
+    } else if (genre === 'radar') {
+      const c = double('radar-tour', Mo.radarTour);
+      maillage(c.solide, pMonde, corps);
+      maillage(c.halos, pHalo, corps);
+      mobile.position.set(0, 3.9, 0);
+      maillage(geo('radar-antenne', Mo.radarAntenne), pMonde, mobile);
+    } else if (genre === 'presse') {
+      const c = double('presse-cadre', Mo.presseCadre);
+      maillage(c.solide, pMonde, corps);
+      maillage(c.halos, pHalo, corps);
+      maillage(geo('presse-tete', Mo.presseTete), pMonde, mobile);
+      corps.rotation.y = Math.PI / 2;
+    } else {
+      maillage(geo('balise-mat', Mo.baliseMat), pMonde, corps);
+      mobile.position.set(0, 2.5, 0);
+      maillage(geo('balise-tete', Mo.baliseTete), pMonde, mobile);
+    }
+    mobiles.push({ t: mobile, genre, phase: hacher(i, 5) });
+    return mobiles;
+  };
+  /** Les mécanismes bougent : pales, antennes, marteaux, gyrophares. */
+  const animerMecanismes = (temps: number) => {
+    for (const [, t] of troncons)
+      for (const m of t.mobiles) {
+        if (m.genre === 'turbine') m.t.rotation.z = temps * 4.2 + m.phase * 6;
+        else if (m.genre === 'radar') m.t.rotation.y = temps * 0.9 + m.phase * 6;
+        else if (m.genre === 'balise') m.t.rotation.y = temps * 5.5 + m.phase * 6;
+        else {
+          // La presse : elle frappe vite, reste un instant en bas, remonte lentement.
+          const ph = (temps * 0.42 + m.phase) % 1;
+          const haut = 3.55,
+            bas = 0.15;
+          m.t.position.y = ph < 0.12 ? haut + (bas - haut) * (ph / 0.12) ** 2 : ph < 0.26 ? bas : bas + (haut - bas) * ((ph - 0.26) / 0.74);
+        }
+      }
+  };
   const troncons = new Map<number, Troncon>();
   const geoTroncon = (theme: Theme, v: number) => double(`troncon-${theme}-${v}`, () => {
     const a = new Assembleur();
@@ -327,7 +453,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
         const g = geoTroncon(theme, v);
         maillage(g.solide, pMonde, racine);
         maillage(g.halos, pHalo, racine);
-        t = { theme, variante: v, racine };
+        t = { theme, variante: v, racine, mobiles: poserMecanismes(racine, i, theme) };
         troncons.set(i, t);
       }
       t.racine.setParent(scene);
@@ -478,6 +604,47 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       part.vie[i] = 0.6 + Math.random() * 0.6;
     }
   };
+
+  // (V4-H) Les débris d'un choc : des morceaux de tôle qui tournoient, rebondissent sur la piste et restent en
+  // arrière (le monde défile). Encore chauds au début (lueur orange). Une réserve de seize, réutilisée.
+  const N_DEBRIS = 16;
+  const debris = Array.from({ length: N_DEBRIS }, (_, k) => {
+    const racine = new Transform();
+    const e = { vie: 0, pos: [0, 0, 0], vit: [0, 0, 0], axe: [0, 1, 0], tour: 0 };
+    maillage(geo(`eclat-${k % 3}`, () => Mo.eclat(k % 3)), pObjet, racine, () => {
+      const u = pObjet.uniforms;
+      u.uImpact.value = Math.max(0, e.vie - 0.6) * 1.4;
+      u.uImpactCouleur.value = [1, 0.4, 0.12];
+      u.uEmission.value = 1;
+      u.uCoeur.value = [1, 1, 1];
+    });
+    racine.visible = false;
+    racine.setParent(scene);
+    return { racine, e };
+  });
+  const lancerDebris = (x: number, y: number, z: number, n: number) => {
+    for (let k = 0; k < n; k++) {
+      const d = debris.find((b) => b.e.vie <= 0) ?? debris[k % N_DEBRIS];
+      const a = Math.random() * Math.PI * 2;
+      const v = 2.5 + Math.random() * 4;
+      d.e.vie = 1.3 + Math.random() * 0.6;
+      d.e.pos = [x + (Math.random() - 0.5) * 0.6, y + Math.random() * 0.3, z];
+      d.e.vit = [Math.cos(a) * v, 2 + Math.random() * 4, Math.sin(a) * v * 0.5 + 2];
+      const ax = [Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5];
+      const l = Math.hypot(ax[0], ax[1], ax[2]) || 1;
+      d.e.axe = ax.map((c) => c / l);
+      d.e.tour = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 10);
+      d.racine.visible = true;
+      d.racine.scale.set(0.8 + Math.random() * 0.7);
+    }
+  };
+  /** Les éclairs de lumière : un choc (orange), une collecte (la couleur du fragment) ; ils éclairent alentour. */
+  const eclairs: { x: number; y: number; z: number; c: number[]; r: number; vie: number; duree: number }[] = [];
+  const eclairer = (x: number, y: number, z: number, c: number[], r: number, duree: number) => {
+    if (eclairs.length > 4) eclairs.shift();
+    eclairs.push({ x, y, z, c, r, vie: duree, duree });
+  };
+  let degats = 0;
 
   // La collecte : le fragment touché est aspiré par le noyau du vaisseau (il rétrécit en s'y précipitant),
   // puis un trait d'énergie file jusqu'à la jauge d'Overdrive. Une réserve de six, réutilisée.
@@ -971,6 +1138,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     renderer.setSize(l, h);
     toile.style.width = '100%';
     toile.style.height = '100%';
+    post?.dimensionner(gl.drawingBufferWidth, gl.drawingBufferHeight);
   };
 
   const equiper = (eq: Equipement, temps: number) => {
@@ -1006,6 +1174,63 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       if (n.s > n.course) n.s -= n.course * 2;
       n.t.position.set(n.depart[0] + n.dir[0] * n.s, n.depart[1], n.depart[2] + n.dir[2] * n.s);
     }
+  };
+
+  /** Les maillages qui projettent une ombre : la piste et ses structures, les objets, le vaisseau. */
+  const projeteurs = new Set([pMonde, pObjet, pVaisseau]);
+  const derniereImage = { ms: 0 };
+  // (En développement : ce que coûte une image côté JavaScript, et la qualité en cours ; lu par les recettes.)
+  if (import.meta.env.DEV)
+    (window as unknown as Record<string, unknown>).__rushImage = () => ({ ms: Math.round(derniereImage.ms * 10) / 10, qualite: niveau(), auto: qualite.auto, logiciel, textures: monde.uTextures.value, ombres: monde.uOmbre.value, lumieres: monde.uNbLum.value });
+  /** Les couleurs des lumières des objets (linéaires). */
+  const LUMIERE_OBJET: Record<string, [number[], number, number]> = {
+    fragment: [[0.35, 0.85, 1.6], 4.5, 1],
+    dore: [[1.6, 1.05, 0.35], 5, 1],
+    noyau: [[1.2, 0.9, 1.8], 6, 1],
+    portail: [[0.6, 1.0, 1.8], 9, 1.2],
+    laser: [[2.0, 0.25, 0.25], 7, 1],
+    bloc: [[1.6, 0.35, 0.15], 4.5, 0.9],
+    drone: [[1.8, 0.3, 0.25], 4.5, 1],
+    eclaireur: [[1.8, 0.35, 0.2], 5, 1],
+  };
+  const candidats: { x: number; y: number; z: number; c: number[]; r: number; d: number }[] = [];
+  /** Remplit les lumières ponctuelles du shader : deux réacteurs, puis les objets lumineux les plus proches. */
+  const poserLumieres = (p: Partie | null, xv: number, nombre: number, boost: number) => {
+    if (!nombre) {
+      monde.uNbLum.value = 0;
+      return;
+    }
+    candidats.length = 0;
+    const acc = uVaisseau.uAccent.value as number[];
+    const f = 1.4 + boost * 1.4;
+    for (const s of [1, -1]) candidats.push({ x: xv + 0.27 * s, y: Mo.HAUTEUR_VOL - 0.1, z: 2.0, c: acc.map((v) => v * f), r: 5.5 + boost * 2, d: -1 });
+    for (const e of eclairs) {
+      const k = e.vie / e.duree;
+      candidats.push({ x: e.x, y: e.y, z: e.z, c: e.c.map((v) => v * k * k), r: e.r, d: -2 });
+    }
+    if (p)
+      for (const [, v] of visuels) {
+        const genre = v.type.split(':')[0];
+        const l = LUMIERE_OBJET[genre];
+        if (!l) continue;
+        const z = v.racine.position.z;
+        if (z < -70 || z > 6) continue;
+        candidats.push({ x: v.racine.position.x, y: v.racine.position.y + l[2], z, c: l[0], r: l[1], d: Math.abs(z) });
+      }
+    candidats.sort((a, b) => a.d - b.d);
+    const n = Math.min(nombre, candidats.length);
+    for (let i = 0; i < n; i++) {
+      const c = candidats[i];
+      const q = plier(pli, c.x, c.y, c.z);
+      lumieres.pos[i * 4] = q[0];
+      lumieres.pos[i * 4 + 1] = q[1];
+      lumieres.pos[i * 4 + 2] = q[2];
+      lumieres.pos[i * 4 + 3] = c.r;
+      lumieres.coul[i * 3] = c.c[0];
+      lumieres.coul[i * 3 + 1] = c.c[1];
+      lumieres.coul[i * 3 + 2] = c.c[2];
+    }
+    monde.uNbLum.value = n;
   };
 
   function dessiner(p: Partie | null, vue: Vue, temps: number, dt: number) {
@@ -1064,6 +1289,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     vaisseau.choisirModele(vue.modele ?? 0);
 
     poserTroncons(distance, themePour, vue.brume ? Math.min(VUE, vue.brume * 2.2) : VUE);
+    animerMecanismes(temps);
 
     // ---- Le vaisseau ----
     const xv = p ? xVoie(p.x) : 0;
@@ -1120,6 +1346,42 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       }
       r.geom.attributes.position.needsUpdate = true;
       r.geom.attributes.couleur.needsUpdate = true;
+    }
+
+    // ---- (V4-H) Les dégâts, les débris, les éclairs ----
+    const degatsVoulus = p && p.bouclierMax > 1 ? 1 - p.boucliers / p.bouclierMax : 0;
+    degats += (degatsVoulus - degats) * borne(dt * 2.5);
+    pVaisseau.uniforms.uDegats.value = degats;
+    // Au dernier bouclier, la coque crache des étincelles.
+    if (p && !p.termine && p.bouclierMax > 1 && p.boucliers <= 1 && !vue.reduit && Math.random() < dt * 10)
+      lancerParticules(xv + (Math.random() - 0.5) * 0.9, Mo.HAUTEUR_VOL + 0.1, 0.4 + Math.random() * 0.8, [1, 0.55, 0.22], 2, 2.5);
+    for (const d of debris) {
+      const e = d.e;
+      if (e.vie <= 0) continue;
+      e.vie -= dt;
+      e.vit[1] -= 9.8 * dt;
+      e.pos[0] += e.vit[0] * dt;
+      e.pos[1] += e.vit[1] * dt;
+      e.pos[2] += (e.vit[2] + vitesse) * dt;
+      if (e.pos[1] < 0.06 && Math.abs(e.pos[0]) < 4.1) {
+        e.pos[1] = 0.06;
+        e.vit[1] = Math.abs(e.vit[1]) * 0.35;
+        e.vit[0] *= 0.7;
+        e.vit[2] *= 0.7;
+      }
+      d.racine.position.set(e.pos[0], e.pos[1], e.pos[2]);
+      d.racine.rotation.x += e.axe[0] * e.tour * dt;
+      d.racine.rotation.y += e.axe[1] * e.tour * dt;
+      d.racine.rotation.z += e.axe[2] * e.tour * dt;
+      if (e.vie <= 0 || e.pos[2] > 14) {
+        e.vie = 0;
+        d.racine.visible = false;
+      }
+    }
+    for (let i = eclairs.length - 1; i >= 0; i--) {
+      eclairs[i].vie -= dt;
+      eclairs[i].z += vitesse * dt * 0.5;
+      if (eclairs[i].vie <= 0) eclairs.splice(i, 1);
     }
 
     // ---- La caméra ----
@@ -1371,7 +1633,83 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     inverse.multiply(camera.projectionMatrix, vueSansTranslation).inverse();
     pCiel.uniforms.uInverse.value = inverse;
 
-    renderer.render({ scene, camera });
+    // ---- V4-H : qualité, textures, lumières, ombres, puis le rendu et son post-traitement ----
+    const t0Image = performance.now();
+    qualite.voulue = vue.qualite ?? 'auto';
+    const n = niveau();
+    const actifQ = !!p && !p.termine;
+    // (Développement) Couper un effet pour le comparer : window.__rushSans = { ombres, textures, halo, lumieres }.
+    const sans = (import.meta.env.DEV ? (window as unknown as { __rushSans?: Record<string, boolean> }).__rushSans : undefined) ?? {};
+    // Les textures : calculées une fois, au premier moment calme (pas pendant l'ouverture).
+    if (n !== 'economie' && textures === null && !cine) {
+      textures = 'attente';
+      window.setTimeout(() => {
+        const t = creerTextures(gl, fin ? 512 : 1024);
+        textures = t;
+        if (t) {
+          monde.tPlaques.value = t.plaques;
+          monde.tBrut.value = t.brut;
+          monde.tNormales.value = t.normales;
+        }
+      }, 60);
+    }
+    monde.uTextures.value = n !== 'economie' && !sans.textures && textures && textures !== 'attente' ? 1 : 0;
+    // Les lumières ponctuelles : les réacteurs, puis les objets lumineux les plus proches.
+    poserLumieres(p, xv, sans.lumieres ? 0 : n === 'elevee' ? 8 : n === 'equilibree' ? 4 : 0, monde.uBoost.value);
+    // Les ombres du soleil.
+    const tailleOmbres = sans.ombres ? 0 : n === 'elevee' ? 2048 : n === 'equilibree' ? 1024 : 0;
+    if (tailleOmbres && ombres.taille !== tailleOmbres) {
+      try {
+        ombres.carte = new Ombres(gl, monde, tailleOmbres);
+        ombres.taille = tailleOmbres;
+      } catch {
+        ombres.carte = null;
+        ombres.taille = -1;
+      }
+    }
+    if (tailleOmbres && ombres.carte) {
+      ombres.carte.dessiner(scene, projeteurs, monde.uSoleilDir.value as number[]);
+      monde.tOmbre.value = ombres.carte.cible.depthTexture;
+      monde.uMatOmbre.value = ombres.carte.matrice;
+      monde.uOmbre.value = 1;
+      monde.uTexelOmbre.value = 1 / ombres.carte.taille;
+      monde.uContact.value = [0, 0, 0, 0];
+    } else {
+      monde.uOmbre.value = 0;
+      monde.tOmbre.value = vide;
+      const pc = plier(pli, xv, 0, 0);
+      monde.uContact.value = [pc[0], pc[2], 1.25, p ? 0.55 : 0.4];
+    }
+    const avecPost = !!post && n !== 'economie';
+    monde.uHdr.value = avecPost && post!.hdr ? 1 : 0;
+    if (post && avecPost) {
+      renderer.render({ scene, camera, target: post.cible as never });
+      const reduit = vue.reduit;
+      const fuite = projeter(cam.x * 0.6 + xv * 0.25, 1.0, -60, 1, 1);
+      post.composer({
+        halo: sans.halo ? 0 : (n === 'elevee' ? 0.95 : 0.8) + monde.uBoost.value * 0.35 + exposition.eclat * 0.3,
+        flou: reduit || n !== 'elevee' ? 0 : borne((vitesse - 38) / 70) * 0.03 + monde.uBoost.value * 0.025,
+        aberration: reduit ? 0 : monde.uBoost.value * 0.004 + alerte * 0.01,
+        vignette: 0.34,
+        grain: n === 'elevee' ? 0.035 : 0.025,
+        temps,
+        centre: [borne(fuite.x, 0.2, 0.8), borne(1 - fuite.y, 0.2, 0.8)],
+      });
+    } else renderer.render({ scene, camera });
+    // La qualité automatique : mesurée pendant la course seulement.
+    if (actifQ && qualite.voulue === 'auto') {
+      const maintenant = performance.now();
+      // (Un intervalle de plus de 250 ms n'est pas une image lente : l'onglet était caché, ou une pause.)
+      if (qualite.derniere && maintenant - qualite.derniere < 250) qualite.mesures.push(maintenant - qualite.derniere);
+      qualite.derniere = maintenant;
+      if (qualite.mesures.length >= 180) {
+        const moyenne = qualite.mesures.reduce((a, b) => a + b, 0) / qualite.mesures.length;
+        qualite.mesures.length = 0;
+        const i = NIVEAUX.indexOf(qualite.auto);
+        if (moyenne > 21 && i < NIVEAUX.length - 1) qualite.auto = NIVEAUX[i + 1];
+      }
+    } else qualite.derniere = 0;
+    derniereImage.ms = performance.now() - t0Image;
 
     // ---- Par-dessus : les gains, l'alerte, le vignettage ----
     ctx.clearRect(0, 0, vue.l, vue.h);
@@ -1510,6 +1848,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     pCiel.uniforms.uInverse.value = inverse;
     const lp = Math.min(l, toile.width),
       hp = Math.min(h, toile.height);
+    // (Ni la carte d'ombres ni les lumières de la course ne valent pour cette vue ; elle va droit à l'écran.)
+    monde.uHdr.value = 0;
+    monde.uOmbre.value = 0;
+    monde.uNbLum.value = 0;
+    monde.uContact.value = [0, 0, 0, 0];
     renderer.render({ scene, camera, target: { buffer: null, width: lp, height: hp, depth: true } as never });
     sortieApercu.width = lp;
     sortieApercu.height = hp;
@@ -1564,6 +1907,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     inverse.multiply(cameraGarage.projectionMatrix, vueSansTranslation).inverse();
     pCiel.uniforms.uInverse.value = inverse;
     poserPli(pliDroit);
+    // (Ni la carte d'ombres ni les lumières de la course ne valent pour cette vue ; elle va droit à l'écran.)
+    monde.uHdr.value = 0;
+    monde.uOmbre.value = 0;
+    monde.uNbLum.value = 0;
+    monde.uContact.value = [0, 0, 0, 0];
     renderer.render({ scene: sceneGarage, camera: cameraGarage, target: { buffer: null, width: lp, height: hp, depth: true } as never });
     poserPli(pli);
     cible.clearRect(0, 0, l, h);
@@ -1573,6 +1921,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   return {
     troisD: true,
     eclater: (voie, couleur, nombre = 12) => lancerParticules(xVoie(voie), Mo.HAUTEUR_VOL, -0.6, rgb(couleur), nombre),
+    debris: (voie) => {
+      const x = xVoie(voie);
+      if (!reduitCourant) lancerDebris(x, Mo.HAUTEUR_VOL, -0.9, 6);
+      eclairer(x, Mo.HAUTEUR_VOL + 0.4, -1.2, [3.2, 1.2, 0.35], 9, 0.45);
+    },
     flotter: (voie, texte, couleur = '236, 244, 255') => textes.push({ texte, x: xVoie(voie), y: 1.9, z: -0.8, vie: 1, couleur, dy: 0 }),
     anneau: (voie, couleur = '170, 225, 255') => {
       const o = ondes.find((x) => x.e.vie <= 0) ?? ondes[0];
@@ -1609,6 +1962,8 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       cap.racine.visible = true;
       cap.racine.position.set(x, 1.0, -0.9);
       cap.racine.scale.set(1);
+      // Un éclair de la couleur du fragment, qui éclaire la piste et la coque un instant.
+      eclairer(x, 1.0, -0.9, lin(c).map((v) => v * 2.6), 6, 0.35);
       // L'onde de collecte.
       const o = ondes.find((k) => k.e.vie <= 0) ?? ondes[0];
       o.e.vie = 1;

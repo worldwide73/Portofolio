@@ -679,10 +679,10 @@ export function rochers(graine: number): Assembleur {
     a.pousser().deplacer(x, y, z).tourner(r(k) * 3, r(k + 4) * 3, r(k + 8) * 3);
     a.sphere(
       taille,
-      1,
+      2,
       M.roche,
       (v) => 0.78 + 0.32 * Math.abs(Math.sin(v[0] * 4.1 + graine) * Math.cos(v[1] * 3.3 + k) * Math.sin(v[2] * 5.2)),
-      true,
+      false,
       (v) => (Math.sin(v[0] * 9 + v[1] * 7 + graine * 3) > 0.82 ? M.braise : v[1] > 0.2 ? M.roche : M.rocheSombre),
     );
     a.retirer();
@@ -880,6 +880,23 @@ export function bulle(): Assembleur {
 export function onde(): Assembleur {
   return new Assembleur().tore(1, 0.05, 48, 6, M.blanc);
 }
+/** (V4-H) Un débris arraché au vaisseau ou à l'obstacle lors d'un choc : tôle pliée, coin d'aile, boîtier. */
+export function eclat(k: number): Assembleur {
+  const a = new Assembleur();
+  if (k === 0) {
+    a.prisme([[-0.17, -0.09], [0.14, -0.12], [0.2, 0.05], [-0.03, 0.13], [-0.19, 0.03]], -0.012, 0.012, M.coque);
+    a.boite(0.02, -0.02, 0.014, 0.24, 0.016, 0.006, M.accentDoux);
+    a.pousser().deplacer(0.17, 0.0, 0).tourner(0, 0.6).prisme([[0, -0.08], [0.09, -0.05], [0.09, 0.05], [0, 0.08]], -0.01, 0.01, M.alliage).retirer();
+  } else if (k === 1) {
+    a.prisme([[-0.12, -0.05], [0.14, -0.05], [0.02, 0.1]], -0.07, 0.07, M.metalMoyen);
+    a.boite(0, -0.05, 0, 0.2, 0.012, 0.12, M.carbone);
+  } else {
+    a.boite(0, 0, 0, 0.13, 0.06, 0.2, M.alliage, 0.012);
+    a.boite(0, 0.035, 0, 0.09, 0.012, 0.14, M.carbone);
+    a.boite(0.07, 0, 0.05, 0.012, 0.03, 0.05, M.braise);
+  }
+  return a;
+}
 
 // ==========================================================================
 // LES BOSS
@@ -933,4 +950,131 @@ export function noyauBoss(): Assembleur {
 }
 export function sphereNoire(): Assembleur {
   return new Assembleur().sphere(1, 3, mat('#05060a', 1, 0.08));
+}
+
+// ==========================================================================
+// (V4-H) LES MÉCANISMES DU BORD DE PISTE : des structures qui bougent pour de vrai (une partie fixe, une
+// partie mobile dessinée à part et animée par la scène). Hors des voies : elles ne gênent jamais le jeu.
+// ==========================================================================
+/** Une turbine de soufflerie : un carénage circulaire sur un pylône ; le rotor (6 pales) tourne. Axe : z. */
+export function turbineCadre(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  // Le pylône, ses jambes de force et son socle.
+  a.boite(0, -1.6, 0, 1.1, 3.6, 1.1, M.metalSombre, 0.12);
+  a.boite(0, -3.4, 0, 2.2, 0.4, 2.2, M.metalMoyen, 0.1);
+  for (const s of [-1, 1]) a.poutre([s * 1.0, -3.2, 0], [s * 0.4, 0.6, 0], 0.16, M.acier);
+  // Le carénage : une couronne épaisse, des nervures, un anneau lumineux.
+  a.pousser().deplacer(0, 2.6, 0);
+  a.tore(2.35, 0.34, 48, 10, M.metalMoyen);
+  a.tore(2.0, 0.06, 48, 6, M.accentDoux);
+  for (let i = 0; i < 12; i++) {
+    const t = (i / 12) * Math.PI * 2;
+    a.pousser().tourner(0, 0, t).deplacer(2.36, 0, 0).boite(0, 0, 0, 0.5, 0.22, 0.95, M.metalSombre, 0.05).retirer();
+  }
+  // Le moyeu fixe (les bras qui tiennent le rotor) et la grille arrière.
+  for (let i = 0; i < 3; i++) a.pousser().tourner(0, 0, (i / 3) * Math.PI * 2 + 0.5).boite(1.1, 0, -0.45, 2.1, 0.12, 0.12, M.acier).retirer();
+  a.pousser().tourner(Math.PI / 2).cylindre(0.42, 0.5, -0.6, -0.2, 16, M.metalSombre).retirer();
+  a.retirer();
+  for (const s of [-1, 1]) h.ajouter(s * 2.35, 2.6, 0.4, 0.5, [1, 0.35, 0.25], 0.5);
+  return { solide: a, halos: h };
+}
+export function turbineRotor(): Assembleur {
+  const a = new Assembleur();
+  for (let i = 0; i < 6; i++) {
+    a.pousser().tourner(0, 0, (i / 6) * Math.PI * 2).tourner(0.38);
+    a.prisme([[0.35, -0.16], [1.95, -0.1], [2.0, 0.1], [0.35, 0.2]], -0.035, 0.035, M.alliage);
+    a.retirer();
+  }
+  a.pousser().tourner(Math.PI / 2).cylindre(0.38, 0.12, -0.2, 0.45, 16, M.coqueSombre).cylindre(0.4, 0.4, -0.22, -0.18, 16, M.accent2).retirer();
+  return a;
+}
+/** Un radar sur sa tour : la tour est fixe, l'antenne (une parabole en treillis) tourne. */
+export function radarTour(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.cylindre(0.6, 0.85, -3.5, 3.2, 10, M.metalSombre, true, false);
+  for (let y = -2.5; y < 3; y += 1.3) a.cylindre(0.9, 0.9, y, y + 0.12, 10, M.metalMoyen, true, false);
+  a.cylindre(1.1, 0.9, 3.2, 3.6, 12, M.metalMoyen);
+  a.boite(0, 3.75, 0, 0.5, 0.3, 0.5, M.acier);
+  a.boite(0.6, 1.5, 0, 0.02, 0.5, 0.6, M.fenetre);
+  h.ajouter(0, 3.9, 0, 0.6, [1, 0.3, 0.25], 0.6);
+  return { solide: a, halos: h };
+}
+export function radarAntenne(): Assembleur {
+  const a = new Assembleur();
+  // La parabole : des anneaux de rayon croissant, reculés, et des rayons.
+  a.pousser().deplacer(0, 1.3, 0).tourner(-0.35);
+  for (let k = 1; k <= 5; k++) {
+    const r = k * 0.42;
+    a.pousser().deplacer(0, 0, -r * r * 0.12).tore(r, 0.035, 32, 4, M.alliage).retirer();
+  }
+  for (let i = 0; i < 8; i++) a.pousser().tourner(0, 0, (i / 8) * Math.PI * 2).poutre([0, 0, 0], [2.1, 0, -0.53], 0.05, M.acier).retirer();
+  a.pousser().tourner(Math.PI / 2).cylindre(0.08, 0.04, 0, 1.2, 8, M.acier).retirer();
+  a.boite(0, 0, 1.2, 0.18, 0.18, 0.18, M.accent);
+  a.retirer();
+  a.boite(0, 0.6, 0, 0.3, 1.2, 0.3, M.metalMoyen, 0.04);
+  return a;
+}
+/** Une presse industrielle : un portique fixe ; la tête (un marteau) monte et descend. */
+export function presseCadre(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  for (const s of [-1, 1]) {
+    a.boite(s * 1.5, 1.6, 0, 0.5, 6.2, 0.7, M.metalSombre, 0.08);
+    a.boite(s * 1.5, 1.6, 0.36, 0.08, 5.6, 0.02, M.jaune);
+    a.boite(s * 1.5, -1.5, 0, 0.9, 0.3, 1.1, M.metalMoyen);
+  }
+  a.boite(0, 4.9, 0, 3.8, 0.7, 0.9, M.metalMoyen, 0.1);
+  a.boite(0, 5.35, 0, 1.2, 0.3, 0.6, M.acier);
+  // L'enclume, en bas.
+  a.boite(0, -1.0, 0, 2.2, 0.8, 1.2, M.acier, 0.08);
+  for (let i = -3; i <= 3; i++) a.boite(i * 0.3, -0.58, 0.61, 0.15, 0.04, 0.01, i % 2 ? M.jaune : M.noir);
+  h.ajouter(0, 4.45, 0.5, 0.7, [1, 0.6, 0.25], 0.5);
+  return { solide: a, halos: h };
+}
+export function presseTete(): Assembleur {
+  const a = new Assembleur();
+  a.boite(0, 0, 0, 2.0, 1.0, 1.0, M.metalSombre, 0.1);
+  a.boite(0, -0.55, 0, 2.1, 0.12, 1.1, M.acier);
+  a.boite(0, 0.9, 0, 0.45, 1.6, 0.45, M.alliage); // la tige du vérin
+  for (const s of [-1, 1]) a.boite(s * 0.98, 0, 0, 0.06, 0.6, 0.8, M.accent2);
+  return a;
+}
+/** Une balise : un mât, et une tête lumineuse qui tourne (deux faces émissives). */
+export function baliseMat(): Assembleur {
+  const a = new Assembleur();
+  a.boite(0, 0.8, 0, 0.22, 3.2, 0.22, M.metalSombre, 0.04);
+  a.boite(0, -0.8, 0, 0.6, 0.2, 0.6, M.metalMoyen);
+  a.cylindre(0.24, 0.24, 2.4, 2.5, 10, M.acier);
+  return a;
+}
+export function baliseTete(): Assembleur {
+  const a = new Assembleur();
+  a.cylindre(0.2, 0.2, 0, 0.42, 12, M.verrerie);
+  a.boite(0, 0.21, 0.13, 0.3, 0.28, 0.05, M.danger);
+  a.boite(0, 0.21, -0.13, 0.3, 0.28, 0.05, M.dangerDoux);
+  a.cylindre(0.23, 0.23, 0.42, 0.48, 12, M.acier);
+  return a;
+}
+/** La plateforme qui porte un mécanisme, et la passerelle qui la relie au bord de la piste (vers −x). */
+export function plateformeMeca(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.boite(0, -0.75, 0, 4.4, 0.5, 4.4, M.metalMoyen, 0.12);
+  a.boite(0, -0.49, 0, 4.0, 0.02, 4.0, M.plaque);
+  a.boite(0, -1.2, 0, 3.0, 0.5, 3.0, M.metalSombre, 0.1);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    a.boite(sx * 2.1, -0.46, sz * 2.1, 0.12, 0.05, 0.12, M.eclatBlanc);
+    h.ajouter(sx * 2.1, -0.38, sz * 2.1, 0.35, [1, 0.8, 0.5], 0.4);
+  }
+  // La passerelle : tablier, garde-corps, câbles lumineux.
+  a.boite(-4.4, -0.62, 0, 4.4, 0.16, 1.0, M.metalMoyen, 0.03);
+  for (let x = -6.4; x <= -2.4; x += 0.5) a.boite(x, -0.53, 0, 0.04, 0.012, 0.9, M.joint);
+  for (const sz of [-0.48, 0.48]) {
+    a.boite(-4.4, -0.1, sz, 4.4, 0.04, 0.04, M.acier);
+    for (let x = -6.4; x <= -2.4; x += 1) a.boite(x, -0.33, sz, 0.04, 0.5, 0.04, M.acier);
+    a.boite(-4.4, -0.55, sz, 4.4, 0.02, 0.02, M.accentDoux);
+  }
+  return { solide: a, halos: h };
 }

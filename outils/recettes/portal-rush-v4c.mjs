@@ -65,8 +65,19 @@ const lancerDepuisHub = async (p) => {
     window.__voyage = [];
     // (La toile des fissures ne vit que la demi-seconde de la charge : on note son apparition au moment même.)
     window.__fissures = false;
+    window.__brise = false;
+    window.__passerAuDebut = null;
     const b = document.querySelector('#hub [data-onglet="rush"]');
     new MutationObserver(() => b.querySelector('canvas.fissures-entree') && (window.__fissures = true)).observe(b, { childList: true });
+    new MutationObserver(() => b.classList.contains('est-brise') && (window.__brise = true)).observe(b, { attributes: true, attributeFilter: ['class'] });
+    // (L'état de « Passer » au moment même où la couche du voyage apparaît.)
+    new MutationObserver((ms, o) => {
+      const v = document.querySelector('.voyage-temporel');
+      if (v && window.__passerAuDebut === null) {
+        window.__passerAuDebut = v.querySelector('.voyage-temporel__passer').hidden;
+        o.disconnect();
+      }
+    }).observe(document.body, { childList: true });
   });
   await p.click('#hub [data-onglet="rush"]');
 };
@@ -136,7 +147,7 @@ try {
         simple: v?.classList.contains('est-simple'),
         hub: document.querySelector('#hub').matches(':popover-open'),
         jeu: document.querySelector('.rush').open,
-        passerCache: v?.querySelector('.voyage-temporel__passer').hidden,
+        passerCache: window.__passerAuDebut,
       };
     });
     await p.screenshot({ path: `${DOSSIER}/v4c-1-fissure.png` });
@@ -150,14 +161,14 @@ try {
     assert.equal(e.passerCache, true, '« Passer » doit attendre une seconde au premier lancement');
   });
   await controle('Entrée : le bouton se brise (éclats 3D), puis le tunnel temporel ; « Passer » paraît ensuite', async () => {
-    await p.waitForFunction(() => document.querySelector('.voyage-temporel')?.classList.contains('est-ouvert'), null, { timeout: 10000 });
-    await p.waitForTimeout(150);
+    await p.waitForFunction(() => window.__brise || document.querySelector('.voyage-temporel')?.classList.contains('est-ouvert'), null, { timeout: 10000 });
     await p.screenshot({ path: `${DOSSIER}/v4c-2-eclats.png` });
-    const brise = await p.evaluate(() => document.querySelector('#hub [data-onglet="rush"]').classList.contains('est-brise'));
+    const brise = await p.evaluate(() => window.__brise);
     assert.ok(brise, 'le bouton n\'est pas brisé');
-    await p.waitForFunction(() => document.querySelector('.voyage-temporel')?.classList.contains('est-voyage'), null, { timeout: 10000 });
     // (« Passer » paraît une seconde après le début, pendant le tunnel.)
-    await p.waitForFunction(() => document.querySelector('.voyage-temporel__passer')?.hidden === false, null, { timeout: 4000 });
+    await p.waitForFunction(() => document.querySelector('.voyage-temporel__passer')?.hidden === false || window.__voyage.some(([m]) => m === 'tunnel'), null, { timeout: 10000 });
+    const vu = await p.evaluate(() => document.querySelector('.voyage-temporel__passer')?.hidden);
+    assert.notEqual(vu, true, '« Passer » toujours caché pendant le tunnel');
     await p.waitForTimeout(600);
     await p.screenshot({ path: `${DOSSIER}/v4c-3-tunnel.png` });
   });

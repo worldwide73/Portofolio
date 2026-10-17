@@ -53,6 +53,8 @@ export interface Reglages {
   piste: string;
   /** La séquence de fin de secteur : complète, ou courte (pour enchaîner). */
   sequenceFin: 'complete' | 'courte';
+  /** (V4-H) La qualité graphique de la 3D : automatique (elle descend seule si les images ralentissent) ou fixée. */
+  qualite: 'auto' | 'elevee' | 'equilibree' | 'economie';
 }
 /** Le tutoriel : jamais vu, commencé (la phase atteinte), terminé ou passé. Il ne se relance seul qu'à l'état « nouveau ». */
 export interface Tutoriel {
@@ -111,7 +113,7 @@ function vide(): Sauvegarde {
     equipement: { ...EQUIPEMENT_DEPART },
     vehicules: VEHICULES.filter((v) => v.condition.type === 'depart').map((v) => v.id),
     vehicule: VEHICULE_DEPART,
-    reglages: { volume: 1, effetsReduits: false, secousses: true, aideCommandes: true, tactile: 'toucher', musique: true, volumeMusique: 0.6, muet: false, piste: '', sequenceFin: 'complete' },
+    reglages: { volume: 1, effetsReduits: false, secousses: true, aideCommandes: true, tactile: 'toucher', musique: true, volumeMusique: 0.6, muet: false, piste: '', sequenceFin: 'complete', qualite: 'auto' },
     origine: 0,
   };
 }
@@ -248,6 +250,7 @@ function normaliser(lu: Sauvegarde): Sauvegarde {
   for (const cle of ['effetsReduits', 'secousses', 'aideCommandes', 'musique', 'muet'] as const) if (typeof r[cle] === 'boolean') s.reglages[cle] = r[cle];
   if (r.tactile === 'glisser') s.reglages.tactile = r.tactile;
   if (r.sequenceFin === 'courte') s.reglages.sequenceFin = 'courte';
+  if (['elevee', 'equilibree', 'economie'].includes(r.qualite)) s.reglages.qualite = r.qualite;
   if (typeof r.piste === 'string' && r.piste.length < 40) s.reglages.piste = r.piste;
   const d = objet(lu.derniere);
   if (['campagne', 'infini', 'defi'].includes(d.mode) && difficulte(d.difficulte)) s.derniere = { mode: d.mode, difficulte: d.difficulte, niveau: Math.max(1, Math.floor(nombre(d.niveau, 1, NIVEAUX.length))) };

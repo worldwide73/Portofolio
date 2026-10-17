@@ -20,7 +20,7 @@ const L = TRONCON;
 /** Un rocher (astéroïde, fragment) à facettes : roche claire au soleil, sombre dessous, parfois glacée. */
 function rocher(a: Assembleur, x: number, y: number, z: number, r: number, graine: number, q: Matiere = M.roche, q2: Matiere = M.rocheSombre) {
   a.pousser().deplacer(x, y, z).tourner(graine * 2.1, graine * 3.7, graine * 1.3);
-  a.sphere(r, r > 3 ? 2 : 1, q, (v) => 0.72 + 0.4 * Math.abs(Math.sin(v[0] * 3.1 + graine * 5) * Math.cos(v[1] * 2.7 + graine) * Math.sin(v[2] * 3.9 + graine * 2)), true, (v) => (v[1] > -0.1 ? q : q2));
+  a.sphere(r, r > 3 ? 3 : 2, q, (v) => 0.72 + 0.4 * Math.abs(Math.sin(v[0] * 3.1 + graine * 5) * Math.cos(v[1] * 2.7 + graine) * Math.sin(v[2] * 3.9 + graine * 2)), false, (v) => (v[1] > -0.1 ? q : q2));
   a.retirer();
 }
 

@@ -288,6 +288,9 @@ export interface Contenu {
       sequenceFin: string;
       sequenceFinTexte: string;
       sequenceChoix: { complete: string; courte: string };
+      qualite: string;
+      qualiteTexte: string;
+      qualiteChoix: { auto: string; elevee: string; equilibree: string; economie: string };
       sons: string;
       sonsTexte: string;
       animations: string;
