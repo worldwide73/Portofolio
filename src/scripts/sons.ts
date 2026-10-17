@@ -559,6 +559,113 @@ export function moteurRush(etat: { actif: boolean; vitesse: number; overdrive: b
 /** Coupe le moteur tout de suite (sortie du jeu, pause). */
 export const arreterMoteurRush = () => moteurRush({ actif: false, vitesse: 0, overdrive: false });
 
+/**
+ * LE VOYAGE TEMPOREL (entrée dans Portal Rush, V4) : un seul son, écrit d'avance sur toute la séquence et calé
+ * sur l'image (rush/tunnel.ts) : l'impulsion et les craquements pendant que le bouton se fissure ; le bris de verre
+ * (un vrai enregistrement, Kenney CC0, mêlé à des éclats synthétisés) ; l'aspiration ; l'accélération (une montée
+ * grave et un souffle qui s'ouvre) ; la traversée (des passages réguliers, comme des anneaux qui défilent) ; la
+ * décélération ; l'arrivée (un accord clair et un coup sourd). Renvoie de quoi l'arrêter en fondu (voyage passé).
+ */
+export function sonVoyageTemporel(charge: number, bris: number, duree: number): { arreter: (arrivee?: boolean) => void } | null {
+  const total = charge + bris + duree + 1.2;
+  const p = piste(total);
+  if (!p) return null;
+  const { c, g, t } = p;
+  g.gain.setValueAtTime(volumeRush, t);
+  const tb = t + charge; // le bris
+  const tv = tb + bris; // le début du voyage
+  const ta = tv + duree; // l'arrivée
+  const vol = (debut: number, monte: number, max: number, fin: number) => {
+    const v = c.createGain();
+    v.connect(g);
+    v.gain.setValueAtTime(0.0001, debut);
+    v.gain.exponentialRampToValueAtTime(max, debut + monte);
+    v.gain.exponentialRampToValueAtTime(0.0001, fin);
+    return v;
+  };
+  // 1. L'impulsion (un coup grave) et les craquements qui se rapprochent.
+  const imp = oscillateur(c, 'sine', vol(t, 0.01, 0.4, t + 0.5), t, t + 0.55);
+  imp.frequency.setValueAtTime(120, t);
+  imp.frequency.exponentialRampToValueAtTime(38, t + 0.45);
+  for (let i = 0; i < 14; i++) {
+    const q = t + 0.05 + (1 - (1 - i / 14) ** 2) * (charge - 0.05);
+    const v = vol(q, 0.003, 0.18, q + 0.03);
+    const { filtre } = souffle(c, v, q, q + 0.04);
+    filtre.frequency.value = 3500 + Math.random() * 4000;
+    filtre.Q.value = 5;
+  }
+  // 2. Le bris de verre : l'enregistrement, et une pluie d'éclats aigus.
+  const verre = tamponPret('/audio/effets/bris.mp3');
+  if (verre) {
+    const src = c.createBufferSource();
+    src.buffer = verre;
+    src.playbackRate.value = 1.25;
+    const v = c.createGain();
+    v.gain.value = 0.55;
+    src.connect(v).connect(g);
+    src.start(tb);
+  }
+  [2637, 3520, 4186, 3136, 4699].forEach((f, i) => note(c, g, f, tb + 0.01 + i * 0.025, 0.35, 0.03, 'triangle'));
+  const coup = oscillateur(c, 'sine', vol(tb, 0.005, 0.45, tb + 0.6), tb, tb + 0.65);
+  coup.frequency.setValueAtTime(140, tb);
+  coup.frequency.exponentialRampToValueAtTime(34, tb + 0.5);
+  // 3. L'aspiration : un souffle qui se resserre vers l'aigu.
+  const asp = souffle(c, vol(tb, bris * 0.8, 0.3, tv + 0.3), tb, tv + 0.35);
+  asp.filtre.Q.value = 3;
+  asp.filtre.frequency.setValueAtTime(300, tb);
+  asp.filtre.frequency.exponentialRampToValueAtTime(6000, tv);
+  // 4. L'accélération puis la décélération : une nappe grave désaccordée qui monte puis redescend, et un souffle large.
+  const pic = tv + duree * 0.6;
+  const nappe = c.createBiquadFilter();
+  nappe.type = 'lowpass';
+  nappe.connect(vol(tv, duree * 0.3, 0.16, ta + 0.4));
+  nappe.frequency.setValueAtTime(400, tv);
+  nappe.frequency.exponentialRampToValueAtTime(3400, pic);
+  nappe.frequency.exponentialRampToValueAtTime(600, ta);
+  [1, 1.006, 1.5].forEach((r) => {
+    const o = oscillateur(c, 'sawtooth', nappe, tv, ta + 0.45);
+    o.frequency.setValueAtTime(55 * r, tv);
+    o.frequency.exponentialRampToValueAtTime(165 * r, pic);
+    o.frequency.exponentialRampToValueAtTime(82 * r, ta);
+  });
+  const vent = souffle(c, vol(tv, duree * 0.5, 0.34, ta + 0.3), tv, ta + 0.35);
+  vent.filtre.Q.value = 0.7;
+  vent.filtre.frequency.setValueAtTime(500, tv);
+  vent.filtre.frequency.exponentialRampToValueAtTime(5200, pic);
+  vent.filtre.frequency.exponentialRampToValueAtTime(900, ta);
+  // 5. La traversée : des passages réguliers (les anneaux), de plus en plus rapprochés, puis espacés.
+  let q = tv + 0.3;
+  while (q < ta - 0.2) {
+    const k = (q - tv) / duree;
+    const rythme = k < 0.6 ? 0.42 - 0.3 * (k / 0.6) : 0.12 + 0.3 * ((k - 0.6) / 0.4);
+    const v = vol(q, 0.02, 0.09, q + 0.16);
+    const { filtre } = souffle(c, v, q, q + 0.18);
+    filtre.Q.value = 2.5;
+    filtre.frequency.setValueAtTime(1800 + 2400 * Math.min(1, k * 1.5), q);
+    filtre.frequency.exponentialRampToValueAtTime(700, q + 0.16);
+    q += rythme;
+  }
+  // 6. L'arrivée : un accord clair et un coup sourd ; le moteur du vaisseau prend le relais (moteurRush).
+  [523.25, 783.99, 1046.5, 1567.98].forEach((f, i) => note(c, g, f, ta - 0.05 + i * 0.03, 1.1, 0.05));
+  const fin = oscillateur(c, 'sine', vol(ta, 0.01, 0.4, ta + 0.7), ta, ta + 0.75);
+  fin.frequency.setValueAtTime(90, ta);
+  fin.frequency.exponentialRampToValueAtTime(40, ta + 0.6);
+  return {
+    arreter: (arrivee = true) => {
+      const n = c.currentTime;
+      g.gain.cancelScheduledValues(n);
+      g.gain.setValueAtTime(g.gain.value, n);
+      g.gain.linearRampToValueAtTime(0, n + 0.25);
+      if (arrivee) {
+        // (Passé : on garde seulement un court accord d'arrivée.)
+        const p2 = piste(1);
+        if (p2) [523.25, 1046.5].forEach((f, i) => note(p2.c, p2.g, f, p2.t + 0.05 + i * 0.03, 0.7, 0.04 * volumeRush));
+        if (p2) p2.g.gain.setValueAtTime(1, p2.t);
+      }
+    },
+  };
+}
+
 /** L'éveil du portail, pendant l'introduction : une nappe grave qui s'ouvre lentement. */
 export function sonEveil(): void {
   const p = piste(2.5);

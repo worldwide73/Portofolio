@@ -176,6 +176,12 @@ export class Partie {
   invincible = 0;
   /** Vrai pendant qu'une étape du tutoriel retient le vaisseau (il ne change pas de voie). */
   figee = false;
+  /**
+   * Le tutoriel (V4) pilote la partie lui-même : le générateur se tait, les objets sont posés par le tutoriel
+   * (« placer »), la vitesse est imposée (« vitesseImposee »), un choc ne coûte rien et la partie ne finit jamais seule.
+   */
+  scriptee = false;
+  vitesseImposee: number | null = null;
   /** L'ouverture de la jauge d'Overdrive a été annoncée. */
   private odAnnonce = false;
   score = 0;
@@ -371,7 +377,7 @@ export class Partie {
     if (this.termine) return;
     this.temps += dt;
     // (L'Overdrive n'accélère pas le vaisseau : la justice des écarts tient toujours.)
-    this.vitesse = this.vitesseA(this.distance);
+    this.vitesse = this.vitesseImposee ?? this.vitesseA(this.distance);
     const pas = this.vitesse * dt;
     this.distance += pas;
     const glisse = dt / this.deplacement;
@@ -421,7 +427,20 @@ export class Partie {
     }
     this.objets = this.objets.filter((o) => o.pos + (o.longueur ?? 0) - this.distance > -16);
 
+    if (this.scriptee) return;
     if (this.boss ? this.boss.vie <= 0 : this.distance >= this.longueur) this.finir(true);
+  }
+
+  /** Le tutoriel pose un objet à « devant » mètres du vaisseau (ses voies finales, ses états d'approche). */
+  placer(type: TypeObjet, devant: number, voies: number[], options: { avant?: { des: number; voies: number[] }[]; fige?: number } = {}): Objet {
+    const o = this.objet(type, this.distance + devant, voies, estObstacle(type) ? 0 : undefined);
+    if (options.avant) o.avant = options.avant;
+    if (options.fige !== undefined) o.fige = options.fige;
+    return o;
+  }
+  /** Retire tout ce qui est encore devant le vaisseau (une phase du tutoriel recommence). */
+  vider(): void {
+    this.objets = this.objets.filter((o) => o.pos < this.distance - 1);
   }
 
   /** Les voies bloquées par un obstacle quand il est à « z » mètres du vaisseau. */
@@ -487,6 +506,12 @@ export class Partie {
       return;
     }
     if (this.invincible > 0) return;
+    if (this.scriptee) {
+      this.chocs++;
+      this.invincible = 0.6;
+      this.evenements.push({ type: 'choc', valeur: this.boucliers });
+      return;
+    }
     this.boucliers--;
     this.chocs++;
     this.combo = 0;
@@ -641,6 +666,7 @@ export class Partie {
 
   /** Pose des motifs jusqu'à une position du parcours (sert aussi aux vérifications). */
   genererJusqua(limite: number): void {
+    if (this.scriptee) return;
     while (this.derniere < limite) {
       // Plus rien dans les derniers mètres : on arrive au portail.
       if (this.derniere > this.longueur - 90) {
