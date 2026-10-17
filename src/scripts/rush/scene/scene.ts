@@ -28,6 +28,7 @@ import { creerPli, majPli, plier, type Pli } from './parcours';
 import { Ombres } from './ombres';
 import { Post } from './post';
 import { creerTextures } from './textures';
+import { chargerModeles, FICHIERS_VAISSEAUX, geometrieImportee, type MaillageImporte } from './assets';
 
 export interface RenduJeu {
   troisD: boolean;
@@ -477,6 +478,29 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   // ==========================================================================
   // LE VAISSEAU
   // ==========================================================================
+  // (V4-H7) Les vaisseaux modélisés dans Blender (public/rush/modeles/*.prm) : chargés à la demande, partagés par
+  // le jeu et le garage. En attendant (ou si le chargement échoue), la silhouette procédurale d'origine.
+  const importes: (MaillageImporte | null)[] = [null, null, null, null];
+  const geosImportees: (Geometry | null)[] = [null, null, null, null];
+  const abonnes: ((m: number) => void)[] = [];
+  const demander = (m: number) => {
+    const f = FICHIERS_VAISSEAUX[m];
+    if (!f || importes[m]) return;
+    chargerModeles(f)
+      .then((ms) => {
+        if (importes[m] || !ms[0]) return;
+        importes[m] = ms[0];
+        geosImportees[m] = geometrieImportee(gl, ms[0]);
+        abonnes.forEach((a) => a(m));
+      })
+      .catch(() => undefined);
+  };
+  /** Les tuyères de la silhouette procédurale : [x, y, z (arrière), rayon]. */
+  const TUYERES_PROC = [
+    [0.27, -0.04, 1.47, 0.12],
+    [-0.27, -0.04, 1.47, 0.12],
+  ];
+  const MAX_FLAMMES = 4;
   const creerVaisseau = (parent: Transform) => {
     const racine = new Transform();
     racine.setParent(parent);
@@ -485,31 +509,65 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     // (V4) Les quatre silhouettes : une seule est attachée à la fois (« modele »), les autres attendent.
     const silhouettes: (Mesh | null)[] = [0, 1, 2, 3].map((m) => {
       const ms = maillage(geo(`vaisseau-${m}`, () => Mo.vaisseau(m)), pVaisseau, corps);
-      if (m > 0) ms?.setParent(null);
+      ms?.setParent(null);
       return ms;
     });
-    let modele = 0;
-    const choisirModele = (m: number) => {
-      if (m === modele || !silhouettes[m]) return;
-      silhouettes[modele]?.setParent(null);
-      silhouettes[m]!.setParent(corps);
-      modele = m;
-    };
+    let modele = -1;
     const emetteurs = Mo.EMETTEURS.map((p) => {
       const m = maillage(geo('emetteur', Mo.emetteur), pVaisseau, corps)!;
       m.position.set(...p);
       return m;
     });
-    const flammes = [1, -1].map((s) => {
+    const flammes = Array.from({ length: MAX_FLAMMES }, () => {
       const f = { force: 1, couleur: [1, 1, 1] };
       const m = maillage(geo('flamme', Mo.flamme), pFlamme, corps, () => {
         pFlamme.uniforms.uCouleur.value = f.couleur;
         pFlamme.uniforms.uForce.value = f.force;
         pFlamme.uniforms.uLongueur.value = 1;
       })!;
-      m.position.set(0.27 * s, -0.04, 1.47);
-      return { m, f };
+      return { m, f, base: 1 };
     });
+    const ancres = { tuyeres: TUYERES_PROC };
+    /** Place les flammes et les émetteurs sur les points d'ancrage du modèle affiché. */
+    const ancrer = (tuyeres: number[][], points?: number[][]) => {
+      ancres.tuyeres = tuyeres;
+      flammes.forEach((fl, k) => {
+        const t = tuyeres[k];
+        fl.m.visible = !!t;
+        if (!t) return;
+        fl.m.position.set(t[0], t[1], t[2]);
+        fl.base = (t[3] ?? 0.12) / 0.12;
+      });
+      emetteurs.forEach((e, k) => {
+        const p = points?.[k] ?? Mo.EMETTEURS[k];
+        e.position.set(p[0], p[1], p[2]);
+      });
+    };
+    let actuelle: Mesh | null = null;
+    const afficher = () => {
+      const g = geosImportees[modele];
+      let mesh: Mesh | null;
+      if (g) {
+        silhouettesImportees[modele] ??= maillage(g, pVaisseau, corps);
+        mesh = silhouettesImportees[modele];
+      } else mesh = silhouettes[modele];
+      if (mesh !== actuelle) {
+        actuelle?.setParent(null);
+        mesh?.setParent(corps);
+        actuelle = mesh;
+      }
+      const im = importes[modele];
+      ancrer(im?.points.tuyeres ?? TUYERES_PROC, im?.points.emetteurs);
+    };
+    const silhouettesImportees: (Mesh | null)[] = [null, null, null, null];
+    abonnes.push((m) => m === modele && afficher());
+    const choisirModele = (m: number) => {
+      if (m === modele || !silhouettes[m]) return;
+      modele = m;
+      demander(m);
+      afficher();
+    };
+    choisirModele(0);
     const bulleEtat = { force: 0, couleur: [1, 1, 1] };
     const bulle = maillage(geo('bulle', Mo.bulle), pBulle, racine, () => {
       pBulle.uniforms.uCouleur.value = bulleEtat.couleur;
@@ -517,15 +575,15 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     })!;
     bulle.scale.set(1.55, 0.75, 2.1);
     bulle.position.set(0, 0.05, 0);
-    return { racine, corps, emetteurs, flammes, bulle, bulleEtat, choisirModele };
+    return { racine, corps, emetteurs, flammes, bulle, bulleEtat, choisirModele, ancres };
   };
   const vaisseau = creerVaisseau(scene);
 
-  // La traînée : deux rubans, un par moteur, qui gardent la trace des changements de voie.
+  // La traînée : un ruban par tuyère, qui garde la trace des changements de voie.
   const POINTS_TRAINEE = 34;
   const traces: number[] = Array(POINTS_TRAINEE).fill(0);
   let accTrainee = 0;
-  const rubans = [1, -1].map((s) => {
+  const rubans = Array.from({ length: MAX_FLAMMES }, (_, s) => {
     const n = POINTS_TRAINEE;
     const position = new Float32Array(n * 2 * 3);
     const uv = new Float32Array(n * 2 * 2);
@@ -1132,7 +1190,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   let themeAffiche: Theme = 'lancement';
   let lointainAffiche: Transform | null = null;
   let distanceMenu = 0;
-  const flammesLongueur = [1, 1];
+  const flammesLongueur = [1, 1, 1, 1];
 
   const dimensionner = (l: number, h: number) => {
     if (l === taille.l && h === taille.h) return;
@@ -1205,7 +1263,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     candidats.length = 0;
     const acc = uVaisseau.uAccent.value as number[];
     const f = 1.4 + boost * 1.4;
-    for (const s of [1, -1]) candidats.push({ x: xv + 0.27 * s, y: Mo.HAUTEUR_VOL - 0.1, z: 2.0, c: acc.map((v) => v * f), r: 5.5 + boost * 2, d: -1 });
+    // (Une lumière par côté : la tuyère la plus extérieure de chaque côté.)
+    for (const s of [1, -1]) {
+      const t = vaisseau.ancres.tuyeres.reduce((a, b) => (b[0] * s > a[0] * s ? b : a));
+      candidats.push({ x: xv + t[0], y: Mo.HAUTEUR_VOL + t[1] - 0.06, z: t[2] + 0.5, c: acc.map((v) => v * f), r: 5.5 + boost * 2, d: -1 });
+    }
     // La lueur anti-gravité, sous la coque : elle éclaire la piste juste sous le vaisseau.
     candidats.push({ x: xv, y: 0.32, z: -0.2, c: acc.map((v) => v * (0.9 + boost * 0.6)), r: 3.4, d: -1 });
     for (const e of eclairs) {
@@ -1309,7 +1371,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     vaisseau.flammes.forEach((f, k) => {
       flammesLongueur[k] += (voulue - flammesLongueur[k]) * borne(dt * 6);
       const len = flammesLongueur[k] * (0.92 + 0.08 * Math.sin(temps * 40 + k * 2));
-      f.m.scale.set(1 + boost * 0.3, 1 + boost * 0.3, len);
+      f.m.scale.set(f.base * (1 + boost * 0.3), f.base * (1 + boost * 0.3), len * (0.75 + f.base * 0.25));
       f.f.couleur = (uVaisseau.uAccent.value as number[]).map((v, i) => v * (1.4 + boost) + (boost ? (uVaisseau.uAccent2.value as number[])[i] * 0.8 : 0));
       f.f.force = 1.1 + boost * 0.7;
     });
@@ -1338,12 +1400,16 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     traces.length = POINTS_TRAINEE;
     const coulTrainee = uVaisseau.uAccent.value as number[];
     for (const r of rubans) {
+      const tu = vaisseau.ancres.tuyeres[r.s];
+      r.m.visible = !!tu;
+      if (!tu) continue;
+      const largeur = tu[3] / 0.12;
       for (let i = 0; i < POINTS_TRAINEE; i++) {
         const t = i / (POINTS_TRAINEE - 1);
-        const z = 1.5 + i * (0.32 + vitesse * 0.006);
-        const x = (traces[i] ?? xv) + 0.27 * r.s;
-        const w = 0.11 * (1 - t) + 0.02;
-        const y = Mo.HAUTEUR_VOL - 0.04;
+        const z = tu[2] + 0.05 + i * (0.32 + vitesse * 0.006);
+        const x = (traces[i] ?? xv) + tu[0];
+        const w = (0.11 * (1 - t) + 0.02) * largeur;
+        const y = Mo.HAUTEUR_VOL + tu[1];
         r.position.set([x - w, y, z, x + w, y, z], i * 6);
         const a = (1 - t) ** 1.6 * (0.55 + boost * 0.6);
         r.couleur.set([coulTrainee[0] * a, coulTrainee[1] * a, coulTrainee[2] * a, coulTrainee[0] * a, coulTrainee[1] * a, coulTrainee[2] * a], i * 6);
@@ -1905,7 +1971,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     vaisseauGarage.racine.rotation.y = temps * 0.5;
     vaisseauGarage.corps.rotation.set(0, 0, Math.sin(temps * 0.9) * 0.08);
     vaisseauGarage.flammes.forEach((f) => {
-      f.m.scale.set(1, 1, 0.9 + 0.1 * Math.sin(temps * 30));
+      f.m.scale.set(f.base, f.base, (0.9 + 0.1 * Math.sin(temps * 30)) * (0.75 + f.base * 0.25));
       f.f.couleur = (uVaisseau.uAccent.value as number[]).map((v) => v * 1.5);
       f.f.force = 1;
     });
