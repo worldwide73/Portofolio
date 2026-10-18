@@ -1,0 +1,64 @@
+# PORTAL RUSH (Unity) — ce que Git ne doit PAS suivre dans le projet Unity.
+#
+# À GARDER dans Git (rien ci-dessous ne les exclut) :
+#   Assets/            le code, les scènes, les modèles, l'interface… ET leurs fichiers .meta
+#                      (le .meta porte l'identifiant de chaque fichier : sans lui, les liens entre
+#                      scènes, matériaux et scripts se cassent d'un ordinateur à l'autre) ;
+#   Packages/          manifest.json et packages-lock.json (les paquets et leurs versions) ;
+#   ProjectSettings/   tous les réglages du projet (dont ProjectVersion.txt).
+#
+# Les chemins qui commencent par « / » ne visent que la racine du projet (unity/PortalRush/).
+# La sortie du build Web va dans public/rush-unity/ (hors de ce dossier) : elle n'est pas concernée.
+
+# ---- Fabriqués par Unity à l'ouverture (on peut les supprimer : Unity les refait) ----
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emory[Cc]aptures/
+/[Rr]ecordings/
+
+# ---- Builds faits à la main depuis l'éditeur (le vrai build va dans public/rush-unity/) ----
+/[Bb]uild/
+/[Bb]uilds/
+
+# ---- Résultats de tests écrits à la racine du projet quand -testResults n'est pas donné ----
+/TestResults*.xml
+
+# ---- Fichiers des éditeurs de code (Visual Studio, Rider, VS Code), régénérés par Unity ----
+.vs/
+.idea/
+.vscode/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.tmp
+
+# Les .meta de ces fichiers de débogage, s'ils apparaissent dans Assets/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# ---- Divers produits par Unity ou par des outils ----
+sysinfo.txt
+crashlytics-build.properties
+/ExportedObj/
+*.apk
+*.aab
+*.unitypackage
+*.app
+/[Aa]ssets/[Ss]treaming[Aa]ssets/aa/
+/[Aa]ssets/[Ss]treaming[Aa]ssets/aa.meta
