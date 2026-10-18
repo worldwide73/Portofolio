@@ -285,13 +285,33 @@ function tronconRift(a: Assembleur, h: Halos, v: number) {
   const violet: RGB = [0.7, 0.55, 1],
     cyan: RGB = [0.37, 0.9, 1];
   const cristal = mat('#3b2c66', 0.6, 0.15);
-  // Les arches de cristal : deux par tronçon, la seconde décalée.
-  arc(a, h, -10, 6.6, -0.6, 9, cristal, M.accent, 0, violet);
-  arc(a, h, -34, 7.4, -1.2, 11, cristal, M.accent2, 0.15, cyan);
-  // Une arche renversée, en miroir, au-dessus (le passage dimensionnel).
-  a.pousser().deplacer(0, 26, -22).tourner(0, 0, Math.PI);
-  arc(a, new Halos(), 0, 8, 0, 10, cristal, M.accent, 0, violet);
-  a.retirer();
+  // Les arches de cristal : deux par tronçon, la seconde décalée. (V4-H7) Faites d'éclats modélisés dans
+  // Blender (prismes à pointe lumineuse sur une âme de métal) si le monde est chargé.
+  const arche = decor['arche-cristal'];
+  const archeCristal = (z: number, rayon: number, cy: number, renverse = false) => {
+    a.pousser().deplacer(0, cy, z);
+    if (renverse) a.tourner(0, 0, Math.PI);
+    a.echelle(rayon / 7, rayon / 7, 1).importer(arche!).retirer();
+  };
+  if (arche) {
+    archeCristal(-10, 6.6, -0.6);
+    archeCristal(-34, 7.4, -1.2);
+    archeCristal(-22, 8, 26, true);
+    for (const [x, y, z] of [[0, 6.0, -10], [0, 6.2, -34]] as const) h.ajouter(x, y, z + 0.3, 2.2, violet, 0.3, 4);
+  } else {
+    arc(a, h, -10, 6.6, -0.6, 9, cristal, M.accent, 0, violet);
+    arc(a, h, -34, 7.4, -1.2, 11, cristal, M.accent2, 0.15, cyan);
+    // Une arche renversée, en miroir, au-dessus (le passage dimensionnel).
+    a.pousser().deplacer(0, 26, -22).tourner(0, 0, Math.PI);
+    arc(a, new Halos(), 0, 8, 0, 10, cristal, M.accent, 0, violet);
+    a.retirer();
+  }
+  // Des grappes de cristaux au bord de la piste, hors des voies.
+  if (decor['grappe-cristaux'])
+    for (let k = 0; k < 3; k++) {
+      const s = (k + v) % 2 ? 1 : -1;
+      a.pousser().deplacer(s * (6.5 + k * 2.2), -0.4, -8 - k * 14).tourner(0, k * 1.7, s * 0.15).echelle(0.8 + (k % 2) * 0.5).importer(decor['grappe-cristaux']).retirer();
+    }
   h.ajouter(0, 18.5, -21.4, 2.4, violet, 0.35, 4);
   // Des plateformes fracturées qui flottent : roche dessous, plaque de métal dessus.
   for (let k = 0; k < 6; k++) {
@@ -305,6 +325,7 @@ function tronconRift(a: Assembleur, h: Halos, v: number) {
     a.retirer();
     a.boite(0, 0.2, 0, 3.4 + r() * 2, 0.3, 3 + r() * 2, mat('#4a4466', 0.8, 0.3), 0.2);
     a.boite(0, 0.37, 0, 2.4, 0.03, 0.06, M.accent);
+    if (k % 2 === 0 && decor['grappe-cristaux']) a.pousser().deplacer(0.6, 0.6, 0.4).echelle(0.7).importer(decor['grappe-cristaux']).retirer();
     a.retirer();
   }
   // Des anneaux suspendus, inclinés, dont l'intérieur luit.

@@ -218,15 +218,128 @@ def tour_neon_b(P):
     return ob, {'halos': [[-4.1, 47.5, 0, 7, 1, 0.31, 0.85, 0.22]]}
 
 
+# ---------------------------------------------------------------------------
+# QUANTUM RIFT — cristaux : prismes hexagonaux à pointe, corps sombre et pointe lumineuse (couleur du monde)
+# ---------------------------------------------------------------------------
+def prisme_cristal(bm, base, axe, rayon, hauteur, pointe, rot=0.0):
+    """Un cristal : prisme à 6 pans de « base » le long de « axe », terminé par une pyramide. Renvoie les faces
+    de la pointe (pour leur donner une autre matière)."""
+    axe = Vector(axe).normalized()
+    q = axe.to_track_quat('Z', 'Y')
+    m = Matrix.Translation(base) @ q.to_matrix().to_4x4() @ Matrix.Rotation(rot, 4, 'Z')
+    bas = [bm.verts.new(m @ Vector((rayon * math.cos(a), rayon * math.sin(a), 0))) for a in [k * math.pi / 3 for k in range(6)]]
+    haut = [bm.verts.new(m @ Vector((rayon * 0.92 * math.cos(a), rayon * 0.92 * math.sin(a), hauteur))) for a in [k * math.pi / 3 for k in range(6)]]
+    sommet = bm.verts.new(m @ Vector((0, 0, hauteur + pointe)))
+    for i in range(6):
+        j = (i + 1) % 6
+        bm.faces.new([bas[i], bas[j], haut[j], haut[i]])
+    bm.faces.new(bas[::-1])
+    pointes = [bm.faces.new([haut[i], haut[(i + 1) % 6], sommet]) for i in range(6)]
+    return pointes
+
+
+def cristaux(nom, P, specs, graine=1):
+    """Une grappe de cristaux : specs = [(base, axe, rayon, hauteur)]. Corps « cristal », pointes lumineuses."""
+    import random
+    rnd = random.Random(graine)
+    corps = matiere('cristalRift', '#3b2c66', 0.6, 0.15)
+    lueur = matiere('cristalLueur', '#ffffff', 0, 0.3, 0.7, 'accent')
+    bm = bmesh.new()
+    pointes = []
+    for base, axe, r, h in specs:
+        pointes += prisme_cristal(bm, base, axe, r, h, r * rnd.uniform(1.4, 2.2), rnd.uniform(0, 1))
+    for f in pointes:
+        f.material_index = 1
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    me = bpy.data.meshes.new(nom)
+    bm.to_mesh(me)
+    bm.free()
+    ob = bpy.data.objects.new(nom, me)
+    bpy.context.scene.collection.objects.link(ob)
+    me.materials.append(corps)
+    me.materials.append(lueur)
+    return ob
+
+
+def grappe_cristaux(P):
+    import random
+    rnd = random.Random(7)
+    specs = []
+    for k in range(9):
+        a = rnd.uniform(0, 6.3)
+        d = rnd.uniform(0, 0.9) if k else 0
+        base = Vector((math.cos(a) * d, math.sin(a) * d, -0.3))
+        axe = (math.cos(a) * rnd.uniform(0.1, 0.7) * (d + 0.2), math.sin(a) * rnd.uniform(0.1, 0.7) * (d + 0.2), 1)
+        h = rnd.uniform(1.2, 3.6) * (1.25 if k == 0 else 1)
+        specs.append((base, axe, rnd.uniform(0.18, 0.42) * (1.4 if k == 0 else 1), h))
+    ob = [cristaux('grappe', P, specs, 3)]
+    # Un socle de roche sombre, à moitié enfoui.
+    def socle(bm):
+        bmesh.ops.create_icosphere(bm, subdivisions=1, radius=1.2)
+    s_ = piece('socle', socle, matiere('rocheRift', '#2a2238', 0.1, 0.85))
+    s_.scale = (1.2, 1.2, 0.45)
+    s_.location = (0, 0, -0.4)
+    figer(s_)
+    ob.append(s_)
+    return ob, {'halos': [[0, 2.5, 0, 2.2, 0.7, 0.55, 1, 0.3]]}
+
+
+def arche_cristal(P):
+    """Une arche de 7 m de rayon faite d'éclats de cristal le long d'un demi-cercle, enracinée dans deux grappes."""
+    import random
+    rnd = random.Random(11)
+    R = 7.0
+    specs = []
+    n = 26
+    for i in range(n + 1):
+        t = math.pi * i / n
+        # Dans Blender : x latéral, z vertical ; l'arche est dans le plan XZ (y = 0).
+        p = Vector((math.cos(t) * R, rnd.uniform(-0.5, 0.5), math.sin(t) * R))
+        tangente = Vector((-math.sin(t), 0, math.cos(t)))
+        normale = Vector((math.cos(t), 0, math.sin(t)))
+        # Des éclats couchés le long de l'arche (alternés), et d'autres qui pointent vers l'extérieur.
+        if i % 2:
+            axe = (tangente * (1 if i % 4 == 1 else -1) + normale * rnd.uniform(-0.3, 0.3) + Vector((0, rnd.uniform(-0.4, 0.4), 0)))
+            specs.append((p - axe.normalized() * 0.6, axe, rnd.uniform(0.25, 0.4), rnd.uniform(1.0, 1.8)))
+        else:
+            axe = normale + tangente * rnd.uniform(-0.4, 0.4) + Vector((0, rnd.uniform(-0.5, 0.5), 0))
+            specs.append((p - normale * 0.4, axe, rnd.uniform(0.2, 0.36), rnd.uniform(0.8, 2.4)))
+    for s in (1, -1):
+        for k in range(5):
+            a = rnd.uniform(0, 6.3)
+            base = Vector((s * R + math.cos(a) * 0.7, math.sin(a) * 0.7, -0.6))
+            specs.append((base, (rnd.uniform(-0.4, 0.4), rnd.uniform(-0.4, 0.4), 1), rnd.uniform(0.25, 0.45), rnd.uniform(1.0, 2.6)))
+    ob = [cristaux('arche', P, specs, 5)]
+    # L'âme de l'arche : un anneau de métal sombre qui tient les éclats, à liseré lumineux dessous.
+    def ame(bm):
+        for i in range(n):
+            t0, t1 = math.pi * i / n, math.pi * (i + 1) / n
+            barre(bm, (math.cos(t0) * R, 0, math.sin(t0) * R), (math.cos(t1) * R, 0, math.sin(t1) * R), 0.32)
+    ob.append(piece('ame', ame, matiere('ameRift', '#241e38', 0.8, 0.4)))
+    def lisere(bm):
+        for i in range(n):
+            t0, t1 = math.pi * i / n, math.pi * (i + 1) / n
+            r = R - 0.18
+            barre(bm, (math.cos(t0) * r, 0, math.sin(t0) * r), (math.cos(t1) * r, 0, math.sin(t1) * r), 0.06)
+    ob.append(piece('lisere', lisere, P['accent2']))
+    for o in ob:
+        appliquer(o)
+    halos = [[math.cos(t) * 6.4, math.sin(t) * 6.4, 0.2, 1.3, 0.7, 0.55, 1, 0.3] for t in [math.pi * k / 6 for k in range(1, 6)]]
+    return ob, {'halos': halos}
+
+
 MONDES = {
     'laser': {'mur-tranchee': mur_tranchee, 'scanner': scanner},
     'neon': {'tour-neon-a': tour_neon_a, 'tour-neon-b': tour_neon_b},
+    'rift': {'grappe-cristaux': grappe_cristaux, 'arche-cristal': arche_cristal},
 }
 CADRAGES = {
     'mur-tranchee': ((5.2, 0, 0.8), 6.5, 250),
     'scanner': ((0, 0, 3.8), 22, 20),
     'tour-neon-a': ((0, 0, 40), 110, 250),
     'tour-neon-b': ((0, 0, 26), 75, 250),
+    'grappe-cristaux': ((0, 0, 1.2), 9, 30),
+    'arche-cristal': ((0, 0, 3.5), 22, 15),
 }
 
 
