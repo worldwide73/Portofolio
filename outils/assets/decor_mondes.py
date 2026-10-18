@@ -328,10 +328,134 @@ def arche_cristal(P):
     return ob, {'halos': halos}
 
 
+# ---------------------------------------------------------------------------
+# VOIDSTORM — la station éventrée dans la tempête : cadres en poutres en I (intacts ou brisés), paratonnerre
+# ---------------------------------------------------------------------------
+def poutre_i(bm, a, b, haut, larg, ep=0.06, haut_vec=(0, 0, 1)):
+    """Une poutre en I de a à b : deux semelles (larg × ep) et une âme (ep × haut), « haut_vec » donne le sens de
+    la hauteur du profil."""
+    a, b = Vector(a), Vector(b)
+    d = (b - a)
+    L = d.length
+    x = d.normalized()
+    up = Vector(haut_vec).normalized()
+    if abs(x.dot(up)) > 0.95:
+        up = Vector((1, 0, 0)) if abs(x.x) < 0.9 else Vector((0, 1, 0))
+    z = (up - x * up.dot(x)).normalized()
+    y = z.cross(x)
+    rot = Matrix((x, y, z)).transposed().to_4x4()
+    c = (a + b) / 2
+    for (oy, oz, sy, sz) in [(0, haut / 2 - ep / 2, larg, ep), (0, -haut / 2 + ep / 2, larg, ep), (0, 0, ep, haut - 2 * ep)]:
+        r = bmesh.ops.create_cube(bm, size=1.0)
+        m = Matrix.Translation(c) @ rot @ Matrix.Translation((0, oy, oz)) @ Matrix.Diagonal((L, sy, sz, 1))
+        bmesh.ops.transform(bm, matrix=m, verts=r['verts'])
+
+
+def cadre_station(P, brise=False):
+    import random
+    rnd = random.Random(31 if brise else 17)
+    ob = []
+    acier = matiere('acierStation', '#2c3038', 0.82, 0.5)
+    X, H = 6.2, 7.2
+    def poteaux(bm):
+        for s in (1, -1):
+            haut = 3.4 if (brise and s > 0) else H + 0.35
+            poutre_i(bm, (s * X, 0, -1.0), (s * X, 0, haut), 0.6, 0.5, haut_vec=(1, 0, 0))
+            # Raidisseurs et platine au pied.
+            for z in [k * 1.0 for k in range(0, int(haut))]:
+                boite(bm, (s * X, 0, z), (0.5, 0.06, 0.05))
+            boite(bm, (s * X, 0, -0.95), (1.0, 0.9, 0.1))
+    ob.append(piece('poteaux', poteaux, acier))
+    if not brise:
+        ob.append(piece('traverse', lambda bm: poutre_i(bm, (-X - 0.3, 0, H), (X + 0.3, 0, H), 0.7, 0.5, haut_vec=(0, 0, 1)), acier))
+        # Les goussets aux angles (des triangles épais).
+        def goussets(bm):
+            for s in (1, -1):
+                v = [bm.verts.new(p) for p in [(s * (X - 0.05), -0.03, H - 0.35), (s * (X - 0.05), -0.03, H - 1.6), (s * (X - 1.3), -0.03, H - 0.35)]]
+                w = [bm.verts.new(p) for p in [(s * (X - 0.05), 0.03, H - 0.35), (s * (X - 0.05), 0.03, H - 1.6), (s * (X - 1.3), 0.03, H - 0.35)]]
+                bm.faces.new(v)
+                bm.faces.new(w[::-1])
+                for i in range(3):
+                    j = (i + 1) % 3
+                    bm.faces.new([v[i], w[i], w[j], v[j]])
+        ob.append(piece('goussets', goussets, P['blindageClair']))
+        ob.append(piece('rampe', lambda bm: boite(bm, (0, 0, H - 0.45), (3.2, 0.3, 0.12)), P['blindage']))
+        ob.append(piece('rampe-feu', lambda bm: boite(bm, (0, 0, H - 0.52), (2.8, 0.2, 0.02)), P['neonBlanc'] if 'neonBlanc' in P else P['feuBlanc']))
+        cables_pendants = [(-2.4, 0, H - 0.35, 2.6), (3.1, 0.1, H - 0.35, 1.7)]
+    else:
+        # La traverse pliée : un tronçon tient encore, l'autre pend vers la piste, arraché.
+        def traverse(bm):
+            poutre_i(bm, (-X - 0.3, 0, H), (0.6, 0, H - 0.25), 0.7, 0.5, haut_vec=(0, 0, 1))
+            poutre_i(bm, (0.7, 0, H - 0.35), (3.6, 0.4, H - 2.9), 0.7, 0.5, haut_vec=(0, 0, 1))
+        ob.append(piece('traverse', traverse, acier))
+        # Le haut du poteau droit, tombé et posé de travers contre le muret extérieur.
+        haut = piece('troncon-tombe', lambda bm: poutre_i(bm, (X + 0.4, 0.6, 0.3), (X + 2.2, -1.4, 3.6), 0.6, 0.5, haut_vec=(1, 0, 0)), acier)
+        ob.append(haut)
+        # Des fers à nu à la cassure, et des éclats de tôle.
+        def fers(bm):
+            for k in range(5):
+                a = Vector((X + rnd.uniform(-0.2, 0.2), rnd.uniform(-0.2, 0.2), 3.4))
+                b = a + Vector((rnd.uniform(-0.3, 0.3), rnd.uniform(-0.3, 0.3), rnd.uniform(0.3, 0.8)))
+                tube(bm, a, b, 0.02, 4)
+        ob.append(piece('fers', fers, P['acier']))
+        cables_pendants = [(0.65, 0, H - 0.4, 3.4), (0.75, 0.15, H - 0.45, 2.6), (-3.0, 0, H - 0.35, 1.5)]
+    # Des câbles qui pendent (avec un léger angle), un chemin de câbles le long de la traverse.
+    def cables(bm):
+        for x, y, z, l in cables_pendants:
+            tube(bm, (x, y, z), (x + rnd.uniform(-0.3, 0.3), y + rnd.uniform(-0.3, 0.3), z - l), 0.03, 5)
+    ob.append(piece('cables', cables, P['caoutchouc']))
+    # Un feu de secours orange sur un poteau.
+    ob.append(piece('secours', lambda bm: boite(bm, (-X + 0.32, 0.1, 2.4), (0.12, 0.18, 0.18)), P['accent2']))
+    for o in ob:
+        appliquer(o)
+    halos = [[-X + 0.42, 2.4, -0.1, 0.8, 1, 0.7, 0.3, 0.7]]
+    if brise:
+        halos.append([X, 3.5, 0, 0.9, 1, 0.6, 0.25, 0.9])
+    return ob, {'halos': halos}
+
+
+def paratonnerre(P):
+    """Un pylône paratonnerre : fût en treillis, empilements d'isolateurs, bobine à anneaux en tête, haubans."""
+    from decor import treillis
+    ob = []
+    acier = matiere('acierStation', '#2c3038', 0.82, 0.5)
+    ceram = matiere('ceramique', '#c9d0da', 0.1, 0.35)
+    H = 26
+    def fut(bm):
+        treillis(bm, [(-1.4, -1.4, 0), (1.4, -1.4, 0), (1.4, 1.4, 0), (-1.4, 1.4, 0)], [(-0.5, -0.5, H), (0.5, -0.5, H), (0.5, 0.5, H), (-0.5, 0.5, H)], 10, 0.22, 0.09)
+    ob.append(piece('fut', fut, acier))
+    ob.append(piece('socle', lambda bm: boite(bm, (0, 0, -0.6), (4, 4, 1.2)), P['acier'], biseau=0.08))
+    # Les isolateurs : des empilements de disques.
+    def isolateurs(bm):
+        for k in range(9):
+            z = H + 0.4 + k * 0.38
+            r = 0.55 if k % 2 == 0 else 0.4
+            bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=r, radius2=r * 0.9, depth=0.18, matrix=Matrix.Translation((0, 0, z)))
+    ob.append(piece('isolateurs', isolateurs, ceram))
+    ob.append(piece('axe', lambda bm: tube(bm, (0, 0, H), (0, 0, H + 7.5), 0.18, 10), P['acier']))
+    # La bobine : trois anneaux lumineux et un tore de tête.
+    def anneaux(bm):
+        for k, (z, r) in enumerate([(H + 4.4, 1.3), (H + 5.1, 1.0), (H + 5.7, 0.75)]):
+            bmesh.ops.create_cone(bm, cap_ends=False, segments=24, radius1=r, radius2=r, depth=0.12, matrix=Matrix.Translation((0, 0, z)))
+    ob.append(piece('anneaux', anneaux, P['accent']))
+    def tete(bm):
+        r = bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=6, radius=1.0)
+        bmesh.ops.transform(bm, matrix=Matrix.Translation((0, 0, H + 7.2)) @ Matrix.Diagonal((1.6, 1.6, 0.45, 1)), verts=r['verts'])
+    ob.append(piece('tete', tete, P['alliage']))
+    ob.append(piece('pointe', lambda bm: tube(bm, (0, 0, H + 7.5), (0, 0, H + 10.5), 0.07, 6), P['alliage']))
+    ob.append(piece('feu', lambda bm: boite(bm, (0, 0, H + 10.6), (0.3, 0.3, 0.3)), P['feuRouge']))
+    # Les haubans vers le sol.
+    ob.append(piece('haubans', lambda bm: [tube(bm, (0, 0, H - 2), (c * 9, s_ * 9, -0.2), 0.04, 4) for c, s_ in ((1, 1), (1, -1), (-1, 1), (-1, -1))], P['acier']))
+    for o in ob:
+        appliquer(o)
+    return ob, {'halos': [[0, H + 5, 0, 3.4, 0.6, 0.85, 1, 0.45], [0, H + 10.6, 0, 1.2, 1, 0.3, 0.25, 0.7]]}
+
+
 MONDES = {
     'laser': {'mur-tranchee': mur_tranchee, 'scanner': scanner},
     'neon': {'tour-neon-a': tour_neon_a, 'tour-neon-b': tour_neon_b},
     'rift': {'grappe-cristaux': grappe_cristaux, 'arche-cristal': arche_cristal},
+    'tempete': {'cadre-station': lambda P: cadre_station(P), 'cadre-brise': lambda P: cadre_station(P, True), 'paratonnerre': paratonnerre},
 }
 CADRAGES = {
     'mur-tranchee': ((5.2, 0, 0.8), 6.5, 250),
@@ -340,6 +464,9 @@ CADRAGES = {
     'tour-neon-b': ((0, 0, 26), 75, 250),
     'grappe-cristaux': ((0, 0, 1.2), 9, 30),
     'arche-cristal': ((0, 0, 3.5), 22, 15),
+    'cadre-station': ((0, 0, 3.5), 20, 20),
+    'cadre-brise': ((0, 0, 3.5), 20, 20),
+    'paratonnerre': ((0, 0, 18), 55, 30),
 }
 
 

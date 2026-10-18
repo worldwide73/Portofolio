@@ -369,6 +369,18 @@ function tronconTempete(a: Assembleur, h: Halos, v: number) {
   for (let i = 0; i < L / 8; i++) {
     const z = -i * 8 - 2;
     const casse = r();
+    // (V4-H7) Les cadres en poutres en I modélisés dans Blender, intacts ou brisés (tantôt d'un côté, tantôt de
+    // l'autre), avec leurs câbles pendants ; les panneaux tordus restent.
+    if (decor['cadre-station']) {
+      poserModule(a, h, casse > 0.6 ? 'cadre-brise' : 'cadre-station', 0, 0, z, casse > 0.6 && i % 2 ? -1 : 1);
+      for (const s of [-1, 1])
+        if (r() > 0.35) {
+          a.pousser().deplacer(s * 6.6, 2 + r() * 3, z - 4).tourner((r() - 0.5) * 0.5, s * (0.2 + r() * 0.4), (r() - 0.5) * 0.6);
+          a.boite(0, 0, 0, 0.12, 2.4 + r() * 2, 3 + r() * 3, mat('#3a3f48', 0.75, 0.5), 0.05);
+          a.retirer();
+        }
+      continue;
+    }
     for (const s of [-1, 1]) {
       const hh = casse > 0.6 && s > 0 ? 2 + r() * 3 : 8;
       a.boite(s * 6.2, hh / 2 - 1, z, 0.6, hh, 0.6, M.metalSombre, 0.1);
@@ -397,6 +409,8 @@ function tronconTempete(a: Assembleur, h: Halos, v: number) {
     a.poutre([x, -6 + r() * 20, -r() * L], [x + (r() - 0.5) * 10, -6 + r() * 20, -r() * L], 0.3 + r() * 0.4, M.metalMoyen);
   }
   for (let k = 0; k < 8; k++) rocher(a, (r() > 0.5 ? 1 : -1) * (10 + r() * 50), -8 + r() * 30, -r() * L, 0.8 + r() * 3, k + v * 7, mat('#3a3d44', 0.4, 0.7), mat('#202227', 0.4, 0.8));
+  // (V4-H7) Un paratonnerre monumental par tronçon, d'un côté puis de l'autre : la tempête frappe dessus.
+  if (decor.paratonnerre) poserModule(a, h, 'paratonnerre', (v % 2 ? 1 : -1) * (17 + r() * 8), -9, -10 - r() * 28);
   // Des feux de secours, orange, sur ce qui tient encore.
   for (let z = 4; z < L; z += 12) {
     a.boite(4.5, 0.6, -z, 0.15, 0.15, 0.15, M.accent2);
