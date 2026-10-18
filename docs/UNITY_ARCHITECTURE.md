@@ -113,6 +113,12 @@ public sealed class Session : MonoBehaviour
   public void Recommencer();              // même lancement, nouvelle graine (sauf défi)
   public void Deplacer(int sens);         // -1 gauche, +1 droite (aussi lu au clavier par Session)
   public void Overdrive();
+  // Ajouts (Session.cs) :
+  public double Compte { get; }           // compte à rebours restant (s) ; 0 = on joue
+  public event Action<int>? Decompte;     // 3, 2, 1, puis 0 au départ
+  public event Action? Abandonnee;
+  public float Horloge { get; }           // temps de jeu (ralenti en pause), pour les animations
+  public static Func<Vector2, bool>? SurInterface;  // l'interface dit si un point de l'écran est sur l'UI
 }
 ```
 
@@ -138,6 +144,22 @@ public static class Qualite
   public static void Appliquer(string mode, bool effetsReduits);
 }
 ```
+
+### 5.2 bis `PortalRush.Jeu.Intro` (sortie du tunnel temporel)
+
+```csharp
+public sealed class Intro : MonoBehaviour
+{
+  public static Intro? Instance { get; }
+  public static bool EnCours { get; }
+  public static event Action? Terminee;   // l'interface enchaîne : tutoriel (premier lancement) ou menu
+  public void Jouer();                    // envoie aussi Pont.Ecran("intro")
+}
+```
+
+L'interface appelle `Intro.Instance.Jouer()` quand `config.intro` est vrai. Côté page : `ecran: intro` = Unity a pris
+le relais du tunnel (la page fond sa propre transition et prolonge le son du voyage) ; l'écran suivant (`tutoriel`,
+`menu`) marque l'arrivée dans le monde (son d'ouverture, démarrage du moteur).
 
 ### 5.3 `PortalRush.Jeu.Pont` (pont JavaScript)
 

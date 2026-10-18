@@ -34,7 +34,7 @@ namespace PortalRush.Editeur
     {
       public Material Revetement = null!, Structure = null!, Lumiere = null!, Lignes = null!;
       public Material Coque = null!, Metal = null!, Danger = null!, Energie = null!, Dore = null!, Faille = null!, Portail = null!;
-      public Material Particules = null!, Trainee = null!, Ciel = null!;
+      public Material Particules = null!, Trainee = null!, Ciel = null!, IntroAnneaux = null!, IntroParoi = null!;
     }
 
     [MenuItem("Portal Rush/3. Construire la scène", false, 3)]
@@ -109,6 +109,12 @@ namespace PortalRush.Editeur
       var effets = oEffets.AddComponent<Effets>();
       effets.particules = m.Particules;
       effets.camera = oCamera.transform;
+
+      var oIntro = new GameObject("Intro");
+      var intro = oIntro.AddComponent<Intro>();
+      intro.camera = oCamera.transform;
+      intro.anneaux = m.IntroAnneaux;
+      intro.paroi = m.IntroParoi;
 
       var oMonde = new GameObject("Monde");
       var parcours = oMonde.AddComponent<Parcours>();
@@ -232,6 +238,8 @@ namespace PortalRush.Editeur
         Particules = Materiau("Particules", "PortalRush/Particules"),
         Trainee = Materiau("Trainee", "PortalRush/Particules"),
         Ciel = Materiau("Ciel", "PortalRush/Ciel"),
+        IntroAnneaux = Lumineux("Intro_Anneaux", new Color(0.5f, 0.9f, 1f) * 3f),
+        IntroParoi = Lumineux("Intro_Paroi", new Color(0.012f, 0.02f, 0.045f)),
       };
       // Les couleurs des particules et des traînées sont stockées sur 8 bits : l'éclat HDR (bloom) vient du matériau.
       m.Particules.SetFloat("_Intensite", 3f);

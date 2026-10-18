@@ -85,7 +85,9 @@ namespace PortalRush.Jeu
         Distance = m.Distance + 14;
         x = Vitrine.Mode == Vitrine.Etat.Garage ? 1 : 1 + Mathf.Sin(t * 0.35f) * 0.45f;
       }
-      bool visible = p != null || Vitrine.Mode != Vitrine.Etat.Masquee;
+      // Pendant la sortie du tunnel, le vaisseau arrive de l'arrière (Intro).
+      Distance -= Intro.RetardVaisseau;
+      bool visible = (p != null || Vitrine.Mode != Vitrine.Etat.Masquee) && !Intro.VaisseauCache;
       if (modele != null && modele.activeSelf != visible) modele.SetActive(visible);
       if (vehicule != affiche || versionVitrine != Vitrine.Version) Equiper(vehicule);
       if (!visible) return;
