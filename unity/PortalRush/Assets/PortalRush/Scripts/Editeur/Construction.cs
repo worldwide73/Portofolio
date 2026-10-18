@@ -42,6 +42,9 @@ namespace PortalRush.Editeur
       }
       if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL)
         EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.WebGL, BuildTarget.WebGL);
+      // Compression des textures pour les navigateurs de bureau (DXT). Ce réglage vit dans Library/ (hors git) :
+      // on le pose à chaque construction. (Un second build ASTC pour le mobile pourra suivre.)
+      EditorUserBuildSettings.webGLBuildSubtarget = WebGLTextureSubtarget.DXT;
 
       if (Directory.Exists(Sortie)) Directory.Delete(Sortie, true);
       var options = new BuildPlayerOptions

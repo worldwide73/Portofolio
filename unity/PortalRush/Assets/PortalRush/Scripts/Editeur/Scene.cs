@@ -211,6 +211,32 @@ namespace PortalRush.Editeur
       return m;
     }
 
+    /** Ajoute les textures PBR d'outils/unity/textures.py (couleur, normal map, masque métal/lissé) si elles existent. */
+    static void Texturer(Material m, string nom, float relief = 1f)
+    {
+      string dossier = Configuration.Racine + "/Textures/";
+      var couleur = AssetDatabase.LoadAssetAtPath<Texture2D>(dossier + nom + "_Couleur.png");
+      var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(dossier + nom + "_Normal.png");
+      var masque = AssetDatabase.LoadAssetAtPath<Texture2D>(dossier + nom + "_Masque.png");
+      if (couleur != null) m.SetTexture("_BaseMap", couleur);
+      if (normal != null)
+      {
+        m.SetTexture("_BumpMap", normal);
+        m.SetFloat("_BumpScale", relief);
+        m.EnableKeyword("_NORMALMAP");
+      }
+      if (masque != null)
+      {
+        m.SetTexture("_MetallicGlossMap", masque);
+        m.SetFloat("_SmoothnessTextureChannel", 0f); // lissé dans l'alpha du masque
+        m.EnableKeyword("_METALLICSPECGLOSSMAP");
+        // Avec le masque, _Smoothness devient un facteur et _Metallic n'est plus lu.
+        m.SetFloat("_Smoothness", 1f);
+      }
+      if (couleur == null) Debug.LogWarning("[Portal Rush] Textures " + nom + " absentes : lancer outils/unity/textures.py.");
+      EditorUtility.SetDirty(m);
+    }
+
     /** Un matériau lumineux : couleur HDR (au-delà de 1, le bloom la fait rayonner). */
     static Material Lumineux(string nom, Color hdr)
     {
@@ -241,6 +267,12 @@ namespace PortalRush.Editeur
         IntroAnneaux = Lumineux("Intro_Anneaux", new Color(0.5f, 0.9f, 1f) * 3f),
         IntroParoi = Lumineux("Intro_Paroi", new Color(0.012f, 0.02f, 0.045f)),
       };
+      // Revêtement continu et métal de structure : textures PBR (la couleur du monde teinte _BaseColor).
+      m.Revetement.SetColor("_BaseColor", Color.white);
+      Texturer(m.Revetement, "Revetement", 1f);
+      m.Structure.SetColor("_BaseColor", Color.white);
+      Texturer(m.Structure, "Structure", 1f);
+      Texturer(m.Metal, "Structure", 0.8f);
       // Les couleurs des particules et des traînées sont stockées sur 8 bits : l'éclat HDR (bloom) vient du matériau.
       m.Particules.SetFloat("_Intensite", 3f);
       m.Trainee.SetFloat("_Trainee", 1f);

@@ -171,11 +171,21 @@ namespace PortalRush.Jeu
       var m = route.materiaux;
       if (m.Length >= 4)
       {
-        if (m[Route.Revetement] != null) m[Route.Revetement].SetColor(IdBaseColor, L(a.Revetement, b.Revetement));
-        if (m[Route.Structure] != null) m[Route.Structure].SetColor(IdBaseColor, L(a.Structure, b.Structure));
+        // Les textures portent déjà la luminosité : le monde ne donne qu'une teinte (et un léger écart de clarté).
+        if (m[Route.Revetement] != null) m[Route.Revetement].SetColor(IdBaseColor, Teinte(L(a.Revetement, b.Revetement), 0.35f));
+        if (m[Route.Structure] != null) m[Route.Structure].SetColor(IdBaseColor, Teinte(L(a.Structure, b.Structure), 0.45f));
         if (m[Route.Lumiere] != null) m[Route.Lumiere].SetColor(IdBaseColor, L(a.Accent, b.Accent) * 3.2f);
         if (m[Route.Lignes] != null) m[Route.Lignes].SetColor(IdBaseColor, L(a.Accent, b.Accent) * 1.6f);
       }
+    }
+
+    /** Une teinte proche du blanc qui garde la couleur dominante de c (force : 0 = blanc, 1 = couleur pure). */
+    static Color Teinte(Color c, float force)
+    {
+      float max = Mathf.Max(0.001f, Mathf.Max(c.r, Mathf.Max(c.g, c.b)));
+      var pure = new Color(c.r / max, c.g / max, c.b / max);
+      float clarte = Mathf.Lerp(0.85f, 1.15f, Mathf.Clamp01(max * 3f));
+      return Color.Lerp(Color.white, pure, force) * clarte;
     }
 
     /** Les directions du jeu web (repère droit, -Z devant) vers Unity (repère gauche, +Z devant). */

@@ -231,6 +231,9 @@ namespace PortalRush.Editeur
       PlayerSettings.WebGL.template = "APPLICATION:Minimal";
       // Le portfolio ferme proprement l'instance (Quit) : la mémoire est rendue.
       PlayerSettings.WebGL.closeOnQuit = true;
+      // Mémoire : démarrage léger, croissance au besoin (valeurs par défaut recommandées par Unity).
+      PlayerSettings.WebGL.initialMemorySize = 32;
+      PlayerSettings.WebGL.maximumMemorySize = 2048;
       PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
       PlayerSettings.stripEngineCode = true;
       // Tout le son passe par le moteur audio du portfolio (sons.ts, RUSH RADIO, DREAM RADIO) : Unity n'ouvre aucune sortie audio.
