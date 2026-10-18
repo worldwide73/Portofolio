@@ -138,7 +138,11 @@ export class Assembleur {
    * (V4-H7) Ajoute un maillage importé (modèle Blender, voir assets.ts) dans le repère courant. Un repère en miroir
    * (échelle négative) retourne l'ordre des sommets pour garder les faces vers l'extérieur.
    */
-  importer(m: { attributs: { position: Float32Array; normal: Float32Array; couleur: Float32Array; matiere: Float32Array; index: ArrayLike<number> } }): this {
+  importer(
+    m: { attributs: { position: Float32Array; normal: Float32Array; couleur: Float32Array; matiere: Float32Array; index: ArrayLike<number> } },
+    /** Facultatif : une matière qui remplace celle du modèle, selon la normale locale du sommet (recolorer). */
+    remplacer?: (n: V3) => Matiere,
+  ): this {
     const a = m.attributs;
     const t = this.t;
     const det = t[0] * (t[5] * t[10] - t[9] * t[6]) - t[4] * (t[1] * t[10] - t[9] * t[2]) + t[8] * (t[1] * t[6] - t[5] * t[2]);
@@ -151,6 +155,13 @@ export class Assembleur {
         const n = this.direction([a.normal[i * 3], a.normal[i * 3 + 1], a.normal[i * 3 + 2]]);
         this.p.push(p[0], p[1], p[2]);
         this.n.push(n[0], n[1], n[2]);
+        if (remplacer) {
+          const q = remplacer([a.normal[i * 3], a.normal[i * 3 + 1], a.normal[i * 3 + 2]]);
+          const l = lineaire(q.c);
+          this.c.push(l[0], l[1], l[2]);
+          this.m.push(q.m, q.r, q.e, q.k ?? 0);
+          continue;
+        }
         this.c.push(a.couleur[i * 3], a.couleur[i * 3 + 1], a.couleur[i * 3 + 2]);
         this.m.push(a.matiere[i * 4], a.matiere[i * 4 + 1], a.matiere[i * 4 + 2], a.matiere[i * 4 + 3]);
       }

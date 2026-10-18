@@ -34,6 +34,7 @@ def matieres_decor(P):
     P['ecran'] = matiere('ecran', '#0a1220', 0.5, 0.08, 0.05)
     P['ligne'] = matiere('ligne', '#0e1622', 0.3, 0.55, 1.0, 'ligne')
     P['accent2'] = matiere('accent2', '#ffffff', 0, 0.5, 1.0, 'accent2')
+    P['roche'] = matiere('roche', '#3d3936', 0.05, 0.92)
     return P
 
 
@@ -266,7 +267,48 @@ def portique(P):
     return ob
 
 
-MODULES = {'bordure': bordure, 'chevron': chevron, 'portique': portique}
+# ---------------------------------------------------------------------------
+# LES ROCHES (astéroïdes, éboulis) : une icosphère déformée par trois bruits (cellules de Voronoï pour les
+# cassures, nuages pour l'irrégularité, une grande onde pour la forme), puis décimée pour garder des plans de
+# fracture nets. Rayon ~1 (le jeu les met à l'échelle et les recolore selon le monde).
+# ---------------------------------------------------------------------------
+def roche(graine):
+    def fabrique(P):
+        import random
+        rnd = random.Random(graine * 7919 + 13)
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=3, radius=1.0)
+        e = (rnd.uniform(1.05, 1.4), rnd.uniform(0.8, 1.0), rnd.uniform(0.7, 0.95))
+        bmesh.ops.transform(bm, matrix=Matrix.Diagonal((*e, 1)), verts=bm.verts[:])
+        # Des plans de fracture au hasard : chacun tranche la roche et la referme d'une face plane.
+        for _ in range(16):
+            n = Vector((rnd.gauss(0, 1), rnd.gauss(0, 1), rnd.gauss(0, 1))).normalized()
+            d = rnd.uniform(0.6, 0.92)
+            geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+            bmesh.ops.bisect_plane(bm, geom=geom, plane_co=n * d, plane_no=n, clear_outer=True)
+            bord = [ed for ed in bm.edges if ed.is_boundary]
+            if bord:
+                bmesh.ops.holes_fill(bm, edges=bord, sides=0)
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        ob = objet_depuis_bmesh(f'roche-{graine}', bm, P['roche'])
+        # Un grain de surface sur les faces de fracture (subdivision simple, bruit léger), puis on allège.
+        modif(ob, 'SUBSURF', subdivision_type='SIMPLE', levels=2)
+        tex = bpy.data.textures.new(f'grain-{graine}', 'CLOUDS')
+        tex.noise_scale = 0.28
+        tex.noise_depth = 2
+        modif(ob, 'DISPLACE', texture=tex, strength=0.09, mid_level=0.5)
+        tex2 = bpy.data.textures.new(f'cassures-{graine}', 'VORONOI')
+        tex2.noise_scale = 0.35
+        modif(ob, 'DISPLACE', texture=tex2, strength=0.05, mid_level=0.5)
+        appliquer(ob)
+        modif(ob, 'DECIMATE', ratio=0.12)
+        appliquer(ob)
+        r = max(v.co.length for v in ob.data.vertices)
+        ob.data.transform(Matrix.Scale(1 / r, 4))
+        return [ob]
+    return fabrique
+
+MODULES = {'bordure': bordure, 'chevron': chevron, 'portique': portique, **{f'roche-{k}': roche(k) for k in range(4)}}
 
 
 def construire(nom, P):
@@ -292,7 +334,14 @@ if __name__ == '__main__':
         ob = construire(nom, P)
         resultats.append((nom, ob, {}))
     ecrire_prm(SORTIE / 'decor.prm', resultats)
-    if '--sans-apercu' not in sys.argv:
+    if '--roches' in sys.argv:
+        # Les quatre roches côte à côte.
+        for o in bpy.data.objects:
+            o.hide_render = o.type == 'MESH' and not o.name.startswith('roche')
+        for k in range(4):
+            bpy.data.objects[f'roche-{k}'].location = (-4.5 + k * 3, 0, 0)
+        apercu(apercus / 'decor-roches.png', cible=(0, 0, 0), distance=11, azimut=20, elevation=25, echantillons=16)
+    elif '--sans-apercu' not in sys.argv:
         # L'aperçu : une bordure de chaque côté (la gauche en miroir), deux mâts, le portique.
         ob_b = bpy.data.objects['bordure']
         for nom in ('bordure', 'chevron'):

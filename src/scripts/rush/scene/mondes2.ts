@@ -19,8 +19,15 @@ import { decor } from './assets';
 const L = TRONCON;
 
 /** Un rocher (astéroïde, fragment) à facettes : roche claire au soleil, sombre dessous, parfois glacée. */
-function rocher(a: Assembleur, x: number, y: number, z: number, r: number, graine: number, q: Matiere = M.roche, q2: Matiere = M.rocheSombre) {
+function rocher(a: Assembleur, x: number, y: number, z: number, r: number, graine: number, q: Matiere = M.roche, q2: Matiere = M.rocheSombre, loin = false) {
   a.pousser().deplacer(x, y, z).tourner(graine * 2.1, graine * 3.7, graine * 1.3);
+  // (V4-H7) Une roche fracturée modélisée dans Blender (decor.prm), recolorée pour le monde ; pas au lointain
+  // (des centaines de roches : la sphère à relief, plus légère, y suffit).
+  const modele = loin ? undefined : decor[`roche-${Math.abs(graine) % 4}`];
+  if (modele) {
+    a.echelle(r * 1.15).importer(modele, (n) => (n[1] > -0.1 ? q : q2)).retirer();
+    return;
+  }
   a.sphere(r, r > 3 ? 3 : 2, q, (v) => 0.72 + 0.4 * Math.abs(Math.sin(v[0] * 3.1 + graine * 5) * Math.cos(v[1] * 2.7 + graine) * Math.sin(v[2] * 3.9 + graine * 2)), false, (v) => (v[1] > -0.1 ? q : q2));
   a.retirer();
 }
@@ -179,7 +186,7 @@ const lointainDebris: Lointain = {
     for (let k = 0; k < 260; k++) {
       const ang = r() * Math.PI * 2;
       const d = 600 + r() * 900;
-      rocher(a, Math.cos(ang) * d, -60 + Math.sin(ang * 3) * 80 + (r() - 0.5) * 60, -Math.abs(Math.sin(ang)) * d - 200, 6 + r() * 26, k);
+      rocher(a, Math.cos(ang) * d, -60 + Math.sin(ang * 3) * 80 + (r() - 0.5) * 60, -Math.abs(Math.sin(ang)) * d - 200, 6 + r() * 26, k, M.roche, M.rocheSombre, true);
     }
   },
 };

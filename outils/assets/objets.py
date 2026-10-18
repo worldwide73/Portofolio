@@ -128,7 +128,73 @@ def barriere(P):
     return ob, {'halos': halos}
 
 
-OBJETS = {'barriere': barriere}
+# ---------------------------------------------------------------------------
+# LES ROCHERS (obstacle « debris », trois variantes) : trois roches fracturées, chacune éclatée en quartiers
+# légèrement écartés qui laissent voir un cœur en fusion. Mêmes places et tailles que le modèle procédural.
+# ---------------------------------------------------------------------------
+def rochers(graine):
+    def fabrique(P):
+        import random
+        from decor import roche
+        rnd = random.Random(100 + graine)
+        braise = matiere('braise', '#ff6a2a', 0, 0.6, 1.4)
+        tranche = matiere('trancheRoche', '#2a1a14', 0.1, 0.9, 0.25)
+        P2 = dict(P)
+        P2['roche'] = matiere('rocheObjet', '#3d3936', 0.05, 0.92)
+        ob = []
+        # (Places du modèle procédural, en jeu : x, y, z, taille → Blender : x, −z, y.)
+        for k, (x, y, z, t) in enumerate([(-0.45, 0.62, 0.1, 0.62), (0.5, 0.7, -0.15, 0.55), (0.05, 1.18, 0.05, 0.42)]):
+            base = roche(graine * 3 + k)(P2)[0]
+            base.data.transform(Matrix.Scale(t, 4))
+            # Deux plans de cassure perpendiculaires : quatre quartiers.
+            n1 = Vector((rnd.gauss(0, 1), rnd.gauss(0, 1), rnd.gauss(0, 0.5))).normalized()
+            n2 = n1.cross(Vector((0, 0, 1))).normalized()
+            for s1 in (1, -1):
+                for s2 in (1, -1):
+                    bm = bmesh.new()
+                    bm.from_mesh(base.data)
+                    for n, sg in ((n1, s1), (n2, s2)):
+                        geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+                        bmesh.ops.bisect_plane(bm, geom=geom, plane_co=(0, 0, 0), plane_no=n * sg, clear_inner=True)
+                        bord = [e for e in bm.edges if e.is_boundary]
+                        if bord:
+                            r_ = bmesh.ops.holes_fill(bm, edges=bord, sides=0)
+                            for f in r_['faces']:
+                                f.material_index = 1
+                    if not bm.faces:
+                        bm.free()
+                        continue
+                    # Le quartier s'écarte du centre : on voit le cœur entre les cassures.
+                    d = (n1 * s1 + n2 * s2).normalized() * t * 0.09
+                    bmesh.ops.translate(bm, vec=d, verts=bm.verts[:])
+                    me = bpy.data.meshes.new(f'quartier-{k}')
+                    bm.to_mesh(me)
+                    bm.free()
+                    q = bpy.data.objects.new(f'quartier-{k}', me)
+                    bpy.context.scene.collection.objects.link(q)
+                    me.materials.append(P2['roche'])
+                    me.materials.append(tranche)
+                    q.location = (x, -z, y)
+                    ob.append(q)
+            bpy.data.objects.remove(base)
+            # Le cœur en fusion, au centre.
+            bm = bmesh.new()
+            bmesh.ops.create_icosphere(bm, subdivisions=2, radius=t * 0.62)
+            c = bpy.data.objects.new(f'coeur-{k}', bpy.data.meshes.new(f'coeur-{k}'))
+            bm.to_mesh(c.data)
+            bm.free()
+            bpy.context.scene.collection.objects.link(c)
+            c.data.materials.append(braise)
+            c.location = (x, -z, y)
+            ob.append(c)
+        for o in ob:
+            figer(o)
+        halos = [[x, y, z, t * 1.6, 1, 0.45, 0.2, 0.5] for x, y, z, t in [(-0.45, 0.62, 0.1, 0.62), (0.5, 0.7, -0.15, 0.55), (0.05, 1.18, 0.05, 0.42)]]
+        return ob, {'halos': halos}
+    return fabrique
+
+
+OBJETS = {'barriere': barriere, **{f'rochers-{k}': rochers(k) for k in range(3)}}
 
 
 def construire(nom, fn, P):
