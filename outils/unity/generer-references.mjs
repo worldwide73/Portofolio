@@ -15,6 +15,7 @@ const { moteur } = await chargerCoeur();
 const SORTIE = join(RACINE, 'unity', 'PortalRush', 'Assets', 'PortalRush', 'Tests', 'Editor', 'References');
 mkdirSync(SORTIE, { recursive: true });
 
+/** Le pas par défaut (1/60 s) ; un scénario peut imposer « pas » (images par seconde, 120 pour le vrai jeu). */
 const DT = 1 / 60;
 const SCENARIOS = [
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ mode: 'campagne', difficulte: 'as', niveau: n, graine: 1000 + n, vehicule: 'aube', secondes: 90 })),
@@ -39,6 +40,9 @@ const SCENARIOS = [
   { mode: 'campagne', difficulte: 'pilote', niveau: 7, graine: 77077, vehicule: 'faucon', secondes: 150, pilote: 'maladroit' },
   { mode: 'infini', difficulte: 'pilote', niveau: 1, graine: 99, vehicule: 'aube', secondes: 120, pilote: 'maladroit' },
   { mode: 'defi', difficulte: 'pilote', niveau: 1, graine: 20261019, vehicule: 'aube', secondes: 120, pilote: 'tardif' },
+  // Au pas du vrai jeu (1/120 s, rush.ts).
+  { mode: 'campagne', difficulte: 'as', niveau: 6, graine: 6120, vehicule: 'faucon', secondes: 120, pilote: 'tardif', pas: 120 },
+  { mode: 'infini', difficulte: 'cauchemar', niveau: 1, graine: 120, vehicule: 'bastion', secondes: 120, pas: 120 },
 ];
 
 /** Le premier obstacle encore devant le vaisseau (à moins de 55 m). */
@@ -123,7 +127,8 @@ for (const s of SCENARIOS) {
   const entrees = [];
   const evenements = [];
   const objets = new Map();
-  const images = Math.round(s.secondes / DT);
+  const dt = s.pas ? 1 / s.pas : DT;
+  const images = Math.round(s.secondes / dt);
   let i = 0;
   for (; i < images && !p.termine; i++) {
     const a = pilote(p);
@@ -131,7 +136,7 @@ for (const s of SCENARIOS) {
     else if (a === 'd') p.deplacer(1);
     else if (a === 'o') p.declencher();
     if (a) entrees.push([i, a]);
-    p.avancer(DT);
+    p.avancer(dt);
     for (const e of p.evenements) evenements.push([i, e.type, e.valeur === undefined ? null : arrondi(e.valeur), e.voie ?? null]);
     p.evenements.length = 0;
     for (const o of p.objets) if (!objets.has(o.id)) objets.set(o.id, objetVersListe(o));
@@ -156,8 +161,8 @@ for (const s of SCENARIOS) {
     boss: p.boss ? { vie: arrondi(p.boss.vie), max: p.boss.max, phase: p.boss.phase } : null,
     resultat: p.termine ? { ...p.termine, temps: arrondi(p.termine.temps), objectifs: p.termine.objectifs.map((o) => ({ type: o.type, valeur: o.valeur, atteint: o.atteint, mesure: o.mesure })) } : null,
   };
-  const nom = `${s.mode}-${s.difficulte}-${s.niveau}-${s.vehicule}-${s.graine}${s.pilote ? `-${s.pilote}` : ''}`;
-  writeFileSync(join(SORTIE, `${nom}.json`), JSON.stringify({ scenario: { ...s, dt: DT }, entrees, objets: [...objets.values()], evenements, final }));
+  const nom = `${s.mode}-${s.difficulte}-${s.niveau}-${s.vehicule}-${s.graine}${s.pilote ? `-${s.pilote}` : ''}${s.pas ? `-pas${s.pas}` : ''}`;
+  writeFileSync(join(SORTIE, `${nom}.json`), JSON.stringify({ scenario: { ...s, dt }, entrees, objets: [...objets.values()], evenements, final }));
   index.push(nom);
   console.log(`${nom} : ${i} images, ${objets.size} objets, ${evenements.length} événements, ${p.termine ? (p.termine.reussi ? 'réussi' : p.termine.arrive ? 'arrivé' : 'perdu') : 'en cours'} (score ${Math.round(p.score)})`);
 }
