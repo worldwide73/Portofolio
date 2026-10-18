@@ -17,7 +17,7 @@ export type V3 = [number, number, number];
 type Gl = ConstructorParameters<typeof Geometry>[0];
 
 /** Les canaux d'une matière : sa couleur vient du sommet, ou d'un réglage du monde. */
-export const CANAL = { fixe: 0, peinture: 1, accent: 2, accent2: 3, danger: 4, coeur: 5, ligne: 6, fissure: 7, clignote: 8, peinture2: 9 } as const;
+export const CANAL = { fixe: 0, peinture: 1, accent: 2, accent2: 3, danger: 4, coeur: 5, ligne: 6, fissure: 7, clignote: 8, peinture2: 9, revetement: 10 } as const;
 
 /**
  * Une matière. c : couleur sRGB (0 à 1) ; m : métal ; r : rugosité ; e : émission

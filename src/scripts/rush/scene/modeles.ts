@@ -11,7 +11,9 @@
 
 import { Assembleur, CANAL, Halos, mat, type Matiere, type V3 } from './geometrie';
 
-export const VOIE = 2.6;
+// (V4-H7) 3 m au lieu de 2,6 : la nouvelle route est plus large et plus monumentale ; toutes les positions
+// des objets passent par cette valeur (les collisions, elles, se font par voie dans le moteur).
+export const VOIE = 3.0;
 const HACHURE = mat('#f0b52a', 0.3, 0.5, 0.22);
 export const HAUTEUR_VOL = 0.78;
 

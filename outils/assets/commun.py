@@ -30,7 +30,7 @@ RACINE = Path(__file__).resolve().parents[2]
 SORTIE = RACINE / 'public' / 'rush' / 'modeles'
 
 # Les canaux du shader de surface (src/scripts/rush/scene/geometrie.ts, CANAL).
-CANAL = {'fixe': 0, 'peinture': 1, 'accent': 2, 'accent2': 3, 'danger': 4, 'coeur': 5, 'ligne': 6, 'fissure': 7, 'clignote': 8, 'peinture2': 9}
+CANAL = {'fixe': 0, 'peinture': 1, 'accent': 2, 'accent2': 3, 'danger': 4, 'coeur': 5, 'ligne': 6, 'fissure': 7, 'clignote': 8, 'peinture2': 9, 'revetement': 10}
 
 
 def hexa(h):

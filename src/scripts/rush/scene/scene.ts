@@ -502,7 +502,8 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   };
   // (V4-H7) Les modules du décor (bordures, portiques…) arrivent après coup : les tronçons déjà construits sans
   // eux sont refaits (une fois, en général pendant les menus).
-  void chargerDecor().then((noms) => {
+  void Promise.all([chargerDecor(), chargerDecor('piste.prm')]).then(([a, b]) => {
+    const noms = [...a, ...b];
     if (!noms.length) return;
     for (const [, t] of troncons) t.racine.setParent(null);
     troncons.clear();
@@ -1238,14 +1239,16 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   };
   const cadrer = (l: number, h: number, boost: number, vitesse: number, dt: number) => {
     const aspect = l / h;
-    let fov = 54 + boost * 6 + borne((vitesse - 30) / 50) * 4;
-    let recul = 7.4,
-      hauteur = 3.25;
+    // (V4-H7) Une caméra plus basse et plus proche, un champ plus large : le vaisseau occupe le bas de l'image,
+    // la route paraît large et les murs défilent tout près (les obstacles restent visibles par-dessus le vaisseau).
+    let fov = 60 + boost * 7 + borne((vitesse - 30) / 50) * 5;
+    let recul = 6.3,
+      hauteur = 2.45;
     if (aspect < 1) {
       // En portrait : on garde les trois voies, en prenant plus de recul.
-      fov = Math.min(80, (2 * Math.atan(Math.tan((31 * Math.PI) / 180) / aspect) * 180) / Math.PI) + boost * 4;
-      recul = 9.6;
-      hauteur = 4.4;
+      fov = Math.min(84, (2 * Math.atan(Math.tan((34 * Math.PI) / 180) / aspect) * 180) / Math.PI) + boost * 4;
+      recul = 8.8;
+      hauteur = 3.7;
     }
     cam.fov += (fov - cam.fov) * borne(dt * 4);
     camera.perspective({ fov: cam.fov, aspect });
@@ -1549,7 +1552,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       cam.x += (xv * 0.5 - cam.x) * borne(dt * 5);
       cam.roulis += (-ecart * 0.045 - cam.roulis) * borne(dt * 6);
       pos = [cam.x, c.hauteur, c.recul];
-      cible = [cam.x * 0.6 + xv * 0.25, 0.95, -16];
+      cible = [cam.x * 0.6 + xv * 0.25, 1.05, -18];
       roulis = cam.roulis;
     } else {
       // Les menus : la caméra tourne lentement autour du vaisseau, qui avance au ralenti

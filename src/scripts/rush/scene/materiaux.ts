@@ -225,7 +225,9 @@ void main() {
     vec3 nl = normalize(vNLocale) * face;
     vec3 w = pow(abs(nl), vec3(6.0));
     w /= w.x + w.y + w.z;
-    vec3 pl = vLocal * uEchelleTex;
+    // (V4-H7) Le revêtement de la route : un détail plus large et beaucoup plus discret (pas de carrelage).
+    bool route = canal == ${CANAL.revetement};
+    vec3 pl = vLocal * uEchelleTex * (route ? 0.45 : 1.0);
     bool brut = metal < 0.3 && rugo > 0.7;
     vec4 dX, dY, dZ;
     if (brut) { dX = texture(tBrut, pl.zy); dY = texture(tBrut, pl.xz); dZ = texture(tBrut, pl.xy); }
@@ -237,12 +239,12 @@ void main() {
     vec2 gZ = (brut ? qZ.ba : qZ.rg) * 2.0 - 1.0;
     // (Le détail s'efface au loin, où il ne ferait que scintiller.)
     float k = uDetail * (1.0 - smoothstep(40.0, 140.0, d));
-    float kp = peint ? 0.55 : 1.0;
+    float kp = peint ? 0.55 : route ? 0.22 : 1.0;
     vec3 delta = (vec3(0.0, gX.y, gX.x) * w.x + vec3(gY.x, 0.0, gY.y) * w.y + vec3(gZ.x, gZ.y, 0.0) * w.z) * k * kp;
     N = normalize(N + mat3(modelMatrix) * delta);
-    base *= mix(1.0, dt.r * 1.5, k * (peint ? 0.6 : 1.0));
-    rugo = clamp(rugo + (dt.g - 0.5) * 0.9 * k, 0.04, 1.0);
-    cavite = mix(1.0, dt.b, k);
+    base *= mix(1.0, dt.r * 1.5, k * (peint ? 0.6 : route ? 0.06 : 1.0));
+    rugo = clamp(rugo + (dt.g - 0.5) * 0.9 * k * (route ? 0.45 : 1.0), 0.04, 1.0);
+    cavite = mix(1.0, dt.b, k * (route ? 0.12 : 1.0));
   } else
 #endif
   if (emi == 0.0) {
@@ -288,6 +290,23 @@ void main() {
   float fresnel = pow(1.0 - nv, 5.0);
   vec3 R = reflect(-V, N);
   vec3 env = environnement(R, rugo, ombre);
+  // (V4-H7) Sur la chaussée : le reflet des rails lumineux du pied des bords (x = ±4,92, y ≈ 0,07 ; le second,
+  // plus haut, de la seconde couleur), étiré par la rugosité — les longues traînées de lumière sur la route.
+  if (canal == ${CANAL.revetement} && R.y > 0.0) {
+    // (Le ciel s'y reflète peu : la route reste sombre, ce sont les lumières qui s'y étirent.)
+    env *= 0.4;
+    for (int k = 0; k < 4; k++) {
+      float xr = (k == 0 || k == 2) ? 4.92 : -4.92;
+      float yr = k < 2 ? 0.07 : 0.25;
+      if (k >= 2) xr *= 1.06;
+      float dx = xr - vMonde.x;
+      if (dx * R.x <= 0.0) continue;
+      float t = dx / R.x;
+      float largeur = 0.06 + rugo * 0.9;
+      float trace = exp(-pow((t * R.y - yr) / largeur, 2.0)) * exp(-t * 0.04);
+      env += (k < 2 ? uAccent * 3.2 : uAccent2 * 2.0) * trace;
+    }
+  }
   // Dans l'ombre, le ciel aussi est en partie caché par ce qui la porte : ambiance et reflets baissent.
   float voile = mix(0.5, 1.0, ombre);
   vec3 f0 = mix(vec3(0.04), base, metal);
