@@ -1,0 +1,20 @@
+{
+    "name": "PortalRush.Interface",
+    "rootNamespace": "PortalRush.Interface",
+    "references": [
+        "PortalRush.Coeur",
+        "PortalRush.Jeu",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "PORTALRUSH_PAQUETS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
