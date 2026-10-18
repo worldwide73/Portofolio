@@ -525,11 +525,100 @@ def tourelle(P):
     return ob, {'halos': [[-0.96, 2.95, 0, 0.6, 1, 0.25, 0.2, 0.7]]}
 
 
+# ---------------------------------------------------------------------------
+# SINGULARITY — les installations arrachées par le trou noir : anneau orbital éventré, fragments de coque
+# ---------------------------------------------------------------------------
+def anneau_brise(P):
+    """Un tiers d'anneau d'habitat (rayon 12 m) : caisson à hublots, rayons, extrémité déchirée aux ponts à nu."""
+    import random
+    rnd = random.Random(5)
+    coque = matiere('coqueSing', '#2a2638', 0.9, 0.22)
+    fen = matiere('fenetreSing', '#e9e2ff', 0, 0.5, 0.5)
+    R, n = 12.0, 22
+    ob = []
+    # Le caisson de l'anneau : une suite de segments trapézoïdaux le long de l'arc (de −60° à +60°).
+    def caisson(bm):
+        for i in range(n):
+            t0 = math.radians(-60 + 120 * i / n)
+            t1 = math.radians(-60 + 120 * (i + 1) / n)
+            if i == n - 1:
+                t1 -= 0.03
+            for (ra, rb) in [(R - 1.1, R + 1.1)]:
+                pts = []
+                for t in (t0, t1):
+                    for r in (ra, rb):
+                        for y in (-1.4, 1.4):
+                            pts.append((r * math.cos(t), y, r * math.sin(t)))
+                v = [bm.verts.new(p) for p in pts]
+                for f in [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]:
+                    bm.faces.new([v[k] for k in f])
+    ob.append(piece('caisson', caisson, coque))
+    # Les hublots sur la face externe et les nervures entre les segments.
+    def hublots(bm):
+        for i in range(n - 2):
+            t = math.radians(-60 + 120 * (i + 0.5) / n)
+            if rnd.random() < 0.3:
+                continue
+            for y in (-0.6, 0.6):
+                boite(bm, ((R + 1.12) * math.cos(t), y, (R + 1.12) * math.sin(t)), (0.05, 0.5, 0.9), Matrix.Rotation(-t, 3, 'Y'))
+    ob.append(piece('hublots', hublots, fen))
+    def nervures(bm):
+        for i in range(0, n, 2):
+            t = math.radians(-60 + 120 * i / n)
+            boite(bm, (R * math.cos(t), 0, R * math.sin(t)), (2.5, 3.1, 0.25), Matrix.Rotation(-t, 3, 'Y'))
+    ob.append(piece('nervures', nervures, P['acier']))
+    # Deux rayons vers le moyeu (disparu), coupés net.
+    ob.append(piece('rayons', lambda bm: [barre(bm, ((R - 1.1) * math.cos(t), 0, (R - 1.1) * math.sin(t)), (4 * math.cos(t), 0, 4 * math.sin(t)), 0.7) for t in (math.radians(-20), math.radians(30))], coque))
+    # L'extrémité déchirée : des ponts qui dépassent, des poutres tordues, des câbles.
+    t = math.radians(60)
+    c = Vector((R * math.cos(t), 0, R * math.sin(t)))
+    tan = Vector((-math.sin(t), 0, math.cos(t)))
+    def dechirure(bm):
+        for k in range(5):
+            a = c + Vector((rnd.uniform(-0.9, 0.9), rnd.uniform(-1.2, 1.2), 0))
+            b = a + tan * rnd.uniform(0.8, 2.6) + Vector((rnd.uniform(-0.6, 0.6), rnd.uniform(-0.6, 0.6), rnd.uniform(-0.6, 0.6)))
+            barre(bm, a, b, 0.12)
+        for k in range(3):
+            boite(bm, c + tan * 0.6 + Vector((0, -1.0 + k * 1.0, 0)), (2.0, 0.05, 1.6), Matrix.Rotation(rnd.uniform(-0.4, 0.4), 3, 'X') @ Matrix.Rotation(-t, 3, 'Y'))
+    ob.append(piece('dechirure', dechirure, P['acier']))
+    ob.append(piece('cables', lambda bm: [tube(bm, c + Vector((rnd.uniform(-0.6, 0.6), rnd.uniform(-1, 1), 0)), c + tan * rnd.uniform(1.5, 3) + Vector((0, rnd.uniform(-1.5, 1.5), rnd.uniform(-1.5, 0))), 0.04, 5) for _ in range(5)], P['caoutchouc']))
+    ob.append(piece('braises', lambda bm: [boite(bm, c + Vector((rnd.uniform(-0.8, 0.8), rnd.uniform(-1.2, 1.2), 0)), (0.2, 0.2, 0.2)) for _ in range(4)], P['accent']))
+    for o in ob:
+        appliquer(o)
+    return ob, {'halos': [[c.x, c.z, -c.y, 2.4, 0.92, 0.88, 1, 0.5]]}
+
+
+def fragment_coque(P):
+    """Un morceau de coque arraché : tôle cintrée sur ses couples, lisses, isolant qui pend, un feu encore allumé."""
+    import random
+    rnd = random.Random(9)
+    coque = matiere('coqueSing', '#2a2638', 0.9, 0.22)
+    ob = []
+    R = 3.0
+    def tole(bm):
+        n = 8
+        for i in range(n):
+            t0, t1 = math.pi * 0.1 + 0.8 * math.pi * i / n, math.pi * 0.1 + 0.8 * math.pi * (i + 1) / n
+            v = [bm.verts.new(p) for p in [(R * math.cos(t0), -2.5, R * math.sin(t0)), (R * math.cos(t1), -2.5, R * math.sin(t1)), (R * math.cos(t1), 2.5 - (i % 3) * 0.6, R * math.sin(t1)), (R * math.cos(t0), 2.5 - ((i + 2) % 3) * 0.5, R * math.sin(t0))]]
+            bm.faces.new(v)
+    t_ = piece('tole', tole, coque)
+    modif(t_, 'SOLIDIFY', thickness=0.08, offset=-1.0)
+    ob.append(t_)
+    ob.append(piece('couples', lambda bm: [barre(bm, (R * 0.96 * math.cos(a), y, R * 0.96 * math.sin(a)), (R * 0.96 * math.cos(a + 0.36), y, R * 0.96 * math.sin(a + 0.36)), 0.16) for y in (-2.2, -0.7, 0.8) for a in [math.pi * 0.1 + k * 0.36 for k in range(7)]], P['acier']))
+    ob.append(piece('lisses', lambda bm: [barre(bm, (R * 0.93 * math.cos(a), -2.4, R * 0.93 * math.sin(a)), (R * 0.93 * math.cos(a), 2.0, R * 0.93 * math.sin(a)), 0.1) for a in [math.pi * 0.15 + k * 0.5 for k in range(5)]], P['acier']))
+    ob.append(piece('isolant', lambda bm: [boite(bm, (rnd.uniform(-2, 2), rnd.uniform(-2, 2), rnd.uniform(1.0, 2.2)), (0.6, 0.05, 1.2), Matrix.Rotation(rnd.uniform(-0.6, 0.6), 3, 'X')) for _ in range(3)], P['jaune']))
+    ob.append(piece('feu', lambda bm: boite(bm, (0, -2.45, R - 0.15), (0.2, 0.1, 0.15)), P['feuRouge']))
+    for o in ob:
+        appliquer(o)
+    return ob, {}
+
+
 MONDES = {
     'laser': {'mur-tranchee': mur_tranchee, 'scanner': scanner},
     'neon': {'tour-neon-a': tour_neon_a, 'tour-neon-b': tour_neon_b},
     'rift': {'grappe-cristaux': grappe_cristaux, 'arche-cristal': arche_cristal},
     'sentinelle': {'colonne-forteresse': colonne_forteresse, 'tourelle': tourelle},
+    'singularite': {'anneau-brise': anneau_brise, 'fragment-coque': fragment_coque},
     'tempete': {'cadre-station': lambda P: cadre_station(P), 'cadre-brise': lambda P: cadre_station(P, True), 'paratonnerre': paratonnerre},
 }
 CADRAGES = {
@@ -544,6 +633,8 @@ CADRAGES = {
     'paratonnerre': ((0, 0, 18), 55, 30),
     'colonne-forteresse': ((0, 0, 21), 70, 250),
     'tourelle': ((-1, 0, 2), 9, 240),
+    'anneau-brise': ((0, 0, 6), 40, 20),
+    'fragment-coque': ((0, 0, 1.5), 12, 30),
 }
 
 

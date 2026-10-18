@@ -440,7 +440,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const troncons = new Map<number, Troncon>();
   // (V4-H7) Les modules d'architecture propres à un monde (public/rush/modeles/monde-<thème>.prm) : demandés à la
   // première construction d'un de ses tronçons ; à leur arrivée, les tronçons de ce monde sont refaits.
-  const MONDES_IMPORTES = new Set<Theme>(['laser', 'neon', 'rift', 'tempete', 'sentinelle']);
+  const MONDES_IMPORTES = new Set<Theme>(['laser', 'neon', 'rift', 'tempete', 'sentinelle', 'singularite']);
   const mondesDemandes = new Set<Theme>();
   const demanderMonde = (theme: Theme) => {
     if (!MONDES_IMPORTES.has(theme) || mondesDemandes.has(theme)) return;

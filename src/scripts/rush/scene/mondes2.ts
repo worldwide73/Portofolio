@@ -520,12 +520,22 @@ function tronconSingularite(a: Assembleur, h: Halos, v: number) {
       y = 4 + Math.sin(t) * d * 0.6,
       z = -(k / 26) * L;
     if (k % 3 === 0) rocher(a, x, y, z, 0.6 + r() * 1.8, k + v * 3, mat('#3a3548', 0.4, 0.6), mat('#1a1724', 0.4, 0.8));
-    else {
+    else if (k % 3 === 1 && decor['fragment-coque']) {
+      // (V4-H7) Un fragment de coque arraché (modélisé dans Blender), qui tournoie vers le trou noir.
+      a.pousser().deplacer(x, y, z).tourner(t, t * 1.3, t * 0.7).echelle(0.35 + r() * 0.4).importer(decor['fragment-coque']).retirer();
+    } else {
       a.pousser().deplacer(x, y, z).tourner(t, t * 1.3, t * 0.7);
       a.boite(0, 0, 0, 1 + r() * 2, 0.1, 0.8 + r(), metal);
       a.retirer();
     }
     if (k % 4 === 0) h.ajouter(x, y, z, 0.8, violet, 0.4, 3);
+  }
+  // (V4-H7) Un tiers d'anneau d'habitat éventré, incliné au-dessus de la piste, d'un côté puis de l'autre.
+  if (decor['anneau-brise']) {
+    const s = v % 2 ? 1 : -1;
+    a.pousser().deplacer(s * 9, 2, -24).tourner(0.5, s * 0.6, s * 0.4);
+    poserModule(a, h, 'anneau-brise', 0, 0, 0, s);
+    a.retirer();
   }
   // Des structures étirées, comme happées.
   for (let k = 0; k < 2; k++) {
