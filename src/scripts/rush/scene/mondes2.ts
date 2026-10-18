@@ -100,6 +100,8 @@ function tronconNeon(a: Assembleur, h: Halos, v: number) {
     const z = -r() * L;
     const hh = 20 + r() * 60;
     const base = -40;
+    // (V4-H7) Les trois premières : des tours modélisées dans Blender (façade tournée vers la piste).
+    if (k < 3 && poserModule(a, h, (k + v) % 2 ? 'tour-neon-a' : 'tour-neon-b', x, base + (k === 1 ? -8 : 0), z, s)) continue;
     a.boite(x, base + hh / 2, z, 6 + r() * 8, hh, 6 + r() * 8, mat('#1d1a2a', 0.7, 0.45), 0.6);
     for (let y = base + 4; y < base + hh - 2; y += 2.2 + r() * 2) a.boite(x - s * 4.2, y, z, 0.05, 0.18, 4 + r() * 3, r() > 0.5 ? M.fenetre : r() > 0.5 ? M.accent2 : M.accent);
     h.ajouter(x, base + hh + 1, z, 2.2, r() > 0.5 ? cyan : rose, 0.6);
