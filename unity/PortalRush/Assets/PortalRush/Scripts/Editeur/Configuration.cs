@@ -233,6 +233,18 @@ namespace PortalRush.Editeur
       PlayerSettings.WebGL.closeOnQuit = true;
       PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
       PlayerSettings.stripEngineCode = true;
+      // Tout le son passe par le moteur audio du portfolio (sons.ts, RUSH RADIO, DREAM RADIO) : Unity n'ouvre aucune sortie audio.
+      var audio = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/AudioManager.asset");
+      if (audio != null && audio.Length > 0)
+      {
+        var so = new SerializedObject(audio[0]);
+        var coupe = so.FindProperty("m_DisableAudio");
+        if (coupe != null)
+        {
+          coupe.boolValue = true;
+          so.ApplyModifiedPropertiesWithoutUndo();
+        }
+      }
     }
   }
 }

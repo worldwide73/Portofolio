@@ -1,4 +1,5 @@
 // PORTAL RUSH (Unity) — LES EFFETS : éclats (collecte, choc, obstacle brisé) et lignes de vitesse.
+// (Les couleurs de particules sont sur 8 bits : l'éclat HDR qui déclenche le bloom vient du matériau, _Intensite.)
 //
 // Particules Shuriken uniquement (le VFX Graph demande des compute shaders, absents en WebGL2). Un seul système
 // d'éclats, émis à la demande (Emit) ; un système de lignes de vitesse accroché à la caméra, dont le débit suit la
@@ -89,10 +90,10 @@ namespace PortalRush.Jeu
       int n;
       switch (genre)
       {
-        case Genre.Dore: c = new Color(1f, 0.78f, 0.3f) * 3f; n = 26; break;
-        case Genre.Choc: c = new Color(1f, 0.25f, 0.2f) * 3f; n = 34; break;
-        case Genre.Debris: c = new Color(1f, 0.6f, 0.3f) * 2f; n = 40; break;
-        default: c = Monde.Instance != null ? Monde.Instance.Ambiance.Accent * 3f : Color.cyan; n = 20; break;
+        case Genre.Dore: c = new Color(1f, 0.78f, 0.3f); n = 26; break;
+        case Genre.Choc: c = new Color(1f, 0.25f, 0.2f); n = 34; break;
+        case Genre.Debris: c = new Color(1f, 0.6f, 0.3f); n = 40; break;
+        default: c = Monde.Instance != null ? Monde.Instance.Ambiance.Accent : Color.cyan; n = 20; break;
       }
       if (Reduits) n /= 3;
       var p = new ParticleSystem.EmitParams { position = position, startColor = c, applyShapeToPosition = true };
@@ -114,7 +115,10 @@ namespace PortalRush.Jeu
       e.rateOverTime = debit;
       var m = lignes.main;
       var accent = Monde.Instance != null ? Monde.Instance.Ambiance.Accent : Color.white;
-      m.startColor = Color.Lerp(Color.white, accent, 0.5f) * (partie != null && partie.Overdrive > 0 ? 2.2f : 1.1f);
+      // (Couleurs sur 8 bits : l'intensité vient du matériau ; l'Overdrive les rend plus opaques.)
+      var teinte = Color.Lerp(Color.white, accent, 0.5f);
+      teinte.a = partie != null && partie.Overdrive > 0 ? 1f : 0.55f;
+      m.startColor = teinte;
     }
   }
 }

@@ -167,7 +167,7 @@ namespace PortalRush.Jeu
       foreach (var tre in trainees)
       {
         if (tre == null) continue;
-        tre.startColor = tr * 2.5f;
+        tre.startColor = tr; // (8 bits : l'éclat vient du matériau)
         tre.endColor = new Color(tr.r, tr.g, tr.b, 0f);
       }
     }
