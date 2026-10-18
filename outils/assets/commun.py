@@ -77,7 +77,7 @@ def palette():
         'joint': matiere('joint', '#0a0c10', 0.2, 0.9),
         'verre': matiere('verre', '#0b1a2c', 0.6, 0.04, 0.08),
         'tuyere': matiere('tuyere', '#3a3530', 0.92, 0.38),
-        'chaud': matiere('chaud', '#6b4a36', 0.9, 0.3),
+        'chaud': matiere('chaud', '#7a4a30', 0.85, 0.3, 0.22),
         'accent': matiere('accent', '#ffffff', 0, 0.5, 1.0, 'accent'),
         'accentDoux': matiere('accentDoux', '#ffffff', 0, 0.5, 0.4, 'accent'),
         'coeur': matiere('coeur', '#ffffff', 0, 0.3, 1.2, 'coeur'),

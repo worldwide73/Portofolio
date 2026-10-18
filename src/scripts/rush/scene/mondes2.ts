@@ -13,7 +13,8 @@
 
 import { Assembleur, Halos, mat, type Matiere, type RGB } from './geometrie';
 import { M } from './modeles';
-import { TRONCON, lampadaire, pilier, piste, rnd, type Kit, type Lointain, type Palette } from './mondes';
+import { TRONCON, lampadaire, pilier, piste, poserModule, rnd, type Kit, type Lointain, type Palette } from './mondes';
+import { decor } from './assets';
 
 const L = TRONCON;
 
@@ -189,13 +190,16 @@ function tronconLaser(a: Assembleur, h: Halos, v: number) {
   piste(a, { plaque: mat('#3c4a55', 0.8, 0.34), plaque2: mat('#2f3b45', 0.8, 0.36), bord: M.metalSombre, graine: 40 + v, dessous: false });
   const rouge: RGB = [1, 0.25, 0.25],
     cyan: RGB = [0.4, 0.95, 1];
-  // La tranchée : murs latéraux, panneaux, feux d'alerte.
+  // La tranchée : murs latéraux, panneaux, feux d'alerte. (V4-H7) Le mur modélisé dans Blender s'il est chargé.
   for (const s of [-1, 1]) {
-    a.boite(s * 5.4, 0.7, -L / 2, 0.6, 3.2, L, mat('#26313a', 0.75, 0.45));
-    for (let z = 3; z < L; z += 6) {
-      a.boite(s * 5.09, 1.0, -z, 0.02, 1.8, 4.6, M.metalMoyen);
-      a.boite(s * 5.08, 1.9, -z, 0.02, 0.08, 4.2, M.accent);
-      a.boite(s * 5.08, 0.25, -z - 2.6, 0.03, 0.2, 0.2, M.danger);
+    if (decor['mur-tranchee']) for (let z = 3; z < L; z += 6) poserModule(a, h, 'mur-tranchee', 0, 0, -z, s);
+    else {
+      a.boite(s * 5.4, 0.7, -L / 2, 0.6, 3.2, L, mat('#26313a', 0.75, 0.45));
+      for (let z = 3; z < L; z += 6) {
+        a.boite(s * 5.09, 1.0, -z, 0.02, 1.8, 4.6, M.metalMoyen);
+        a.boite(s * 5.08, 1.9, -z, 0.02, 0.08, 4.2, M.accent);
+        a.boite(s * 5.08, 0.25, -z - 2.6, 0.03, 0.2, 0.2, M.danger);
+      }
     }
     // Au-delà : les plateformes en grille et les clôtures laser.
     a.boite(s * 12, -0.9, -L / 2, 12, 0.15, L, M.metalSombre);
@@ -208,6 +212,10 @@ function tronconLaser(a: Assembleur, h: Halos, v: number) {
   }
   // Le portique scanner, tous les 24 m : cadre carré, barre de balayage, projecteurs rouges.
   for (const z of [-6, -30]) {
+    if (poserModule(a, h, 'scanner', 0, 0, z)) {
+      h.ajouter(0, 6.7, z + 0.2, 1.4, cyan, 0.3, 5);
+      continue;
+    }
     for (const s of [-1, 1]) {
       a.boite(s * 5.9, 3.5, z, 0.8, 7.5, 1.0, M.metalMoyen, 0.15);
       a.boite(s * 5.48, 3.5, z, 0.03, 6.4, 0.5, M.accent);

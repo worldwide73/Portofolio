@@ -60,16 +60,17 @@ def nacelle(nom, P, x, z, y0, y1, r, couleur_coque):
     coeur = revolution(nom + '-coeur', [(r * 0.42, y0 + 0.16), (r * 0.2, y0 + 0.17), (0.001, y0 + 0.17)], P['accent'], segments=24)
     objets = [corps, conduit, aubes, volets, interieur, coeur]
     for o in objets:
-        o.location = (x, 0, z)
+        o.location = (x, o.location.y, z)  # (garder le recul des pièces centrées hors de l'origine : volets, aubes)
     return objets, (x, z, y0 - 0.02)
 
 
-def tuyere(nom, P, x, z, y, r, longueur=0.2):
+def tuyere(nom, P, x, z, y, r, longueur=0.13):
     """Une tuyère au bout d'une nacelle (vers −Y) : bague, volets, intérieur chaud, cœur lumineux."""
     bague = revolution(nom + '-bague', [(r * 1.02, y + 0.06), (r * 1.08, y + 0.03), (r * 1.08, y - 0.02), (r * 1.0, y - 0.04), (r * 0.92, y - 0.03)], P['acier'], segments=36)
 
     def volet(bm):
-        boite(bm, (r * 0.86, -longueur * 0.5, 0), (0.018, longueur, r * 0.36), Matrix.Rotation(-0.2, 3, 'Z'))
+        # (Des volets courts, légèrement ouverts : on voit l'intérieur chaud et le cœur depuis l'arrière.)
+        boite(bm, (r * 0.9, -longueur * 0.5, 0), (0.016, longueur, r * 0.36), Matrix.Rotation(0.12, 3, 'Z'))
 
     volets = couronne(nom + '-volets', 14, volet, 0.0, centre=(0, y - 0.02, 0))
     volets.data.materials.append(P['tuyere'])
@@ -77,7 +78,7 @@ def tuyere(nom, P, x, z, y, r, longueur=0.2):
     coeur = revolution(nom + '-coeur', [(r * 0.46, y + 0.12), (r * 0.22, y + 0.13), (0.001, y + 0.13)], P['accent'], segments=24)
     objets = [bague, volets, chaud, coeur]
     for o in objets:
-        o.location = (x, 0, z)
+        o.location = (x, o.location.y, z)  # (garder le recul des pièces centrées hors de l'origine : volets, aubes)
     return objets, (x, z, -(y - longueur))
 
 

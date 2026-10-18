@@ -155,6 +155,18 @@ export function piste(a: Assembleur, s: StylePiste) {
   }
 }
 
+/**
+ * (V4-H7) Pose un module importé (modèle Blender) en (x, y, z), éventuellement en miroir (sx = −1), avec ses
+ * halos (points « halos » du modèle : [x, y, z, rayon, r, v, b, intensité]).
+ */
+export function poserModule(a: Assembleur, h: Halos, nom: string, x: number, y: number, z: number, sx = 1): boolean {
+  const m = decor[nom];
+  if (!m) return false;
+  a.pousser().deplacer(x, y, z).echelle(sx, 1, 1).importer(m).retirer();
+  for (const [hx, hy, hz, r, cr, cv, cb, i] of m.points.halos ?? []) h.ajouter(x + hx * sx, y + hy, z + hz, r, [cr, cv, cb], i ?? 1);
+  return true;
+}
+
 // ---- Des pièces d'architecture réutilisées ----
 /** Un pilier massif, biseauté, avec chapiteau et socle. */
 export function pilier(a: Assembleur, x: number, z: number, y0: number, y1: number, l: number, q: Matiere) {

@@ -438,12 +438,36 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       }
   };
   const troncons = new Map<number, Troncon>();
-  const geoTroncon = (theme: Theme, v: number) => double(`troncon-${theme}-${v}`, () => {
+  // (V4-H7) Les modules d'architecture propres à un monde (public/rush/modeles/monde-<thème>.prm) : demandés à la
+  // première construction d'un de ses tronçons ; à leur arrivée, les tronçons de ce monde sont refaits.
+  const MONDES_IMPORTES = new Set<Theme>(['laser']);
+  const mondesDemandes = new Set<Theme>();
+  const demanderMonde = (theme: Theme) => {
+    if (!MONDES_IMPORTES.has(theme) || mondesDemandes.has(theme)) return;
+    mondesDemandes.add(theme);
+    void chargerDecor(`monde-${theme}.prm`).then((noms) => {
+      if (!noms.length) {
+        mondesDemandes.delete(theme);
+        return;
+      }
+      for (const [i, t] of troncons)
+        if (t.theme === theme) {
+          t.racine.setParent(null);
+          troncons.delete(i);
+        }
+      for (const [cle, g] of geos)
+        if (cle.startsWith(`troncon-${theme}-`)) {
+          g?.remove();
+          geos.delete(cle);
+        }
+    });
+  };
+  const geoTroncon = (theme: Theme, v: number) => (demanderMonde(theme), double(`troncon-${theme}-${v}`, () => {
     const a = new Assembleur();
     const h = new Halos();
     kitDe(theme).troncon(a, h, v);
     return { solide: a, halos: h };
-  });
+  }));
   const varianteDe = (i: number, theme: Theme) => {
     const n = kitDe(theme).variantes;
     return ((i * 2654435761) >>> 0) % 7 % n;
