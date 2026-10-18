@@ -453,6 +453,9 @@ function tronconSentinelle(a: Assembleur, h: Halos, v: number) {
   for (const z of [-12, -36]) {
     for (const s of [-1, 1]) {
       const x = s * 17;
+      // (V4-H7) La colonne de forteresse modélisée dans Blender (fût octogonal à bandes blindées, contreforts,
+      // canal d'énergie tourné vers la piste, chapiteau crénelé), s'il est chargé.
+      if (poserModule(a, h, 'colonne-forteresse', x, 0, z, s)) continue;
       pilier(a, x, z, -1, 44, 3.4, pierre);
       a.boite(x - s * 1.72, 21, z, 0.06, 40, 0.5, M.accent2);
       a.poutre([x + s * 1.5, 6, z], [x + s * 9, -1, z], 1.4, pierre);
@@ -460,6 +463,8 @@ function tronconSentinelle(a: Assembleur, h: Halos, v: number) {
       h.ajouter(x - s * 1.9, 20, z + 0.4, 2.4, braise, 0.35, 0.5);
     }
   }
+  // Les tourelles de défense, braquées sur la piste, sous l'arche.
+  if (decor.tourelle) for (const s of [-1, 1]) poserModule(a, h, 'tourelle', s * (8.8 + (v % 2) * 1.5), -0.2, -24 + s * 3, s);
   // L'arche colossale, une fois par tronçon.
   a.boite(0, 42, -24, 40, 4, 5, pierre, 0.8);
   a.boite(0, 39.9, -24, 34, 0.1, 1.2, M.accent2);

@@ -451,10 +451,85 @@ def paratonnerre(P):
     return ob, {'halos': [[0, H + 5, 0, 3.4, 0.6, 0.85, 1, 0.45], [0, H + 10.6, 0, 1.2, 1, 0.3, 0.25, 0.7]]}
 
 
+# ---------------------------------------------------------------------------
+# CORE SENTINEL — la forteresse : colonnes monumentales blindées, tourelles de défense (face avant = −x)
+# ---------------------------------------------------------------------------
+def octogone(bm, z0, z1, r0, r1=None):
+    r1 = r0 if r1 is None else r1
+    bmesh.ops.create_cone(bm, cap_ends=True, segments=8, radius1=r0, radius2=r1, depth=z1 - z0, matrix=Matrix.Translation((0, 0, (z0 + z1) / 2)) @ Matrix.Rotation(math.pi / 8, 4, 'Z'))
+
+
+def colonne_forteresse(P):
+    pierre = matiere('pierreForteresse', '#2b221c', 0.55, 0.55)
+    blind = matiere('blindForteresse', '#3a2c24', 0.8, 0.42)
+    ob = []
+    ob.append(piece('socle', lambda bm: (octogone(bm, -1, 0.6, 2.9, 2.7), octogone(bm, 0.6, 1.6, 2.4, 2.2)), pierre, biseau=0.06))
+    ob.append(piece('fut', lambda bm: octogone(bm, 1.6, 38, 1.75, 1.6), pierre))
+    ob.append(piece('bandes', lambda bm: [octogone(bm, z, z + 0.7, 1.98) for z in (6, 13, 20, 27, 34)], blind, biseau=0.04))
+    ob.append(piece('chapiteau', lambda bm: (octogone(bm, 38, 40, 1.7, 2.5), octogone(bm, 40, 41.2, 2.5)), blind, biseau=0.05))
+    # Les créneaux du chapiteau.
+    ob.append(piece('creneaux', lambda bm: [boite(bm, (math.cos(a) * 2.25, math.sin(a) * 2.25, 41.8), (0.7, 0.7, 1.2), Matrix.Rotation(a, 3, 'Z')) for a in [k * math.pi / 4 for k in range(8)]], pierre, biseau=0.04))
+    # Les contreforts : quatre ailerons triangulaires au pied.
+    def contreforts(bm):
+        for k in range(4):
+            a = math.pi / 4 + k * math.pi / 2
+            c, s_ = math.cos(a), math.sin(a)
+            pts = [(1.6, 0), (4.2, 0), (1.6, 7.5)]
+            v0 = [bm.verts.new((c * x - s_ * -0.35, s_ * x + c * -0.35, z + 0.6)) for x, z in pts]
+            v1 = [bm.verts.new((c * x - s_ * 0.35, s_ * x + c * 0.35, z + 0.6)) for x, z in pts]
+            bm.faces.new(v0)
+            bm.faces.new(v1[::-1])
+            for i in range(3):
+                j = (i + 1) % 3
+                bm.faces.new([v0[i], v0[j], v1[j], v1[i]])
+    ob.append(piece('contreforts', contreforts, blind, biseau=0.05))
+    # Le canal d'énergie vertical, sur la face tournée vers la piste (−x), dans une gorge à lèvres d'acier.
+    ob.append(piece('gorge', lambda bm: boite(bm, (-1.62, 0, 20), (0.2, 0.9, 34)), P['joint']))
+    ob.append(piece('levres', lambda bm: [boite(bm, (-1.7, s_ * 0.5, 20), (0.16, 0.12, 34.4)) for s_ in (1, -1)], P['acier']))
+    ob.append(piece('canal', lambda bm: boite(bm, (-1.74, 0, 20), (0.04, 0.34, 33.6)), P['accent2']))
+    # Des tuyaux qui montent sur les côtés et un projecteur sous le chapiteau.
+    ob.append(piece('tuyaux', lambda bm: [tube(bm, (0, s_ * 1.85, 1.6), (0, s_ * 1.85, 38), 0.18, 8) for s_ in (1, -1)], P['acier']))
+    ob.append(piece('colliers', lambda bm: [octogone(bm, z, z + 0.25, 1.9) for z in (9.5, 16.5, 23.5, 30.5)], P['acier']))
+    ob.append(piece('projecteur', lambda bm: boite(bm, (-2.1, 0, 37.2), (0.5, 1.1, 0.6)), P['danger']))
+    for o in ob:
+        appliquer(o)
+    return ob, {'halos': [[-2.4, 37.2, 0, 3, 1, 0.3, 0.2, 0.5], [-1.9, 20, 0, 2.4, 1, 0.6, 0.3, 0.3]]}
+
+
+def tourelle(P):
+    blind = matiere('blindForteresse', '#3a2c24', 0.8, 0.42)
+    ob = []
+    ob.append(piece('pied', lambda bm: (octogone(bm, 0, 1.2, 1.6, 1.4), octogone(bm, 1.2, 1.5, 1.2)), P['blindage'], biseau=0.05))
+    ob.append(piece('anneau', lambda bm: octogone(bm, 1.5, 1.75, 1.35), P['acier']))
+    # La tourelle : un caisson à pans inclinés, tourné vers la piste (−x).
+    def caisson(bm):
+        pts = [(-1.3, -1.0), (1.0, -1.1), (1.2, 1.1), (-1.3, 1.0)]
+        bas = [bm.verts.new((x, y, 1.75)) for x, y in pts]
+        haut = [bm.verts.new((x * 0.75 + 0.15, y * 0.8, 3.0)) for x, y in pts]
+        bm.faces.new(bas[::-1])
+        bm.faces.new(haut)
+        for i in range(4):
+            j = (i + 1) % 4
+            bm.faces.new([bas[i], bas[j], haut[j], haut[i]])
+    ob.append(piece('caisson', caisson, blind, biseau=0.06, segments=2))
+    # Deux canons, leurs manchons et bouches.
+    ob.append(piece('canons', lambda bm: [tube(bm, (-0.9, s_ * 0.42, 2.3), (-3.4, s_ * 0.42, 2.45), 0.13, 10) for s_ in (1, -1)], P['acier']))
+    ob.append(piece('manchons', lambda bm: [tube(bm, (-0.8, s_ * 0.42, 2.3), (-1.7, s_ * 0.42, 2.35), 0.24, 10) for s_ in (1, -1)], P['blindage']))
+    ob.append(piece('bouches', lambda bm: [tube(bm, (-3.3, s_ * 0.42, 2.44), (-3.42, s_ * 0.42, 2.45), 0.15, 10) for s_ in (1, -1)], P['danger']))
+    # Le capteur et des plaques de blindage latérales.
+    ob.append(piece('capteur', lambda bm: boite(bm, (-0.75, 0, 2.95), (0.35, 0.5, 0.25)), P['blindage']))
+    ob.append(piece('oeil', lambda bm: boite(bm, (-0.94, 0, 2.95), (0.02, 0.32, 0.1)), P['danger']))
+    ob.append(piece('plaques', lambda bm: [boite(bm, (0.1, s_ * 1.06, 2.25), (1.5, 0.08, 0.8), Matrix.Rotation(s_ * 0.15, 3, 'X')) for s_ in (1, -1)], P['blindageClair'], biseau=0.02))
+    for o in ob:
+        appliquer(o)
+    return ob, {'halos': [[-0.96, 2.95, 0, 0.6, 1, 0.25, 0.2, 0.7]]}
+
+
 MONDES = {
     'laser': {'mur-tranchee': mur_tranchee, 'scanner': scanner},
     'neon': {'tour-neon-a': tour_neon_a, 'tour-neon-b': tour_neon_b},
     'rift': {'grappe-cristaux': grappe_cristaux, 'arche-cristal': arche_cristal},
+    'sentinelle': {'colonne-forteresse': colonne_forteresse, 'tourelle': tourelle},
     'tempete': {'cadre-station': lambda P: cadre_station(P), 'cadre-brise': lambda P: cadre_station(P, True), 'paratonnerre': paratonnerre},
 }
 CADRAGES = {
@@ -467,6 +542,8 @@ CADRAGES = {
     'cadre-station': ((0, 0, 3.5), 20, 20),
     'cadre-brise': ((0, 0, 3.5), 20, 20),
     'paratonnerre': ((0, 0, 18), 55, 30),
+    'colonne-forteresse': ((0, 0, 21), 70, 250),
+    'tourelle': ((-1, 0, 2), 9, 240),
 }
 
 
