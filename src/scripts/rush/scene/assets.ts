@@ -103,6 +103,8 @@ export function geometrieImportee(gl: Gl, m: MaillageImporte): Geometry {
 const enCours = new Map<string, Promise<MaillageImporte[]>>();
 /** Charge (une seule fois) un fichier de modèles de public/rush/modeles/. */
 export function chargerModeles(fichier: string): Promise<MaillageImporte[]> {
+  // (En développement : les recettes peuvent couper les modèles importés pour mesurer « avant / après ».)
+  if (import.meta.env?.DEV && (window as unknown as { __rushSans?: Record<string, boolean> }).__rushSans?.assets) return Promise.reject(new Error('modèles coupés'));
   let p = enCours.get(fichier);
   if (!p) {
     const base = (import.meta.env?.BASE_URL ?? '/').replace(/\/?$/, '/');

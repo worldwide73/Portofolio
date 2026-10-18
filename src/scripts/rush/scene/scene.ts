@@ -1310,6 +1310,22 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const derniereImage = { ms: 0 };
   // (En développement : ce que coûte une image côté JavaScript, et la qualité en cours ; lu par les recettes.)
   if (import.meta.env.DEV)
+    (window as unknown as Record<string, unknown>).__rushTriangles = () => {
+      // Les triangles des maillages visibles de la scène (passage principal, sans l'ombre ni le post-traitement).
+      let n = 0,
+        maillages = 0;
+      scene.traverse((o: Transform) => {
+        if (!o.visible) return true;
+        const g = (o as Mesh).geometry;
+        if (g && (o as Mesh).mode === gl.TRIANGLES) {
+          const a = g.attributes.index ?? g.attributes.position;
+          n += (a?.count ?? 0) / 3;
+          maillages++;
+        }
+      });
+      return { triangles: Math.round(n), maillages };
+    };
+  if (import.meta.env.DEV)
     (window as unknown as Record<string, unknown>).__rushImage = () => ({ ms: Math.round(derniereImage.ms * 10) / 10, qualite: niveau(), auto: qualite.auto, logiciel, textures: monde.uTextures.value, ombres: monde.uOmbre.value, lumieres: monde.uNbLum.value });
   /** Les couleurs des lumières des objets (linéaires). */
   const LUMIERE_OBJET: Record<string, [number[], number, number]> = {
