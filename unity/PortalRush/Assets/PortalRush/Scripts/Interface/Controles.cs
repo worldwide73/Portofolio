@@ -110,6 +110,21 @@ namespace PortalRush.Interface
       return el;
     }
 
+    /** Une zone qui défile verticalement (molette, doigt), sans barre visible ; elle suit le focus du clavier. */
+    public static ScrollView Defilement(string classes, VisualElement? parent = null)
+    {
+      var sv = new ScrollView(ScrollViewMode.Vertical);
+      sv.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+      sv.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+      Classes(sv, classes);
+      sv.RegisterCallback<FocusInEvent>(e =>
+      {
+        if (e.target is VisualElement v && v != sv && sv.contentContainer.Contains(v)) sv.ScrollTo(v);
+      });
+      parent?.Add(sv);
+      return sv;
+    }
+
     /** Une touche de clavier dessinée (« Esc », « ← »…). */
     public static Label Touche(string texte, string classes = "", VisualElement? parent = null)
     {

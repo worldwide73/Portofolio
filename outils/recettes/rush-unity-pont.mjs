@@ -115,8 +115,15 @@ const visiteur = async (navigateur, { adresse = '/?rush=unity', manifeste = true
     },
     [sauvegardes, options],
   );
+  // Les fichiers du build (public/rush-unity/…), et les modules de la version Unity hors drapeau.ts (en développement,
+  // Vite sert chaque module à part : src/scripts/rush-unity/index.ts, pont.ts…).
   const requetes = [];
-  contexte.on('request', (r) => r.url().includes('/rush-unity/') && requetes.push(r.url().replace(SITE, '')));
+  const modules = [];
+  contexte.on('request', (r) => {
+    const chemin = new URL(r.url()).pathname;
+    if (chemin.startsWith('/rush-unity/')) requetes.push(chemin);
+    else if (/\/rush-unity\/(?!drapeau)/.test(chemin)) modules.push(chemin);
+  });
   await contexte.route('**/rush-unity/portal-rush.json*', (r) => (manifeste ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MANIFESTE) }) : r.fulfill({ status: 404, body: 'absent' })));
   await contexte.route('**/rush-unity/Build/PortalRush.loader.js', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: FAUX_LOADER }));
   await contexte.route('**/rush-unity/Build/*.unityweb', (r) => r.fulfill({ status: 200, contentType: 'application/octet-stream', body: 'faux' }));
@@ -130,7 +137,7 @@ const visiteur = async (navigateur, { adresse = '/?rush=unity', manifeste = true
   await p.goto(SITE + adresse);
   await p.waitForFunction(() => !document.documentElement.classList.contains('intro') && window.__portalRush, null, { timeout: 40000 });
   await p.waitForTimeout(600);
-  return { p, contexte, requetes, journal };
+  return { p, contexte, requetes, modules, journal };
 };
 
 const ouvrirHub = async (p) => {
@@ -194,7 +201,7 @@ try {
   // A. SANS LE DRAPEAU : L'ANCIEN JEU, COMME AVANT
   // ==========================================================================
   {
-    const { p, contexte, requetes } = await visiteur(avecGl, { adresse: '/' });
+    const { p, contexte, requetes, modules } = await visiteur(avecGl, { adresse: '/' });
     await ouvrirHub(p);
     await cliquerRush(p);
     await controle('A. Sans ?rush=unity : l\'ancien jeu s\'ouvre depuis le Hub (fissure, tunnel, tutoriel), sans toile Unity', async () => {
@@ -206,8 +213,9 @@ try {
       assert.equal(e.tuto, true, 'premier lancement : le tutoriel');
       assert.equal(e.styles, false, 'aucun style de la version Unity');
     });
-    await controle('A. Sans ?rush=unity : aucune requête vers /rush-unity/ (ni au chargement, ni au Hub, ni au jeu)', async () => {
+    await controle('A. Sans ?rush=unity : aucune requête vers le build ni vers le code de la version Unity (seul drapeau.ts)', async () => {
       assert.deepEqual(requetes, []);
+      assert.deepEqual(modules, []);
     });
     formeAncienne = forme(await sauvegarde(p));
     await quitterAncien(p);
@@ -218,9 +226,10 @@ try {
   // B à E. AVEC LE DRAPEAU ET LE FAUX BUILD
   // ==========================================================================
   {
-    const { p, contexte, requetes } = await visiteur(avecGl);
-    await controle('B. Rien de la version Unity au chargement du portfolio (aucune requête, aucun style)', async () => {
+    const { p, contexte, requetes, modules } = await visiteur(avecGl);
+    await controle('B. Rien de la version Unity au chargement du portfolio (ni build, ni code, ni style)', async () => {
       assert.deepEqual(requetes, []);
+      assert.deepEqual(modules, []);
       assert.equal(await p.evaluate(() => !!document.getElementById('rush-unity-styles')), false);
     });
     // DREAM RADIO joue avant l'entrée (pour vérifier qu'elle s'efface puis reprend).
