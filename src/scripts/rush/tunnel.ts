@@ -32,6 +32,12 @@ export interface OptionsVoyage {
   fin: () => void;
   /** Les moments du voyage, pour le son. */
   moment?: (m: 'charge' | 'bris' | 'tunnel' | 'arrivee' | 'passe') => void;
+  /**
+   * (Version Unity, 18 octobre 2026) Tant que cette fonction répond vrai, le voyage se prolonge à vitesse de croisière,
+   * avant sa fin (le jeu se charge encore) ; il reprend sa décélération et son arrivée dès qu'elle répond faux.
+   * Sans elle, rien ne change.
+   */
+  retenir?: () => boolean;
 }
 
 const VERTEX_PLEIN = `#version 300 es
@@ -290,7 +296,7 @@ function fissurer(bouton: HTMLElement, impact: { x: number; y: number }, duree: 
 }
 
 /** Lance la séquence complète. Renvoie de quoi la passer (Échap, etc.), ou null si elle n'a pas pu démarrer. */
-export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter: () => void } | null {
+export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter: () => void; fondre: (ms?: number) => void } | null {
   const b = o.source?.getBoundingClientRect();
   const visible = !!b && b.width > 0 && b.bottom > 0 && b.top < window.innerHeight;
   const impact = o.point ?? (b && visible ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight / 2 });
@@ -410,6 +416,9 @@ export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter
   let tPrec = 0;
   let id = 0;
   let tPasse = -1;
+  /** Le temps passé retenu (option « retenir ») : l'horloge du voyage s'arrête au point de croisière. */
+  let retenue = 0;
+  const CROISIERE = CHARGE + BRIS + o.duree * 0.75;
 
   const terminer = () => {
     if (fini) return;
@@ -436,7 +445,11 @@ export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter
     }
     const dt = Math.min(0.05, (maintenant - tPrec) / 1000);
     tPrec = maintenant;
-    let t = (maintenant - t0) / 1000;
+    let t = (maintenant - t0) / 1000 - retenue;
+    if (o.retenir && avecGl && tPasse < 0 && t > CROISIERE && o.retenir()) {
+      retenue += t - CROISIERE;
+      t = CROISIERE;
+    }
     // Passé : on saute à l'arrivée, en 0,35 s.
     if (tPasse >= 0) t = Math.max(t, DUREE - 0.35 + (maintenant - tPasse) / 1000 - 0.0001);
     const tVoyage = t - CHARGE - BRIS;
@@ -572,13 +585,24 @@ export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter
   };
   bouton_passer.addEventListener('click', passer);
   voile.addEventListener('pointerdown', (e) => e.target !== bouton_passer && passer());
-  // (Un garde-fou : si l'onglet est masqué ou que les images ne viennent plus, on arrive quand même.)
-  window.setTimeout(() => {
-    if (!fini) {
+  // (Un garde-fou : si l'onglet est masqué ou que les images ne viennent plus, on arrive quand même ; pas pendant
+  // que le voyage est retenu, et, après, le temps de finir.)
+  let aEteRetenu = false;
+  const gardeFou = (delai: number) =>
+    window.setTimeout(() => {
+      if (fini) return;
+      if (o.retenir?.()) {
+        aEteRetenu = true;
+        return gardeFou(1000);
+      }
+      if (aEteRetenu) {
+        aEteRetenu = false;
+        return gardeFou((DUREE - CROISIERE + 4) * 1000);
+      }
       arriver();
       terminer();
-    }
-  }, (DUREE + 4) * 1000);
+    }, delai);
+  gardeFou((DUREE + 4) * 1000);
   /** Repasse par-dessus ce qui vient de s'ouvrir (la fenêtre du jeu), pour finir l'éclair dessus. */
   const remonter = () => {
     if (fini || !voile.isConnected) return;
@@ -589,5 +613,13 @@ export function voyageTemporel(o: OptionsVoyage): { passer: () => void; remonter
       // (pas de popover : la couche reste où elle est)
     }
   };
-  return { passer, remonter };
+  /** (Version Unity) S'efface en fondu, sans éclair : le jeu a repris le tunnel à son compte. Puis se retire. */
+  const fondre = (ms = 450) => {
+    if (fini) return;
+    arriver();
+    voile.style.transition = `opacity ${ms}ms ease`;
+    voile.style.opacity = '0';
+    window.setTimeout(terminer, ms);
+  };
+  return { passer, remonter, fondre };
 }

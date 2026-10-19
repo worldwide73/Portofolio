@@ -375,6 +375,14 @@ export const difficulteOuverte = (s: Sauvegarde, d: Difficulte) => (d === 'cauch
 /** La plus haute difficulté ouverte, au plus « d ». */
 export const difficulteJouable = (s: Sauvegarde, d: Difficulte): Difficulte => (difficulteOuverte(s, d) ? d : d === 'paradoxe' && cauchemarOuvert(s) ? 'cauchemar' : d === 'pilote' ? 'pilote' : 'expert');
 
+/** « Continuer » : le prochain secteur de la campagne ; sans partie jouée, « Commencer » le secteur 01 (sorti de rush.ts). */
+export function reprise(s: Sauvegarde): { premiere: boolean; niveau: number; difficulte: Difficulte } {
+  const premiere = s.totaux.parties === 0 && !Object.keys(s.reussis).length;
+  const niveau = premiere ? 1 : Math.min(s.niveauMax, NIVEAUX.length);
+  const difficulte = difficulteJouable(s, s.difficulte);
+  return { premiere, niveau, difficulte };
+}
+
 /** La pièce verrouillée la plus proche d'être gagnée (pour « Prochaine pièce »). */
 export function prochainePiece(s: Sauvegarde): { piece: Piece; mesure: number; cible: number } | null {
   let meilleure: { piece: Piece; mesure: number; cible: number; part: number } | null = null;

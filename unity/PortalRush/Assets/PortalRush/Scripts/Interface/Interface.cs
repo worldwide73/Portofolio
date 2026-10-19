@@ -199,7 +199,7 @@ namespace PortalRush.Interface
         }
       var p = Partie;
       if (p != null) Hud.Image(p, dt);
-      if (Tutoriel.Actif) Tutoriel.Tic(dt);
+      if (Tutoriel.Vivant) Tutoriel.Tic(dt);
       if (cine1 >= 0)
       {
         cine1 -= dt;
@@ -655,9 +655,9 @@ namespace PortalRush.Interface
       EcranResultat.Oublier();
       Vitrine.Masquer();
       var l = Lancement;
+      Hud.Commencer(p, l);
       if (l != null && l.Tutoriel) Tutoriel.Brancher(p);
       else if (Tutoriel.Actif) Tutoriel.Arreter();
-      Hud.Commencer(p, l);
       Montrer(null);
     }
 

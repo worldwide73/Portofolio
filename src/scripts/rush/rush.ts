@@ -34,9 +34,11 @@ import { ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from './equilibrage';
 import { Partie, type ObjectifAtteint } from './moteur';
 import { creerRendu, dessinerVaisseau } from './rendu';
 import type { RenduJeu } from './scene/scene';
-import { avancement, cauchemarOuvert, charger, difficulteJouable, difficulteOuverte, enregistrer, etoilesDe, noterTutoriel, paradoxeOuvert, prochainePiece, ranger, totalEtoiles, tutorielAFaire, type Bilan, type Sauvegarde } from './sauvegarde';
+import { avancement, cauchemarOuvert, charger, difficulteJouable, difficulteOuverte, enregistrer, etoilesDe, noterTutoriel, paradoxeOuvert, prochainePiece, ranger, reprise as repriseDe, totalEtoiles, tutorielAFaire, type Bilan, type Sauvegarde } from './sauvegarde';
+import { SON_EVENEMENT, adaptationCourse, adaptationFixe, cleAdaptation as cleDe, finVictorieuse, vitesseRelative } from './sons-course';
 import { voyageTemporel } from './tunnel';
 import { Tutoriel } from './tutoriel';
+import { approcheRushUnity, rushUnityDemandee } from '../rush-unity/drapeau';
 
 type Ecran = 'accueil' | 'campagne' | 'infini' | 'defi' | 'records' | 'garage' | 'pause' | 'fin' | 'victoire' | '';
 type Textes = Contenu['rush'];
@@ -185,16 +187,14 @@ export function initRush(): void {
   const suivreSon = () => {
     const p = partie;
     const enCourse = !!p && ecran === '' && !enPause && !p.termine && fenetre.open && transition !== 'sortie';
-    const vitesse = p ? Math.max(0, Math.min(1, (p.vitesse - p.profil.vitesse.depart) / Math.max(1, p.profil.vitesse.max - p.profil.vitesse.depart))) : 0;
+    const vitesse = p ? vitesseRelative(p) : 0;
     let a: Adaptation;
-    if (ecran === 'victoire' || (finCine && fenetre.classList.contains('est-cinematique-victoire'))) a = { mode: 'victoire', intensite: 0.6, danger: 0, overdrive: false };
-    else if (ecran === 'fin' || (finCine && p?.termine)) a = { mode: 'defaite', intensite: 0, danger: 0, overdrive: false };
-    else if (ecran === 'pause' || (p && enPause)) a = { mode: 'pause', intensite: 0, danger: 0, overdrive: false };
-    else if (p && ecran === '') {
-      const avance = Number.isFinite(p.longueur) ? p.avancement : 0;
-      a = { mode: 'course', intensite: Math.min(1, vitesse * 0.75 + avance * 0.35), danger: p.boucliers <= 1 ? 0.8 : p.boss ? 0.5 : 0, overdrive: p.overdrive > 0 };
-    } else a = { mode: 'menu', intensite: 0, danger: 0, overdrive: false };
-    const cle = `${a.mode}|${Math.round(a.intensite * 20)}|${Math.round(a.danger * 4)}|${a.overdrive}`;
+    if (ecran === 'victoire' || (finCine && fenetre.classList.contains('est-cinematique-victoire'))) a = adaptationFixe('victoire');
+    else if (ecran === 'fin' || (finCine && p?.termine)) a = adaptationFixe('defaite');
+    else if (ecran === 'pause' || (p && enPause)) a = adaptationFixe('pause');
+    else if (p && ecran === '') a = adaptationCourse({ vitesse, avancement: Number.isFinite(p.longueur) ? p.avancement : 0, boucliers: p.boucliers, boss: !!p.boss, overdrive: p.overdrive > 0 });
+    else a = adaptationFixe('menu');
+    const cle = cleDe(a);
     if (cle !== cleAdaptation) {
       cleAdaptation = cle;
       rushRadio.adapter(a);
@@ -257,13 +257,8 @@ export function initRush(): void {
     if (s.defi.meilleur > m.score) m = { score: s.defi.meilleur, origine: textes.defi.titre };
     return m;
   };
-  /** Continuer : le prochain secteur de la campagne ; sans partie jouée, « Commencer » le secteur 01. */
-  const reprise = () => {
-    const premiere = s.totaux.parties === 0 && !Object.keys(s.reussis).length;
-    const niveau = premiere ? 1 : Math.min(s.niveauMax, NIVEAUX.length);
-    const difficulte = difficulteJouable(s, s.difficulte);
-    return { premiere, niveau, difficulte };
-  };
+  /** Continuer : le prochain secteur de la campagne ; sans partie jouée, « Commencer » le secteur 01 (sauvegarde.ts). */
+  const reprise = () => repriseDe(s);
 
   // ==========================================================================
   // LA BARRE DU HAUT : la touche Échap dit ce qu'elle fera ; le module, où l'on est
@@ -942,7 +937,6 @@ export function initRush(): void {
       if (p.scriptee) tuto.surEvenement(e);
       switch (e.type) {
         case 'deplacement':
-          sonRush('deplacement');
           break;
         case 'fragment':
         case 'dore': {
@@ -953,14 +947,12 @@ export function initRush(): void {
           else rendu.eclater(voie, couleur, peu ? 4 : 10);
           rendu.flotter(voie, `+${nombre(e.valeur ?? 0)}`, couleur);
           gagner(e.valeur);
-          sonRush(e.type === 'dore' ? 'noyau' : 'fragment');
           nourrirJauge(peu ? 0 : 520);
           break;
         }
         case 'noyau':
           rendu.eclater(voie, '255, 190, 140', peu ? 6 : 16);
           gagner(e.valeur);
-          sonRush('noyau');
           break;
         case 'parfait':
           annoncer(textes.annonces.parfait, 'parfait');
@@ -968,13 +960,11 @@ export function initRush(): void {
           rendu.flotter(p.voieOccupee, `+${nombre(e.valeur ?? 0)}`, '236, 244, 255');
           if (!peu) rendu.flasher('170, 225, 255', 0.12);
           gagner(e.valeur);
-          sonRush('parfait');
           break;
         case 'motif':
           annoncer(textes.annonces.motif, 'motif');
           rendu.flotter(p.voieOccupee, `+${nombre(e.valeur ?? 0)}`, '255, 214, 120');
           gagner(e.valeur);
-          sonRush('pret');
           break;
         case 'choc':
           if (!p.scriptee) annoncer((e.valeur ?? 0) === 1 ? textes.annonces.dernier : textes.annonces.choc, 'choc');
@@ -982,7 +972,6 @@ export function initRush(): void {
           rendu.alerter();
           rendu.eclater(voie, '255, 150, 140', peu ? 6 : 20);
           rendu.debris?.(voie);
-          sonRush('choc');
           break;
         case 'combo-perdu':
           annoncer(textes.annonces.comboPerdu, 'choc');
@@ -990,12 +979,10 @@ export function initRush(): void {
         case 'portail':
           annoncer(textes.annonces.portail, 'portail');
           if (!peu) rendu.flasher('190, 150, 255', 0.25);
-          sonRush('portail');
           break;
         case 'overdrive':
           annoncer(remplir(textes.annonces.overdrive, { n: (e.valeur ?? 2).toLocaleString(locale(), { maximumFractionDigits: 1 }) }), 'overdrive');
           if (!peu) rendu.flasher('210, 190, 255', 0.35);
-          sonRush('overdrive');
           break;
         case 'fin-overdrive':
           break;
@@ -1004,22 +991,18 @@ export function initRush(): void {
           break;
         case 'pret':
           annoncer(textes.annonces.pret, 'pret');
-          sonRush('pret');
           break;
         case 'detruit':
           rendu.eclater(voie, '236, 244, 255', peu ? 6 : 18);
           rendu.flotter(voie, `+${nombre(e.valeur ?? 0)}`, '210, 190, 255');
           gagner(e.valeur);
-          sonRush('detruit');
           break;
         case 'boss-touche':
           rendu.toucherBoss();
-          sonRush('boss');
           break;
         case 'phase-boss':
           annoncer(remplir(textes.annonces.phase, { n: e.valeur ?? 1 }), 'phase');
           if (s.reglages.secousses && !peu) rendu.secouer(0.6);
-          sonRush('phase');
           break;
         case 'phase':
           if ((e.valeur ?? 0) > 0) annoncer(textes.phases[p.niveauBase.phases[e.valeur ?? 0]?.nom ?? p.phaseCourante.nom], 'phase');
@@ -1031,6 +1014,9 @@ export function initRush(): void {
           finDePartie();
           break;
       }
+      // (Le son de l'évènement, le même que dans la version Unity : sons-course.ts.)
+      const son = SON_EVENEMENT[e.type];
+      if (son) sonRush(son);
     }
     p.evenements.length = 0;
   };
@@ -1068,7 +1054,7 @@ export function initRush(): void {
   const finDePartie = () => {
     const r = partie?.termine;
     if (!r || finCine) return;
-    const victoire = (choix.mode === 'campagne' && r.reussi) || (choix.mode === 'defi' && r.arrive);
+    const victoire = finVictorieuse(choix.mode, r);
     if (animationsCoupees() || !rendu.cinematique) {
       finCine = window.setTimeout(passerCinematique, 900);
       return;
@@ -1105,7 +1091,7 @@ export function initRush(): void {
     const r = p.termine;
     const bilan: Bilan = ranger(s, choix.mode, choix.difficulte, choix.niveau, r, p.graine);
     const victoire = choix.mode === 'campagne' && r.reussi;
-    sonRush(victoire || (choix.mode === 'defi' && r.arrive) ? 'victoire' : 'defaite');
+    sonRush(finVictorieuse(choix.mode, r) ? 'victoire' : 'defaite');
     fermerPanneau();
     const f = textes.fin;
     if (victoire) {
@@ -1310,9 +1296,20 @@ export function initRush(): void {
     true,
   );
 
-  const ouvrir = (e: Ouverture = 'accueil', depuis: HTMLElement | null = null, point: { x: number; y: number } | null = null) => {
-    if (transition || voyage) return;
-    if (fenetre.open) {
+  /**
+   * « mode » (version Unity, 18 octobre 2026) : « auto », la version Unity si son drapeau est levé (?rush=unity), sinon
+   * ce jeu ; « ancien », ce jeu, sans essayer Unity (repli) ; « direct », ce jeu tout de suite, sans voyage (repli de
+   * la version Unity quand son chargement échoue : son voyage à elle a déjà eu lieu, la fenêtre est peut-être ouverte).
+   */
+  const ouvrir = (e: Ouverture = 'accueil', depuis: HTMLElement | null = null, point: { x: number; y: number } | null = null, mode: 'auto' | 'ancien' | 'direct' = 'auto') => {
+    if (transition || voyage || fenetre.dataset.moteur === 'unity') return;
+    if (mode === 'auto' && !fenetre.open && rushUnityDemandee()) {
+      void import('../rush-unity')
+        .then((m) => m.ouvrirRushUnity({ ecran: e, depuis, point, repli: (direct) => ouvrir(e, depuis, point, direct ? 'direct' : 'ancien') }))
+        .catch(() => ouvrir(e, depuis, point, 'ancien'));
+      return;
+    }
+    if (fenetre.open && mode !== 'direct') {
       if (e === 'reglages' || e === 'commandes') ouvrirPanneau(e === 'commandes' ? 'commandes' : 'audio');
       else if (e === 'tutoriel') lancerTutoriel(0);
       else if (!partie) montrer(e);
@@ -1333,6 +1330,22 @@ export function initRush(): void {
     const duree = allege ? 2.6 : 4.6;
     const CHARGE = 0.5,
       BRIS = 0.85;
+    // Le Hub se range ; le jeu s'ouvre sous l'éclair, qui repasse par-dessus pour finir.
+    const entrer = () => {
+      document.querySelectorAll<HTMLElement>('#hub:popover-open').forEach((h) => h.hidePopover());
+      fenetre.style.setProperty('--ox', '50%');
+      fenetre.style.setProperty('--oy', '50%');
+      fenetre.classList.add(court ? 'est-entree-douce' : 'est-entree');
+      demarrerFenetre(arrivee);
+      voyage?.remonter();
+      rendu.cinematique?.('entree');
+      if (s.reglages.musique) window.setTimeout(() => fenetre.open && rushRadio.jouer(), court ? 100 : 400);
+    };
+    if (mode === 'direct') {
+      entrer();
+      window.setTimeout(() => fenetre.classList.remove('est-entree', 'est-entree-douce'), 650);
+      return;
+    }
     transition = 'entree';
     sonVoyage = court ? null : sonVoyageTemporel(CHARGE, BRIS, duree);
     if (court) sonRush('ouverture');
@@ -1348,17 +1361,7 @@ export function initRush(): void {
       texte: { passer: textes.voyage.passer },
       // (En développement, les recettes lisent les temps forts du voyage : charge, bris, tunnel, arrivée.)
       moment: import.meta.env.DEV ? (m) => ((window as unknown as { __voyage: [string, number][] }).__voyage ??= []).push([m, performance.now()]) : undefined,
-      arrivee: () => {
-        // Le Hub se range ; le jeu s'ouvre sous l'éclair, qui repasse par-dessus pour finir.
-        document.querySelectorAll<HTMLElement>('#hub:popover-open').forEach((h) => h.hidePopover());
-        fenetre.style.setProperty('--ox', '50%');
-        fenetre.style.setProperty('--oy', '50%');
-        fenetre.classList.add(court ? 'est-entree-douce' : 'est-entree');
-        demarrerFenetre(arrivee);
-        voyage?.remonter();
-        rendu.cinematique?.('entree');
-        if (s.reglages.musique) window.setTimeout(() => fenetre.open && rushRadio.jouer(), court ? 100 : 400);
-      },
+      arrivee: () => entrer(),
       fin: () => {
         voyage = null;
         sonVoyage = null;
@@ -1426,6 +1429,8 @@ export function initRush(): void {
     else montrer('accueil');
   };
   api = { ouvrir, pause };
+  // (Version Unity, derrière son drapeau : son préchargement discret quand on approche du jeu.)
+  approcheRushUnity();
   // Les boutons « Jouer à Portal Rush » du portfolio (vitrine de l'accueil, carte et fiche du projet).
   document.addEventListener('click', (e) => {
     const bouton = (e.target as Element).closest<HTMLElement>('[data-jouer-rush]');
@@ -1445,7 +1450,8 @@ export function initRush(): void {
   document.addEventListener(
     'keydown',
     (e) => {
-    if (!fenetre.open || e.ctrlKey || e.metaKey || e.altKey) return;
+    // (La version Unity reçoit elle-même ses touches : rush-unity/index.ts.)
+    if (!fenetre.open || fenetre.dataset.moteur === 'unity' || e.ctrlKey || e.metaKey || e.altKey) return;
     const actif = document.activeElement;
     if (actif instanceof Element && actif.closest('#hub')) return;
     // Échap : traité ici (le navigateur ne ferme jamais la fenêtre de lui-même).
@@ -1547,7 +1553,7 @@ export function initRush(): void {
   // Les autres demandes de fermeture (bouton « retour » d'un téléphone…) suivent la même règle qu'Échap.
   fenetre.addEventListener('cancel', (e) => {
     e.preventDefault();
-    echap();
+    if (fenetre.dataset.moteur !== 'unity') echap();
   });
   fenetre.addEventListener('close', () => {
     // Le son du jeu s'arrête ; DREAM RADIO reprend seulement si elle jouait avant l'entrée.
