@@ -30,9 +30,13 @@ pages de documentation Unity ont été lues par un service de recherche, et **ri
   `outils/unity/coeur-tests`, 18 octobre 2026). Le mode « partie scriptée » du tutoriel est porté aussi, mais
   aucune partie de référence ne le couvre encore. Les données C# sont à jour **[exécuté]**
   (`exporter-donnees.mjs --verifier` : « Données C# à jour. »).
-- **Écrit mais jamais compilé dans Unity** : installateur des paquets, configuration URP/Web, scripts de jeu
-  (session, trajectoire, route, vaisseau, caméra, objets, décor, qualité), shaders, tests EditMode. D'autres lots
-  sont en cours d'écriture pendant la rédaction (interface, textes, export FBX, chargeur et pont côté portfolio).
+- **Écrit mais jamais compilé dans Unity** : installateur des paquets, configuration URP/Web, scène et build par
+  script, scripts de jeu (session, trajectoire, route, vaisseau, caméra, objets, décor, qualité, intro), shaders,
+  interface UI Toolkit, tests EditMode. Ces scripts **compilent hors de Unity** contre une copie minimale de l'API
+  recopiée du source officiel 6000.3 / URP 17.3 **[exécuté]** (`outils/unity/verif-compilation`, mise à jour du
+  19 octobre ci-dessous) : cela écarte les fautes de C#, pas les erreurs que seul Unity voit.
+- **Intégration au portfolio écrite et vérifiée avec une instance Unity simulée** (19 octobre) : recette
+  `outils/recettes/rush-unity-pont.mjs` 39/39 **[exécuté]** ; ancien jeu inchangé (27/27 et 20/20).
 - **Choix techniques confirmés par les sources** : Unity 6.3 LTS ; **WebGL2 seul** (WebGPU est expérimental dans
   6.3) ; URP en **Forward** (Forward+ a un défaut connu sous Chrome) ; pas de VFX Graph, de compute shaders ni de GPU
   Resident Drawer ; éclairage global **précalculé** seulement ; build **Brotli avec repli de décompression**.
@@ -108,9 +112,9 @@ privée stricte). Le contrat garde tout cela côté JavaScript : Unity envoie `f
 
 ## 2. Table de correspondance
 
-Cibles d'après le contrat (`docs/UNITY_ARCHITECTURE.md`). État relevé le 18 octobre 2026 en fin de journée ;
-**« en cours (autre lot) »** = fichiers présents dans l'arbre de travail mais pas encore enregistrés dans Git
-au moment de la rédaction, non relus en détail ici.
+Cibles d'après le contrat (`docs/UNITY_ARCHITECTURE.md`). État mis à jour le 19 octobre 2026. « Compile hors
+Unity » = accepté par `outils/unity/verif-compilation` (API recopiée du source officiel) ; **rien n'a été compilé
+ni lancé dans Unity**.
 
 | Ancien système | Implémentation Unity (fichier / assemblage) | Statut |
 |---|---|---|
@@ -119,25 +123,25 @@ au moment de la rédaction, non relus en détail ici.
 | Parties de référence (jeu web) | `Tests/Editor/References/*.json` (29), `outils/unity/generer-references.mjs` | **Fait** (produites par le vrai moteur TypeScript) |
 | Rejeu dans Unity | `Tests/Editor/RejeuTests.cs` + `Verification/` — `PortalRush.Tests.Editor` | `Verification/` **compilé et exécuté en .NET** **[exécuté]** ; `RejeuTests.cs` (NUnit, 31 tests attendus : 29 parties + 2) **préparé, non compilé dans Unity** |
 | Installation des paquets | `Scripts/Installation/Installateur.cs` — `PortalRush.Installation` | **Écrit, non compilé dans Unity** (enregistré, commit `deb1a52`) |
-| Configuration URP / Web / qualité | `Scripts/Editeur/Configuration.cs` — `PortalRush.Editeur` | **Écrit, non compilé** (Forward, WebGL2 seul, Brotli + repli, 3 niveaux URP) ; modifications en cours |
-| Points d'entrée batch `Batch.Configurer`, `Batch.Construire`, scène construite par code, manifeste | `Scripts/Editeur/` (Batch, Scene, Construction) | **À faire** (annoncé par le responsable) |
-| Boucle de partie, commandes clavier / tactile | `Scripts/Jeu/Session.cs` — `PortalRush.Jeu` | **Écrit, non compilé** |
-| Pli du parcours (`parcours.ts`), piste (`mondes*.ts`) | `Jeu/Parcours.cs`, `Route.cs`, `Monde.cs`, `Decor.cs`, `Ambiances.cs` | **Écrit, non compilé** (formes de prototype en attendant les FBX) |
-| Vaisseau, caméra, objets, effets | `Jeu/Vaisseau.cs`, `CameraJeu.cs`, `Objets.cs`, `Effets.cs`, `Formes.cs`, `Catalogue.cs`, `Vitrine.cs` ; `Shaders/Ciel.shader`, `Particules.shader` | **Écrit, non compilé** |
-| Qualité graphique Auto / Élevée / Équilibrée / Économie | `Jeu/Qualite.cs` + niveaux de `Configuration.cs` | **Écrit, non compilé** ; réglages à mesurer dans le navigateur **[hypothèse]** |
-| Modèles PRM1 (`outils/assets/*.py`) | `outils/assets/exporter_unity.py` → `Assets/PortalRush/Modeles/*.fbx`, `palette.json`, `modeles.json` | **En cours (autre lot)** |
-| Textes FR/EN (`fr.ts`, `en.ts`) | `outils/unity/exporter-textes.mjs` → `Interface/Textes.Generees.cs`, `Textes.cs` | **En cours (autre lot)** |
-| Interface (`PortalRush.astro`, `rush.css`, `rush.ts`) | `Scripts/Interface/` (UI Toolkit), `UI/` (polices Geist Mono et Tektur sous OFL, images) | **En cours (autre lot)** |
-| Tutoriel (scénario des 5 phases) | `Jeu` (Session / tutoriel) | **À faire** (le moteur sait déjà jouer une partie scriptée) |
-| Cinématiques : sortie du tunnel, fin de secteur, victoire, défaite | `Jeu/CameraJeu.cs` + `Interface` | **À faire** |
-| Pont JavaScript ↔ Unity | `Jeu/Pont/Pont.cs`, `Messages.cs`, `Plugins/WebGL/PortalRushPont.jslib` | **À faire** côté Unity |
-| Chargeur, drapeau `?rush=unity`, pont côté page | `src/scripts/rush-unity/` (`chargeur.ts`, `drapeau.ts`, `pont.ts`, `protocole.ts`, `vue.ts`), `src/scripts/rush/sons-course.ts` | **En cours (autre lot)** |
+| Configuration URP / Web / qualité | `Scripts/Editeur/Configuration.cs` — `PortalRush.Editeur` | **Écrit, compile hors Unity** (Forward, WebGL2 seul, Brotli + repli, 3 niveaux URP, mémoire, son de Unity coupé) |
+| Points d'entrée batch `Batch.Configurer`, `Batch.Construire`, scène construite par code, manifeste | `Scripts/Editeur/` (Batch, Scene, Construction, ImportModeles, ImportTextures) | **Écrit, compile hors Unity** |
+| Boucle de partie, commandes clavier / tactile | `Scripts/Jeu/Session.cs` — `PortalRush.Jeu` | **Écrit, compile hors Unity** |
+| Pli du parcours (`parcours.ts`), piste (`mondes*.ts`) | `Jeu/Parcours.cs`, `Route.cs`, `Monde.cs`, `Decor.cs`, `Ambiances.cs` | **Écrit, compile hors Unity** (modules Blender du catalogue, formes de prototype en secours) |
+| Vaisseau, caméra, objets, effets | `Jeu/Vaisseau.cs`, `CameraJeu.cs`, `Objets.cs`, `Effets.cs`, `Formes.cs`, `Catalogue.cs`, `Vitrine.cs` ; `Shaders/Ciel.shader`, `Particules.shader` | **Écrit, compile hors Unity** (shaders jamais compilés) |
+| Qualité graphique Auto / Élevée / Équilibrée / Économie | `Jeu/Qualite.cs` + niveaux de `Configuration.cs` | **Écrit, compile hors Unity** ; réglages à mesurer dans le navigateur **[hypothèse]** |
+| Modèles PRM1 (`outils/assets/*.py`) | `outils/assets/exporter_unity.py` → `Assets/PortalRush/Modeles/*.fbx`, `palette.json`, `modeles.json` | **Fait** (43 FBX ; orientation vérifiée contre les `.prm`) |
+| Textes FR/EN (`fr.ts`, `en.ts`) | `outils/unity/exporter-textes.mjs` → `Interface/Textes.Generees.cs`, `Textes.cs` | **Fait** (`--verifier` : à jour) |
+| Interface (`PortalRush.astro`, `rush.css`, `rush.ts`) | `Scripts/Interface/` (UI Toolkit), `UI/` (polices Geist Mono et Tektur sous OFL, images) | **Écrit, compile hors Unity** (11 écrans, HUD, barre, réglages, RUSH RADIO) |
+| Tutoriel (scénario des 5 phases) | `Interface/Tutoriel.cs` + partie scriptée de `Session` | **Écrit, compile hors Unity** |
+| Cinématiques : sortie du tunnel, fin de secteur, victoire, défaite | `Jeu/Intro.cs`, `Jeu/CameraJeu.cs` + `Interface` | Sortie du tunnel **écrite** ; séquence de fin de victoire **en cours** |
+| Pont JavaScript ↔ Unity | `Jeu/Pont/Pont.cs`, `Messages.cs`, `Plugins/WebGL/PortalRushPont.jslib` | **Écrit, compile hors Unity** ; format des messages vérifié par la recette du pont |
+| Chargeur, drapeau `?rush=unity`, pont côté page | `src/scripts/rush-unity/` (`chargeur.ts`, `drapeau.ts`, `pont.ts`, `protocole.ts`, `vue.ts`), `src/scripts/rush/sons-course.ts` | **Fait, vérifié avec une instance simulée** (39/39) **[exécuté]** |
 | Sauvegarde, progression, étoiles, records | `src/scripts/rush/sauvegarde.ts` | **Réutilisé tel quel côté JavaScript** |
 | DREAM RADIO, RUSH RADIO, sons, musique adaptative | `src/scripts/audio/*`, `sons.ts` | **Réutilisé tel quel côté JavaScript** |
 | Fissure et tunnel temporel | `src/scripts/rush/tunnel.ts` | **Réutilisé tel quel côté JavaScript** |
 | Langue du site | `fr.ts` / `en.ts`, message `langue` | **Réutilisé tel quel côté JavaScript** |
 | Rendu 2D de secours, ancien rendu 3D | `rush/rendu.ts`, `rush/scene/*` | **Conservés** : c'est l'ancien jeu, repli de la version Unity |
-| Build Web, en-têtes, CSP | `public/rush-unity/`, `netlify.toml` | **À faire** ; changement de CSP **soumis à l'accord de Mathéo** (§3.7) |
+| Build Web, en-têtes, CSP | `public/rush-unity/`, `netlify.toml` | Build par `Construction.cs` **écrit, jamais lancé** ; changement de CSP **soumis à l'accord de Mathéo** (§3.7) |
 
 ---
 
@@ -274,8 +278,9 @@ Firefox et Safari, et sur un téléphone.
 
 - Navigateurs pris en charge par Unity 6.3 : Chrome, Firefox, Edge, Safari (macOS) sur ordinateur, s'ils gèrent
   WebGL2 et WebAssembly en 64 bits ; **Safari iOS 15+** et **Chrome Android 58+** sur mobile **[source S17]**.
-- Règle du contrat (§1, §6) : **l'ancien jeu reste le repli**. Le chargeur (lot en cours) bascule sur l'ancien jeu
-  si le manifeste manque, si WebGL2 est absent ou si le chargement échoue **[code, lot non relu en détail]**.
+- Règle du contrat (§1, §6) : **l'ancien jeu reste le repli**. Le chargeur bascule sur l'ancien jeu si le
+  manifeste manque, si WebGL2 est absent ou si le chargement échoue, dans le même voyage (pas de second tunnel)
+  **[exécuté]** (recette du pont, partie F).
   Propositions complémentaires **[hypothèse]** : un délai maximal entre le clic et le message `pret` ; un message
   `erreur` de Unity qui déclenche aussi le repli ; sur mobile, tant que le build ASTC n'existe pas, préférer
   l'ancien jeu.
@@ -299,31 +304,33 @@ Firefox et Safari, et sur un téléphone.
 
 ---
 
-## 4. Plan par phases (A à G) et état au 18 octobre 2026
+## 4. Plan par phases (A à G) et état au 19 octobre 2026
 
 | Phase | Contenu | État |
 |---|---|---|
 | **A. Audit** | inventaire, correspondances, choix techniques, mode d'emploi PC (ce document) ; cœur C# porté et vérifié hors de Unity | **Fait** |
-| **B. Prototype graphique** | projet configuré (URP Forward, WebGL2, qualité), scène construite par code, trajectoire et route courbes, un monde, vaisseau Aube, caméra ; **premier build Web mesuré dans le navigateur** | **Écrit en partie, rien de compilé** ; scène et build par script à venir ; tout reste à ouvrir et mesurer sur le PC |
-| **C. Gameplay** | session à 1/120 s, commandes clavier et tactile, objets et collisions affichés, Overdrive, boss, tutoriel scripté ; rejeu EditMode vert | Cœur **fait et vérifié** ; `Session.cs` et `Objets.cs` **écrits, non compilés** ; tutoriel **à faire** |
-| **D. Production graphique** | 8 mondes, piste construite, obstacles et vaisseaux en FBX, textures, lumières, post-traitement, effets, profils de qualité réglés | Export FBX **en cours** ; le reste **à faire** |
-| **E. Interface et cinématiques** | écrans UI Toolkit (menu, campagne, survie, défi, records, garage, réglages, pause, fin), HUD, textes FR/EN, sortie du tunnel, fins | Textes et interface **en cours** ; cinématiques **à faire** |
-| **F. Intégration** | pont (`.jslib` + `Pont.cs` + `pont.ts`), chargeur, manifeste, `?rush=unity`, repli, focus clavier, audio par le portfolio, **CSP et en-têtes** | Côté page **en cours** ; côté Unity **à faire** ; CSP **à décider avec Mathéo** |
-| **G. Tests** | rejeu Unity, recette Playwright avec une instance Unity simulée, essais réels Chrome / Edge / Firefox / Safari et téléphone, mesures (temps de chargement, images par seconde, mémoire), mode réduit | **À faire** (le rejeu .NET existe déjà) |
+| **B. Prototype graphique** | projet configuré (URP Forward, WebGL2, qualité), scène construite par code, trajectoire et route courbes, un monde, vaisseau Aube, caméra ; **premier build Web mesuré dans le navigateur** | **Écrit, compile hors Unity** ; tout reste à ouvrir et mesurer sur le PC |
+| **C. Gameplay** | session à 1/120 s, commandes clavier et tactile, objets et collisions affichés, Overdrive, boss, tutoriel scripté ; rejeu EditMode vert | Cœur **fait et vérifié** ; `Session.cs`, `Objets.cs`, tutoriel **écrits, compilent hors Unity** ; rejeu EditMode à lancer sur le PC |
+| **D. Production graphique** | 8 mondes, piste construite, obstacles et vaisseaux en FBX, textures, lumières, post-traitement, effets, profils de qualité réglés | FBX **faits** ; route, décor, textures PBR, post-traitement, effets **écrits** ; réglage à l'œil **sur le PC** |
+| **E. Interface et cinématiques** | écrans UI Toolkit (menu, campagne, survie, défi, records, garage, réglages, pause, fin), HUD, textes FR/EN, sortie du tunnel, fins | Textes, interface, sortie du tunnel **écrits** ; séquence de fin de victoire **en cours** |
+| **F. Intégration** | pont (`.jslib` + `Pont.cs` + `pont.ts`), chargeur, manifeste, `?rush=unity`, repli, focus clavier, audio par le portfolio, **CSP et en-têtes** | **Écrite des deux côtés ; vérifiée avec une instance simulée (39/39)** ; CSP **à décider avec Mathéo** |
+| **G. Tests** | rejeu Unity, recette Playwright avec une instance Unity simulée, essais réels Chrome / Edge / Firefox / Safari et téléphone, mesures (temps de chargement, images par seconde, mémoire), mode réduit | Rejeu .NET 29/29, compilation hors Unity, recette du pont 39/39 **faits** ; tout ce qui demande Unity ou un vrai navigateur avec carte graphique **à faire sur le PC** |
 
 ---
 
 ## 5. Ce qui manque ici (et ce qui reste invérifiable sans le PC)
 
-- **Aucune compilation Unity** : pas d'éditeur, pas de licence, serveurs Unity bloqués. Tous les scripts hors de
-  `Coeur/` et `Tests/Editor/Verification/` n'ont **jamais été compilés** ; des erreurs `error CS…` sont probables à
-  la première ouverture.
+- **Aucune compilation Unity** : pas d'éditeur, pas de licence, serveurs Unity bloqués. Les scripts hors de
+  `Coeur/` et `Tests/Editor/Verification/` n'ont été compilés **que contre une copie minimale de l'API**
+  (`outils/unity/verif-compilation`, signatures recopiées du source officiel) : des erreurs `error CS…` restent
+  possibles à la première ouverture (API mal recopiée, différences de version), et les shaders n'ont jamais été
+  compilés.
 - **Pas de fichiers `.meta`** : Unity les crée à la première ouverture ; ils **doivent être enregistrés dans Git**
   (sinon les liens entre scènes, matériaux et scripts changent d'un ordinateur à l'autre).
 - **Pas de `Packages/manifest.json`** : l'installateur ajoute les paquets par leur nom à l'ouverture ; Unity écrit
   `manifest.json` et `packages-lock.json`, à enregistrer ensuite.
-- **Pas encore** : `Batch.Configurer`, `Batch.Construire`, la scène, le pont Unity (`Pont.cs`, `.jslib`), les FBX,
-  le tutoriel, les cinématiques, le réglage mémoire, la compression des textures par script.
+- **Pas encore** : la séquence de fin de victoire (en cours), le réglage fin des mondes à l'œil, les mesures de
+  fluidité et de mémoire, le build ASTC pour mobile.
 - **Invérifiable ici** : la fluidité sur une vraie carte graphique, le rendu réel de URP dans un navigateur
   (MSAA, HDR, post-traitement), le comportement de Netlify avec les en-têtes, la CSP en ligne, WebGPU, le mobile.
 - **Le script `outils/unity/unity.ps1` n'a jamais été lancé sous Windows ni avec un vrai Unity** : il a été analysé
@@ -438,7 +445,7 @@ scène, jouer, construire le build.
 
 1. À la racine du dépôt : `npm install` (la première fois), puis `npm run dev`.
 2. Ouvrir **`http://localhost:4321/?rush=unity`**, puis l'Orbital Hub › **Portal Rush**. Sans `?rush=unity`,
-   l'ancien jeu s'ouvre (normal). `?rush=web` revient à l'ancien jeu pour l'onglet **[code, lot en cours]**.
+   l'ancien jeu s'ouvre (normal). `?rush=web` revient à l'ancien jeu pour l'onglet **[code]** (`drapeau.ts` ; non couvert par la recette).
 3. Vérifier : pas d'écran noir (la transition du tunnel s'enchaîne), clavier, son (par le portfolio), retour au Hub,
    et le repli : renommer temporairement `public/rush-unity/portal-rush.json` → l'ancien jeu doit s'ouvrir.
 4. Ce test local **ne prouve pas** que le site en ligne marchera (CSP et en-têtes de Netlify : §3.6, §3.7).
