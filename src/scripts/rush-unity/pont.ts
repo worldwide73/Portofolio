@@ -410,7 +410,9 @@ export function creerPont(o: OptionsPont): Pont {
         if (langue === langueSite()) return envoyer({ type: 'langue', langue });
         // Le changement de langue du site, sans rechargement (langue.ts) ; l'évènement « langue » répondra.
         const lien = o.fenetre.querySelector<HTMLAnchorElement>(`[data-langue-choix="${langue}"]`) ?? document.querySelector<HTMLAnchorElement>(`a[data-langue][hreflang="${langue}"]`);
-        if (lien) void changerLangue(lien.href);
+        // (Si le changement n'a pas eu lieu — un autre est en cours —, Unity reçoit quand même la langue affichée.)
+        if (lien) void changerLangue(lien.href).then(() => langueSite() !== langue && envoyer({ type: 'langue', langue: langueSite() }));
+        else envoyer({ type: 'langue', langue: langueSite() });
         return;
       }
     }

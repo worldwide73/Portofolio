@@ -288,9 +288,9 @@ export async function ouvrirRushUnity(o: OuvertureUnity): Promise<void> {
   }
 
   // ---- Les touches et les évènements de la page ----
-  /** Pendant le voyage : Échap, Entrée ou Espace le passent (comme rush.ts) ; le reste attend. Pas après le relais. */
+  /** Pendant le voyage : Échap, Entrée ou Espace le passent (comme rush.ts) ; le reste attend. Pas une fois arrivé. */
   const toucheVoyage = (e: KeyboardEvent) => {
-    if (!voyage || relais) return;
+    if (!voyage || relais || arrive) return;
     if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -303,7 +303,7 @@ export async function ouvrirRushUnity(o: OuvertureUnity): Promise<void> {
   };
   /** Jeu ouvert : Échap n'est pas pris par le navigateur (il irait fermer la fenêtre) mais reste à Unity. */
   const touche = (e: KeyboardEvent) => {
-    if (!fenetre.open || fenetre.dataset.moteur !== 'unity' || (voyage && !relais) || fini) return;
+    if (!fenetre.open || fenetre.dataset.moteur !== 'unity' || (voyage && !relais && !arrive) || fini) return;
     if (e.key === 'Escape') e.preventDefault();
     if (!pont.branche) {
       if (e.key === 'Escape' && !e.repeat) {

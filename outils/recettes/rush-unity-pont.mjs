@@ -158,11 +158,11 @@ const etatUnity = (p) => p.evaluate(() => window.__rushUnity?.etat());
 const recus = (p) => p.evaluate(() => (window.__fauxUnity?.recus ?? []).map((r) => r.m));
 const dernier = async (p, type) => (await recus(p)).filter((m) => m.type === type).pop();
 /** Injecte un message Unity → page et attend la réponse de ce type. */
-const envoyer = async (p, message, reponse) => {
+const envoyer = async (p, message, reponse, delai = 5000) => {
   const avant = (await recus(p)).length;
   await p.evaluate((m) => window.__fauxUnity.envoyer(m), message);
   if (!reponse) return p.waitForTimeout(80);
-  await p.waitForFunction(([n, t]) => window.__fauxUnity.recus.slice(n).some((r) => r.m.type === t), [avant, reponse], { timeout: 5000 });
+  await p.waitForFunction(([n, t]) => window.__fauxUnity.recus.slice(n).some((r) => r.m.type === t), [avant, reponse], { timeout: delai });
   return (await recus(p)).slice(avant).filter((m) => m.type === reponse).pop();
 };
 const sauvegarde = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('portal-rush-3') ?? 'null'));
@@ -339,18 +339,23 @@ try {
       assert.equal(e.transition, null);
     });
     await controle('B. Onglet masqué → « pause » ; de nouveau visible → « reprendre »', async () => {
-      await p.evaluate(() => {
-        Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
-        document.dispatchEvent(new Event('visibilitychange'));
-      });
-      await p.waitForTimeout(50);
-      assert.equal((await recus(p)).pop().type, 'pause');
-      await p.evaluate(() => {
-        delete document.hidden;
-        document.dispatchEvent(new Event('visibilitychange'));
-      });
-      await p.waitForTimeout(50);
-      assert.equal((await recus(p)).pop().type, 'reprendre');
+      const n = (await recus(p)).length;
+      try {
+        await p.evaluate(() => {
+          Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+        await p.waitForTimeout(80);
+      } finally {
+        await p.evaluate(() => {
+          delete document.hidden;
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+      }
+      await p.waitForTimeout(80);
+      // (L'audio qui reprend peut ajouter « audio » ; l'ordre pause → reprendre est ce qui compte.)
+      const types = (await recus(p)).slice(n).map((m) => m.type).filter((x) => x === 'pause' || x === 'reprendre');
+      assert.deepEqual(types, ['pause', 'reprendre']);
     });
 
     // ---- C. La fin d'une partie ----
@@ -476,12 +481,20 @@ try {
       await envoyer(p, { type: 'ecran', nom: 'menu' });
     });
     await controle('D. « langue » : le site passe en anglais sans rechargement ; Unity reçoit « langue » et la vue', async () => {
-      const r = await envoyer(p, { type: 'langue', langue: 'en' }, 'langue');
+      // (Le serveur de développement compile la page anglaise à la première demande : on lui laisse le temps.)
+      const r = await envoyer(p, { type: 'langue', langue: 'en' }, 'langue', 30000).catch(async (e) => {
+        throw new Error(`${e.message.split('\n')[0]} — ${JSON.stringify(await p.evaluate(() => [document.documentElement.lang, location.href, window.__fauxUnity.recus.slice(-3).map((x) => x.m.type)]))}`);
+      });
       assert.equal(r.langue, 'en');
       assert.equal(await p.evaluate(() => document.documentElement.lang), 'en');
       await p.waitForFunction(() => window.__fauxUnity.recus.filter((x) => x.m.type === 'vue').pop()?.m.vue.langue === 'en', null, { timeout: 3000 });
       assert.equal(await p.evaluate(() => document.querySelector('.rush').open), true);
-      await envoyer(p, { type: 'langue', langue: 'fr' }, 'langue');
+      // (Le site n'accepte pas deux changements de langue coup sur coup : il répond alors la langue affichée.)
+      const refus = await envoyer(p, { type: 'langue', langue: 'fr' }, 'langue', 30000);
+      await p.waitForTimeout(800);
+      const retour = refus.langue === 'fr' ? refus : await envoyer(p, { type: 'langue', langue: 'fr' }, 'langue', 30000);
+      assert.equal(retour.langue, 'fr');
+      assert.equal(await p.evaluate(() => document.documentElement.lang), 'fr');
     });
 
     // ---- E. La sortie ----
@@ -699,7 +712,9 @@ try {
       await p.evaluate(() => (window.__fauxUnityOptions = { pret: 6000 }));
       await ouvrirHub(p);
       await cliquerRush(p);
-      await p.waitForFunction(() => window.__rushUnity?.etat().attente, null, { timeout: 5000 });
+      await p.waitForFunction(() => document.querySelector('.rush')?.dataset.moteur === 'unity' && window.__rushUnity?.etat().attente, null, { timeout: 12000 }).catch(async (e) => {
+        throw new Error(`${e.message.split('\n')[0]} — état : ${JSON.stringify(await p.evaluate(() => ({ e: window.__rushUnity?.etat(), ouvert: document.querySelector('.rush').open, hub: document.querySelector('#hub').matches(':popover-open') })))}`);
+      });
       await p.keyboard.press('Escape');
       await p.waitForFunction(() => !document.querySelector('.rush').open, null, { timeout: 5000 });
       await p.waitForTimeout(1700);
