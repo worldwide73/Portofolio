@@ -92,10 +92,27 @@ namespace PortalRush.Jeu
           Poser(tranche, Modele("portique", (int)(h.Suivant() * 8)), p.CentreA(s), Vector3.zero, () => Formes.Portique(catalogue?.metal, catalogue?.energie, Route.DemiLargeur + 1.6f, 7.6f));
         }
       }
-      // Tunnel (mondes à voûte) : une tranche sur trois, nervures tous les 12 m.
+      // Tunnel (mondes à voûte) : une tranche sur trois. Avec les modules Blender (parois + voûte de 6 m, dessinés pour
+      // la route web dont le bord est à 4,8 m) : décalés de 0,8 m vers l'extérieur et voûte élargie d'autant.
       if (style.Voute && n % 3 == 1)
-        for (int s = s0; s < s0 + LongueurTranche; s += 12)
-          Poser(tranche, Modele("voute", 0), p.CentreA(s), Vector3.zero, () => Formes.Nervure(catalogue?.metal, catalogue?.energie, Route.DemiLargeur + 2.2f, 9f));
+      {
+        var paroi = Modele("paroi", 0);
+        var voute = Modele("voute", 0);
+        if (paroi != null && voute != null)
+        {
+          const float ecart = Route.DemiLargeur - 4.8f;
+          for (int s = s0 + 3; s < s0 + LongueurTranche; s += 6)
+          {
+            var pose = p.CentreA(s);
+            Module(tranche, paroi, pose, new Vector3(ecart, 0, 0), new Vector3(1, 1, 1.04f));
+            Module(tranche, paroi, pose, new Vector3(-ecart, 0, 0), new Vector3(-1, 1, 1.04f));
+            Module(tranche, voute, pose, Vector3.zero, new Vector3(1f + ecart / 5.42f, 1f, 1.04f));
+          }
+        }
+        else
+          for (int s = s0; s < s0 + LongueurTranche; s += 12)
+            Poser(tranche, null, p.CentreA(s), Vector3.zero, () => Formes.Nervure(catalogue?.metal, catalogue?.energie, Route.DemiLargeur + 2.2f, 9f));
+      }
       // Tours et structures, à plusieurs distances.
       for (int k = 0; k < 5; k++)
       {
@@ -110,6 +127,14 @@ namespace PortalRush.Jeu
         Poser(tranche, Modele("tour", variante), pose, new Vector3(cote * loin, -40f, 0), () => Formes.Tour(catalogue?.metal, catalogue?.energie, haut, large), lacet);
       }
       return tranche;
+    }
+
+    /** Un module de piste qui suit exactement la route (repère de la pose, décalage latéral, échelle ; x < 0 = miroir). */
+    static void Module(GameObject parent, GameObject modele, Pose pose, Vector3 decalage, Vector3 echelle)
+    {
+      var o = Instantiate(modele, parent.transform);
+      o.transform.SetPositionAndRotation(pose.position + pose.rotation * decalage, pose.rotation);
+      o.transform.localScale = echelle;
     }
 
     void Poser(GameObject parent, GameObject? modele, Pose pose, Vector3 decalage, Func<GameObject> secours, float lacet = 0)

@@ -369,6 +369,13 @@ namespace PortalRush.Editeur
               if (cle != null) Ajouter(c.objets, cle, e);
               else ignores.Add(relatif + " › " + e.name);
             }
+            else if (groupe == "piste")
+            {
+              // Les modules de tunnel (6 m) : parois et voûte, posés par Decor dans les mondes à voûte.
+              string n = e.name.ToLowerInvariant();
+              if (n.StartsWith("bord-tunnel", StringComparison.Ordinal)) Ajouter(c.decor, "commun/paroi", e);
+              else if (n.StartsWith("voute", StringComparison.Ordinal)) Ajouter(c.decor, "commun/voute", e);
+            }
             else if (groupe == "decor" || groupe == "mondes")
             {
               string monde = groupe == "mondes" && parties.Length > 2 ? parties[1].ToLowerInvariant() : "commun";
