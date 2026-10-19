@@ -331,6 +331,7 @@ suivant compile les assemblages gardés.
 |---|---|---|
 | Règles C# = règles TypeScript | ici (.NET 8) | `dotnet run -c Release` dans `outils/unity/coeur-tests` |
 | Données C# à jour | ici | `node --experimental-strip-types --no-warnings outils/unity/exporter-donnees.mjs --verifier` |
+| Le code Unity compile (contrôle partiel) | ici (.NET, stubs) | `dotnet build -c Joueur` puis `-c Editeur` dans `outils/unity/verif-compilation` (API Unity déclarée d'après le source officiel 6000.3 / URP 17.3 ; ne remplace pas Unity) |
 | Rejeu dans Unity | PC (Unity) | Test Runner › EditMode, ou `outils/unity/unity.ps1 -Tests` |
 | Compilation Unity, scène, build Web | PC (Unity) | `outils/unity/unity.ps1` (voir `docs/UNITY_MIGRATION.md`) |
 | Pont et chargeur côté page | ici (Playwright) | recette avec une instance Unity simulée |

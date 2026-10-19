@@ -53,6 +53,7 @@ namespace PortalRush.Editeur
     static void Menu()
     {
       Tout();
+      ImportModeles.Synchroniser();
       Scene.Construire();
       EditorUtility.DisplayDialog("Portal Rush", "Projet configuré et scène construite (Assets/PortalRush/Scenes/PortalRush.unity).\n\nEnsuite : Window › General › Test Runner (EditMode), puis Play.", "OK");
     }

@@ -104,7 +104,11 @@ namespace PortalRush.Jeu
       {
         var modele = catalogue != null ? Catalogue.Trouver(catalogue.objets, nom, (int)(o.Graine * 997) + i) : null;
         GameObject morceau;
-        if (modele != null) morceau = Instantiate(modele, v.Racine.transform);
+        if (modele != null)
+        {
+          morceau = Instantiate(modele, v.Racine.transform);
+          Assembler(morceau.transform, o.Type);
+        }
         else
         {
           if (!signale)
@@ -119,6 +123,27 @@ namespace PortalRush.Jeu
         v.X.Add(i < o.Voies.Length ? o.Voies[i] : 1);
       }
       return v;
+    }
+
+    /**
+     * Les modèles exportés en pièces (outils/assets/exporter_unity.py) : le rotor a une seule pale, à répéter à 120°
+     * et 240° autour de l'axe vertical ; la porte a un seul battant, à doubler (le second tourné d'un demi-tour).
+     */
+    static void Assembler(Transform racine, TypeObjet type)
+    {
+      string? piece = type == TypeObjet.Rotor ? "rotor-pale" : type == TypeObjet.Porte ? "porte-battant" : null;
+      if (piece == null) return;
+      Transform? source = null;
+      foreach (var t in racine.GetComponentsInChildren<Transform>(true))
+        if (t.name.StartsWith(piece, System.StringComparison.Ordinal)) { source = t; break; }
+      if (source == null) return;
+      var angles = type == TypeObjet.Rotor ? new[] { 120f, 240f } : new[] { 180f };
+      foreach (float a in angles)
+      {
+        var copie = Instantiate(source.gameObject, source.parent).transform;
+        copie.localPosition = Quaternion.Euler(0, a, 0) * source.localPosition;
+        copie.localRotation = Quaternion.Euler(0, a, 0) * source.localRotation;
+      }
     }
 
     /** Une bande de faille posée sur la voie, qui suit la courbe de la route de Pos à Pos + Longueur. */
@@ -201,7 +226,8 @@ namespace PortalRush.Jeu
             hauteur = Mathf.Sin(temps * 2.4f + o.Id) * 0.25f;
             break;
           case TypeObjet.Rotor:
-            tourne = Quaternion.Euler(0, 0, temps * 220f);
+            // Le rotor balaie la route à l'horizontale (pales autour de l'axe vertical, comme le jeu web).
+            tourne = Quaternion.Euler(0, temps * 220f, 0);
             break;
         }
         var pose = parcours.PoseA(o.Pos, v.X[i], hauteur);

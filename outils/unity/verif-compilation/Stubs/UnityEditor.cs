@@ -70,6 +70,10 @@ namespace UnityEditor
     public static bool DeleteAsset(string path) => false;
     public static void ImportAsset(string path) { }
     public static void ImportAsset(string path, ImportAssetOptions options) { }
+    // Modules/AssetDatabase/Editor/ScriptBindings/AssetDatabase.bindings.cs
+    public static void StartAssetEditing() { }
+    public static void StopAssetEditing() { }
+    public static bool WriteImportSettingsIfDirty(string path) => false;
   }
   [Flags] public enum ImportAssetOptions { Default = 0, ForceUpdate = 1, ForceSynchronousImport = 8 }
 
@@ -179,6 +183,14 @@ namespace UnityEditor
   // ---- Import des assets ----
   public class AssetImporter : UnityEngine.Object
   {
+    // Editor/Mono/AssetPipeline/AssetImporter.bindings.cs : structure imbriquée.
+    public struct SourceAssetIdentifier
+    {
+      public SourceAssetIdentifier(UnityEngine.Object asset) { type = null!; name = ""; }
+      public SourceAssetIdentifier(Type type, string name) { this.type = type; this.name = name; }
+      public Type type;
+      public string name;
+    }
     public string assetPath => "";
     public string userData { get; set; } = "";
     public void SaveAndReimport() { }
@@ -187,17 +199,11 @@ namespace UnityEditor
     public Dictionary<SourceAssetIdentifier, UnityEngine.Object> GetExternalObjectMap() => new Dictionary<SourceAssetIdentifier, UnityEngine.Object>();
     public static AssetImporter GetAtPath(string path) => null!;
   }
-  public struct SourceAssetIdentifier
-  {
-    public SourceAssetIdentifier(UnityEngine.Object asset) { type = null!; name = ""; }
-    public SourceAssetIdentifier(Type type, string name) { this.type = type; this.name = name; }
-    public Type type;
-    public string name;
-  }
   public class AssetPostprocessor
   {
     public string assetPath { get; set; } = "";
     public AssetImporter assetImporter => null!;
+    public AssetImporters.AssetImportContext context => null!;
     public virtual int GetPostprocessOrder() => 0;
     public virtual uint GetVersion() => 0;
   }
@@ -218,6 +224,9 @@ namespace UnityEditor
     public bool isReadable { get; set; }
     public bool alphaIsTransparency { get; set; }
   }
+  // Modules/AssetPipelineEditor/Public/ModelImporting/ModelImporter.bindings.cs
+  [Flags] public enum MeshOptimizationFlags { PolygonOrder = 1 << 0, VertexOrder = 1 << 1, Everything = ~0 }
+  public enum ModelImporterIndexFormat { Auto = 0, UInt16 = 1, UInt32 = 2 }
   public enum ModelImporterMaterialImportMode { None = 0, ImportStandard = 1, ImportViaMaterialDescription = 2 }
   public enum ModelImporterNormals { Import = 0, Calculate = 1, None = 2 }
   public enum ModelImporterTangents { Import = 0, CalculateLegacy = 1, CalculateLegacyWithSplitTangents = 4, CalculateMikk = 3, None = 2 }
@@ -247,6 +256,10 @@ namespace UnityEditor
     public bool importCameras { get; set; }
     public bool importLights { get; set; }
     public bool importBlendShapes { get; set; }
+    public bool importConstraints { get; set; }
+    public bool keepQuads { get; set; }
+    public ModelImporterIndexFormat indexFormat { get; set; }
+    public MeshOptimizationFlags meshOptimizationFlags { get; set; }
     public bool importVisibility { get; set; }
     public bool addCollider { get; set; }
     public bool optimizeMeshPolygons { get; set; }
@@ -339,4 +352,19 @@ namespace UnityEditor.PackageManager.Requests
   public sealed partial class ListRequest : Request<PackageCollection> { }
   public sealed partial class AddRequest : Request<PackageInfo> { }
   public sealed partial class AddAndRemoveRequest : Request<PackageCollection> { }
+}
+
+namespace UnityEditor.AssetImporters
+{
+  // Editor/Mono/AssetPipeline/AssetImportContext.bindings.cs
+  public class AssetImportContext
+  {
+    public string assetPath => "";
+    public void DependsOnSourceAsset(string path) { }
+    public void DependsOnArtifact(string path) { }
+    public void AddObjectToAsset(string identifier, UnityEngine.Object obj) { }
+    public void SetMainObject(UnityEngine.Object obj) { }
+    public void LogImportWarning(string msg) { }
+    public void LogImportError(string msg) { }
+  }
 }

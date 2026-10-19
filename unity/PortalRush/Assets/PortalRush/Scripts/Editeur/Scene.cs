@@ -285,19 +285,25 @@ namespace PortalRush.Editeur
     // ==========================================================================
     // CATALOGUE DES MODÈLES
     // ==========================================================================
-    /** Nom d'objet Blender (début) → clé du catalogue. À compléter quand les modèles changent. */
+    /**
+     * Nom d'objet Blender (début du nom, dans l'ordre : le premier qui correspond gagne) → clé du catalogue.
+     * D'après Modeles/modeles.json et le rapport de l'export (outils/assets/exporter_unity.py). À compléter quand les
+     * modèles changent ; les objets non classés sont listés dans la console à chaque construction.
+     */
     static readonly (string Debut, string Cle)[] Obstacles =
     {
-      ("barriere", "bloc"), ("bloc", "bloc"), ("rocher", "debris"), ("roche", "debris"), ("debris", "debris"),
-      ("laser", "laser"), ("mobile", "mobile"), ("glisseur", "mobile"), ("drone", "drone"), ("porte", "porte"),
-      ("rotor", "rotor"), ("chute", "chute"), ("eclaireur", "eclaireur"), ("frappe", "frappe"), ("marteau", "frappe"),
-      ("faille", "faille"), ("portail", "portail"), ("boss", "boss"), ("sentinelle", "boss"),
-      ("fragment", "fragment"), ("dore", "dore"), ("noyau", "noyau"),
+      ("cristal-fragment", "fragment"), ("cristal-dore", "dore"), ("cristal-noyau", "noyau"),
+      ("bloc-chute", "chute"), ("barriere", "bloc"), ("rochers", "debris"), ("pylones", "laser"),
+      ("cargo", "mobile"), ("lance", "frappe"), ("drone", "drone"), ("eclaireur", "eclaireur"),
+      ("porte", "porte"), ("rotor", "rotor"),
+      // (faille, portail, boss : pas de modèle Blender, procéduraux comme dans le jeu web.)
     };
     static readonly (string Debut, string Cle)[] Usages =
     {
-      ("pilier", "pilier"), ("pylone", "pilier"), ("support", "pilier"), ("portique", "portique"), ("arche", "portique"),
-      ("voute", "voute"), ("tunnel", "voute"), ("tour", "tour"), ("structure", "tour"), ("immeuble", "tour"),
+      ("portique", "portique"), ("scanner", "portique"), ("arche-cristal", "portique"),
+      ("cadre-station", "portique"), ("cadre-brise", "portique"),
+      ("paratonnerre", "tour"), ("tour-neon", "tour"), ("colonne-forteresse", "tour"), ("anneau-brise", "tour"),
+      ("pilier", "pilier"), ("voute", "voute"),
     };
 
     static string? Correspondance((string Debut, string Cle)[] table, string nom)

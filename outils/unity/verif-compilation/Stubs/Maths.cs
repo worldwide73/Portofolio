@@ -109,7 +109,7 @@ namespace UnityEngine
   }
   public struct Bounds
   {
-    public Bounds(Vector3 center, Vector3 size) { }
+    public Bounds(Vector3 center, Vector3 size) : this() { }
     public Vector3 center { get; set; } public Vector3 size { get; set; } public Vector3 extents { get; set; }
     public Vector3 min { get; set; } public Vector3 max { get; set; }
     public void Encapsulate(Vector3 point) { }
@@ -152,7 +152,7 @@ namespace UnityEngine
   }
   public struct Rect
   {
-    public Rect(float x, float y, float width, float height) { }
+    public Rect(float x, float y, float width, float height) : this() { }
     public float x { get; set; } public float y { get; set; } public float width { get; set; } public float height { get; set; }
     public Vector2 center { get; set; } public Vector2 size { get; set; } public Vector2 position { get; set; }
     public float xMin { get; set; } public float yMin { get; set; } public float xMax { get; set; } public float yMax { get; set; }

@@ -108,7 +108,8 @@ namespace PortalRush.Jeu
           break;
         case "rotor":
           Pave(t, c?.metal, new Vector3(0, 1.1f, 0), new Vector3(0.6f, 0.6f, 0.6f), "Moyeu", PrimitiveType.Cylinder);
-          Pave(t, c?.danger, new Vector3(0, 1.1f, 0), new Vector3(5.8f, 0.2f, 0.35f), "Pale");
+          Pave(t, c?.danger, new Vector3(0, 1.1f, 0), new Vector3(5.8f, 0.12f, 0.35f), "Pale");
+          Pave(t, c?.danger, new Vector3(0, 1.1f, 0), new Vector3(0.35f, 0.12f, 5.8f), "Pale");
           break;
         case "chute":
           Pave(t, c?.metal, new Vector3(0, 1f, 0), new Vector3(2.6f, 2f, 2.6f));

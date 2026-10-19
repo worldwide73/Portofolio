@@ -138,6 +138,15 @@ namespace UnityEngine
   [AttributeUsage(AttributeTargets.Field)] public sealed class HideInInspector : Attribute { }
   [AttributeUsage(AttributeTargets.Class)] public sealed class CreateAssetMenuAttribute : Attribute { public string menuName { get; set; } = ""; public string fileName { get; set; } = ""; public int order { get; set; } }
   [AttributeUsage(AttributeTargets.Class)] public sealed class DisallowMultipleComponent : Attribute { }
+  // Runtime/Export/Scripting/RuntimeInitializeOnLoadAttribute.cs
+  public enum RuntimeInitializeLoadType { AfterSceneLoad = 0, BeforeSceneLoad, AfterAssembliesLoaded, BeforeSplashScreen, SubsystemRegistration }
+  [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+  public class RuntimeInitializeOnLoadMethodAttribute : Attribute
+  {
+    public RuntimeInitializeOnLoadMethodAttribute() { }
+    public RuntimeInitializeOnLoadMethodAttribute(RuntimeInitializeLoadType loadType) { }
+    public RuntimeInitializeLoadType loadType => default;
+  }
   [AttributeUsage(AttributeTargets.Class)] public sealed class AddComponentMenu : Attribute { public AddComponentMenu(string menuName) { } }
 
   // ---- Temps, écran, journal, application ----
@@ -165,6 +174,14 @@ namespace UnityEngine
     public static void LogWarningFormat(string format, params object[] args) { }
     public static void LogErrorFormat(string format, params object[] args) { }
     public static void DrawLine(Vector3 start, Vector3 end, Color color) { }
+    public static bool isDebugBuild => false;
+  }
+  // Modules/Audio/Public/ScriptBindings/Audio.bindings.cs
+  public class AudioBehaviour : Behaviour { }
+  public sealed class AudioListener : AudioBehaviour
+  {
+    public static float volume { get; set; }
+    public static bool pause { get; set; }
   }
   public static class Application
   {
@@ -173,6 +190,8 @@ namespace UnityEngine
     public static bool isEditor => false;
     public static string dataPath => "";
     public static string unityVersion => "";
+    public static string version => "";
+    public static bool isMobilePlatform => false;
     public static string streamingAssetsPath => "";
     public static RuntimePlatform platform => default;
     public static int targetFrameRate { get; set; }
@@ -257,6 +276,10 @@ namespace UnityEngine
     public bool IsKeywordEnabled(string keyword) => false;
     public bool HasProperty(string name) => false;
     public bool HasProperty(int nameID) => false;
+    // Runtime/Export/Shaders/Material.bindings.cs
+    public void SetOverrideTag(string tag, string val) { }
+    public string GetTag(string tag, bool searchFallbacks, string defaultValue) => defaultValue;
+    public string GetTag(string tag, bool searchFallbacks) => "";
   }
   [Flags] public enum MaterialGlobalIlluminationFlags { None = 0, RealtimeEmissive = 1, BakedEmissive = 2, EmissiveIsBlack = 4, AnyEmissive = 3 }
   public sealed class MaterialPropertyBlock
@@ -509,15 +532,15 @@ namespace UnityEngine
     public struct SizeOverLifetimeModule { public bool enabled { get; set; } public MinMaxCurve size { get; set; } }
     public struct MinMaxCurve
     {
-      public MinMaxCurve(float constant) { }
-      public MinMaxCurve(float min, float max) { }
+      public MinMaxCurve(float constant) : this() { }
+      public MinMaxCurve(float min, float max) : this() { }
       public float constant { get; set; }
       public static implicit operator MinMaxCurve(float constant) => default;
     }
     public struct MinMaxGradient
     {
-      public MinMaxGradient(Color color) { }
-      public MinMaxGradient(Color min, Color max) { }
+      public MinMaxGradient(Color color) : this() { }
+      public MinMaxGradient(Color min, Color max) : this() { }
       public Color color { get; set; }
       public static implicit operator MinMaxGradient(Color color) => default;
     }

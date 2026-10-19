@@ -17,6 +17,8 @@ namespace PortalRush.Editeur
       try
       {
         Configuration.Tout();
+        // Les matériaux de la palette avant la scène (en batch, le passage différé de l'import n'a pas le temps de se faire).
+        ImportModeles.Synchroniser();
         Scene.Construire();
         EditorApplication.Exit(0);
       }
