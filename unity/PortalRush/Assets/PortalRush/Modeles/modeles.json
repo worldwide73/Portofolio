@@ -1,0 +1,1686 @@
+{
+ "version": 1,
+ "axes": "Unity : +X droite, +Y haut, +Z avant (nez des vaisseaux, sens de la course) ; Unity = jeu web (x, y, -z)",
+ "unite": "m",
+ "fichiers": [
+  {
+   "chemin": "Collecte/dore.fbx",
+   "dossier": "Collecte",
+   "source": "objets-collecte.prm",
+   "objets": [
+    {
+     "nom": "cristal-dore",
+     "triangles": 320,
+     "matieres": ["PR_alliage", "PR_orBague", "PR_orCollecte"],
+     "min": [-0.48, -0.62, -0.343],
+     "max": [0.48, 0.62, 0.343],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 0, -0.05],
+       "rayon": 1.1,
+       "couleur": [1, 0.8, 0.4],
+       "intensite": 0.7
+      }
+     ]
+    }
+   ],
+   "octets": 27404
+  },
+  {
+   "chemin": "Collecte/fragment.fbx",
+   "dossier": "Collecte",
+   "source": "objets-collecte.prm",
+   "objets": [
+    {
+     "nom": "cristal-fragment",
+     "triangles": 272,
+     "matieres": ["PR_acier", "PR_alliage", "PR_cristalFragment"],
+     "min": [-0.215, -0.3712, -0.215],
+     "max": [0.215, 0.3712, 0.215],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 0, -0.05],
+       "rayon": 0.8,
+       "couleur": [0.6, 0.9, 1],
+       "intensite": 0.7
+      }
+     ]
+    }
+   ],
+   "octets": 23740
+  },
+  {
+   "chemin": "Collecte/noyau.fbx",
+   "dossier": "Collecte",
+   "source": "objets-collecte.prm",
+   "objets": [
+    {
+     "nom": "cristal-noyau",
+     "triangles": 536,
+     "matieres": ["PR_accent", "PR_alliage", "PR_coeur"],
+     "min": [-0.56, -0.56, -0.4523],
+     "max": [0.56, 0.56, 0.4523],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 0, -0.05],
+       "rayon": 1.2,
+       "couleur": [1, 0.6, 0.35],
+       "intensite": 0.9
+      }
+     ]
+    }
+   ],
+   "octets": 34556
+  },
+  {
+   "chemin": "Decor/Mecanismes/balise.fbx",
+   "dossier": "Decor",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "balise-mat",
+     "triangles": 1344,
+     "matieres": ["PR_acier", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_hachureJaune", "PR_joint", "PR_navVert", "PR_neonBlanc_objets"],
+     "min": [-0.642, -0.9, -0.42],
+     "max": [0.36, 2.5, 0.42],
+     "ancrages": []
+    },
+    {
+     "nom": "balise-tete",
+     "triangles": 580,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_dangerDoux", "PR_dangerFort", "PR_verre"],
+     "min": [-0.27, 0.0, -0.27],
+     "max": [0.27, 0.82, 0.27],
+     "ancrages": []
+    }
+   ],
+   "octets": 82556
+  },
+  {
+   "chemin": "Decor/Mecanismes/plateforme.fbx",
+   "dossier": "Decor",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "plateforme-meca",
+     "triangles": 1616,
+     "matieres": ["PR_accentDoux", "PR_acier", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_ecran", "PR_fenetre", "PR_feuBlanc", "PR_hachureJaune", "PR_jaune", "PR_joint", "PR_metalMoyen", "PR_plaque"],
+     "min": [-6.66, -1.55, -2.211],
+     "max": [2.2, 0.3075, 2.211],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [1.95, -0.3, -1.95],
+       "rayon": 0.35,
+       "couleur": [1, 0.82, 0.55],
+       "intensite": 0.4
+      },
+      {
+       "type": "halo",
+       "position": [1.95, -0.3, 1.95],
+       "rayon": 0.35,
+       "couleur": [1, 0.82, 0.55],
+       "intensite": 0.4
+      },
+      {
+       "type": "halo",
+       "position": [-1.95, -0.3, -1.95],
+       "rayon": 0.35,
+       "couleur": [1, 0.82, 0.55],
+       "intensite": 0.4
+      },
+      {
+       "type": "halo",
+       "position": [-1.95, -0.3, 1.95],
+       "rayon": 0.35,
+       "couleur": [1, 0.82, 0.55],
+       "intensite": 0.4
+      }
+     ]
+    }
+   ],
+   "octets": 63676
+  },
+  {
+   "chemin": "Decor/Mecanismes/presse.fbx",
+   "dossier": "Decor",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "presse-cadre",
+     "triangles": 4210,
+     "matieres": ["PR_acier", "PR_alliage", "PR_ambre", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_dangerDoux", "PR_hachureJaune", "PR_hachureNoire", "PR_jaune", "PR_joint", "PR_neonBlanc_objets", "PR_rouille"],
+     "min": [-2.05, -1.65, -0.8],
+     "max": [2.05, 8.8, 0.8],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [1.85, 5.37, -0.0],
+       "rayon": 0.32,
+       "couleur": [1, 0.62, 0.22],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [-1.85, 5.37, -0.0],
+       "rayon": 0.32,
+       "couleur": [1, 0.62, 0.22],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [0, 4.47, -0.32],
+       "rayon": 0.75,
+       "couleur": [1, 0.92, 0.8],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [0, 4.47, 0.32],
+       "rayon": 0.75,
+       "couleur": [1, 0.92, 0.8],
+       "intensite": 0.3
+      }
+     ]
+    },
+    {
+     "nom": "presse-tete",
+     "triangles": 980,
+     "matieres": ["PR_accent2", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_bronze", "PR_hachureJaune", "PR_hachureNoire"],
+     "min": [-1.212, -0.624, -0.557],
+     "max": [1.212, 5.0, 0.557],
+     "ancrages": []
+    }
+   ],
+   "octets": 159164
+  },
+  {
+   "chemin": "Decor/Mecanismes/radar.fbx",
+   "dossier": "Decor",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "radar-tour",
+     "triangles": 3798,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_dangerFort", "PR_fenetre", "PR_hachureNoire", "PR_jaune", "PR_joint", "PR_metalMoyen"],
+     "min": [-1.41, -3.5, -1.32],
+     "max": [1.436, 4.06, 1.32],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0.9051, 4.03, 0.9051],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [-0.9051, 4.03, 0.9051],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [-0.9051, 4.03, -0.9051],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [0.9051, 4.03, -0.9051],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      }
+     ]
+    },
+    {
+     "nom": "radar-antenne",
+     "triangles": 2196,
+     "matieres": ["PR_accent", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_gris", "PR_joint", "PR_metalMoyen"],
+     "min": [-2.0, 0.0, -1.0693],
+     "max": [2.0, 4.1674, 0.9149],
+     "ancrages": []
+    }
+   ],
+   "octets": 199516
+  },
+  {
+   "chemin": "Decor/Mecanismes/turbine.fbx",
+   "dossier": "Decor",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "turbine-cadre",
+     "triangles": 4310,
+     "matieres": ["PR_accentDoux", "PR_acier", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_dangerFort", "PR_feuRouge", "PR_hachureJaune", "PR_metalMoyen"],
+     "min": [-2.743, -3.6, -1.207],
+     "max": [2.743, 5.34, 1.39],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [2.75, 2.6, -0.32],
+       "rayon": 0.4,
+       "couleur": [1, 0.3, 0.22],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [-2.75, 2.6, -0.32],
+       "rayon": 0.4,
+       "couleur": [1, 0.3, 0.22],
+       "intensite": 0.55
+      }
+     ]
+    },
+    {
+     "nom": "turbine-rotor",
+     "triangles": 1126,
+     "matieres": ["PR_accent2", "PR_acier", "PR_alliage", "PR_graphite", "PR_jaune"],
+     "min": [-1.98, -1.7846, -0.8],
+     "max": [1.98, 1.7846, 0.2],
+     "ancrages": []
+    }
+   ],
+   "octets": 189196
+  },
+  {
+   "chemin": "Decor/bordure.fbx",
+   "dossier": "Decor",
+   "source": "decor.prm",
+   "objets": [
+    {
+     "nom": "bordure",
+     "triangles": 656,
+     "matieres": ["PR_accent2", "PR_acier", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_joint", "PR_kerbClair", "PR_kerbSombre", "PR_ligne", "PR_muret", "PR_neonLigne"],
+     "min": [3.79, -0.905, -3.0],
+     "max": [4.78, 0.705, 3.0],
+     "ancrages": []
+    }
+   ],
+   "octets": 39388
+  },
+  {
+   "chemin": "Decor/chevron.fbx",
+   "dossier": "Decor",
+   "source": "decor.prm",
+   "objets": [
+    {
+     "nom": "chevron",
+     "triangles": 292,
+     "matieres": ["PR_acier", "PR_blindage", "PR_ecran", "PR_feuRouge", "PR_neonBlanc"],
+     "min": [4.19, 0.65, -0.65],
+     "max": [4.41, 1.605, 0.65],
+     "ancrages": []
+    }
+   ],
+   "octets": 26764
+  },
+  {
+   "chemin": "Decor/portique.fbx",
+   "dossier": "Decor",
+   "source": "decor.prm",
+   "objets": [
+    {
+     "nom": "portique",
+     "triangles": 5364,
+     "matieres": ["PR_accent", "PR_acier", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_ecran", "PR_feuRouge", "PR_jaune", "PR_neonBlanc"],
+     "min": [-7.7, -3.042, -1.1],
+     "max": [7.7, 12.02, 1.1],
+     "ancrages": []
+    }
+   ],
+   "octets": 162300
+  },
+  {
+   "chemin": "Decor/roches.fbx",
+   "dossier": "Decor",
+   "source": "decor.prm",
+   "objets": [
+    {
+     "nom": "roche-0",
+     "triangles": 576,
+     "matieres": ["PR_roche"],
+     "min": [-0.8146, -0.8146, -0.8349],
+     "max": [0.9457, 0.7613, 0.8903],
+     "ancrages": []
+    },
+    {
+     "nom": "roche-1",
+     "triangles": 892,
+     "matieres": ["PR_roche"],
+     "min": [-0.9807, -0.7514, -0.7845],
+     "max": [0.7008, 0.7457, 0.6651],
+     "ancrages": []
+    },
+    {
+     "nom": "roche-2",
+     "triangles": 996,
+     "matieres": ["PR_roche"],
+     "min": [-0.9989, -0.7263, -0.6721],
+     "max": [0.7491, 0.7895, 0.6498],
+     "ancrages": []
+    },
+    {
+     "nom": "roche-3",
+     "triangles": 230,
+     "matieres": ["PR_roche"],
+     "min": [-0.9125, -0.5707, -0.6241],
+     "max": [0.903, 0.6144, 0.6318],
+     "ancrages": []
+    }
+   ],
+   "octets": 121100
+  },
+  {
+   "chemin": "Mondes/laser/mur-tranchee.fbx",
+   "dossier": "Mondes",
+   "source": "monde-laser.prm",
+   "objets": [
+    {
+     "nom": "mur-tranchee",
+     "triangles": 960,
+     "matieres": ["PR_accent", "PR_accent2", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_danger", "PR_ecranLaser", "PR_joint", "PR_murLaser", "PR_renfonceLaser"],
+     "min": [4.92, -0.9, -3.0],
+     "max": [5.75, 2.3, 3.0],
+     "ancrages": []
+    }
+   ],
+   "octets": 46476
+  },
+  {
+   "chemin": "Mondes/laser/scanner.fbx",
+   "dossier": "Mondes",
+   "source": "monde-laser.prm",
+   "objets": [
+    {
+     "nom": "scanner",
+     "triangles": 1596,
+     "matieres": ["PR_accent", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_danger"],
+     "min": [-6.65, 0.0, -0.85],
+     "max": [6.65, 8.07, 0.85],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [5.9, 7.4, -0.65],
+       "rayon": 0.9,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [-5.9, 7.4, -0.65],
+       "rayon": 0.9,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [-4.2, 6.55, -0.35],
+       "rayon": 0.5,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [-2.8, 6.55, -0.35],
+       "rayon": 0.5,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [-1.4, 6.55, -0.35],
+       "rayon": 0.5,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [0.0, 6.55, -0.35],
+       "rayon": 0.5,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [1.4, 6.55, -0.35],
+       "rayon": 0.5,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [2.8, 6.55, -0.35],
+       "rayon": 0.5,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [4.2, 6.55, -0.35],
+       "rayon": 0.5,
+       "couleur": [1, 0.25, 0.25],
+       "intensite": 0.45
+      }
+     ]
+    }
+   ],
+   "octets": 57820
+  },
+  {
+   "chemin": "Mondes/neon/tour-neon-a.fbx",
+   "dossier": "Mondes",
+   "source": "monde-neon.prm",
+   "objets": [
+    {
+     "nom": "tour-neon-a",
+     "triangles": 1480,
+     "matieres": ["PR_accent", "PR_accent2", "PR_acier", "PR_betonNeon", "PR_blindage", "PR_fenetreNeon", "PR_feuRouge", "PR_vitreNeon"],
+     "min": [-5.13, 0.0, -4.52],
+     "max": [4.0, 82.7, 4.045],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0.4, 82.4, 0],
+       "rayon": 2.5,
+       "couleur": [1, 0.3, 0.25],
+       "intensite": 0.7
+      },
+      {
+       "type": "halo",
+       "position": [-5.2, 30, -2.6],
+       "rayon": 5,
+       "couleur": [1, 0.31, 0.85],
+       "intensite": 0.25
+      }
+     ]
+    }
+   ],
+   "octets": 53324
+  },
+  {
+   "chemin": "Mondes/neon/tour-neon-b.fbx",
+   "dossier": "Mondes",
+   "source": "monde-neon.prm",
+   "objets": [
+    {
+     "nom": "tour-neon-b",
+     "triangles": 1060,
+     "matieres": ["PR_accent", "PR_accent2", "PR_acier", "PR_betonNeon2", "PR_blindage", "PR_blindageClair", "PR_ecranNeon", "PR_fenetreNeon", "PR_jaune"],
+     "min": [-6.2, 0.0, -12.0],
+     "max": [5.3, 50.3, 6.3],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-4.1, 47.5, 0],
+       "rayon": 7,
+       "couleur": [1, 0.31, 0.85],
+       "intensite": 0.22
+      }
+     ]
+    }
+   ],
+   "octets": 47324
+  },
+  {
+   "chemin": "Mondes/rift/arche-cristal.fbx",
+   "dossier": "Mondes",
+   "source": "monde-rift.prm",
+   "objets": [
+    {
+     "nom": "arche-cristal",
+     "triangles": 1438,
+     "matieres": ["PR_accent2", "PR_ameRift", "PR_cristalLueur", "PR_cristalRift"],
+     "min": [-9.0136, -0.7232, -1.3993],
+     "max": [8.7783, 8.4251, 1.5127],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [5.54256, 3.2, -0.2],
+       "rayon": 1.3,
+       "couleur": [0.7, 0.55, 1],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [3.2, 5.54256, -0.2],
+       "rayon": 1.3,
+       "couleur": [0.7, 0.55, 1],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [0.0, 6.4, -0.2],
+       "rayon": 1.3,
+       "couleur": [0.7, 0.55, 1],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [-3.2, 5.54256, -0.2],
+       "rayon": 1.3,
+       "couleur": [0.7, 0.55, 1],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [-5.54256, 3.2, -0.2],
+       "rayon": 1.3,
+       "couleur": [0.7, 0.55, 1],
+       "intensite": 0.3
+      }
+     ]
+    }
+   ],
+   "octets": 78300
+  },
+  {
+   "chemin": "Mondes/rift/grappe-cristaux.fbx",
+   "dossier": "Mondes",
+   "source": "monde-rift.prm",
+   "objets": [
+    {
+     "nom": "grappe-cristaux",
+     "triangles": 218,
+     "matieres": ["PR_cristalLueur", "PR_cristalRift", "PR_rocheRift"],
+     "min": [-1.288, -0.94, -1.2429],
+     "max": [1.288, 3.2029, 1.4806],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 2.5, 0],
+       "rayon": 2.2,
+       "couleur": [0.7, 0.55, 1],
+       "intensite": 0.3
+      }
+     ]
+    }
+   ],
+   "octets": 27308
+  },
+  {
+   "chemin": "Mondes/sentinelle/colonne-forteresse.fbx",
+   "dossier": "Mondes",
+   "source": "monde-sentinelle.prm",
+   "objets": [
+    {
+     "nom": "colonne-forteresse",
+     "triangles": 1564,
+     "matieres": ["PR_accent2", "PR_acier", "PR_blindForteresse", "PR_danger", "PR_joint", "PR_pierreForteresse"],
+     "min": [-3.1704, -1.0, -3.1704],
+     "max": [3.1704, 42.4, 3.1704],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-2.4, 37.2, 0],
+       "rayon": 3,
+       "couleur": [1, 0.3, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-1.9, 20, 0],
+       "rayon": 2.4,
+       "couleur": [1, 0.6, 0.3],
+       "intensite": 0.3
+      }
+     ]
+    }
+   ],
+   "octets": 62284
+  },
+  {
+   "chemin": "Mondes/sentinelle/tourelle.fbx",
+   "dossier": "Mondes",
+   "source": "monde-sentinelle.prm",
+   "objets": [
+    {
+     "nom": "tourelle",
+     "triangles": 648,
+     "matieres": ["PR_acier", "PR_blindForteresse", "PR_blindage", "PR_blindageClair", "PR_danger"],
+     "min": [-3.4325, 0.0, -1.4706],
+     "max": [1.4706, 3.075, 1.4706],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-0.96, 2.95, 0],
+       "rayon": 0.6,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.7
+      }
+     ]
+    }
+   ],
+   "octets": 38524
+  },
+  {
+   "chemin": "Mondes/singularite/anneau-brise.fbx",
+   "dossier": "Mondes",
+   "source": "monde-singularite.prm",
+   "objets": [
+    {
+     "nom": "anneau-brise",
+     "triangles": 980,
+     "matieres": ["PR_accent", "PR_acier", "PR_caoutchouc", "PR_coqueSing", "PR_fenetreSing"],
+     "min": [3.2891, -11.5373, -1.7094],
+     "max": [13.2019, 11.9509, 1.55],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [6.0, 10.3923, 0.0],
+       "rayon": 2.4,
+       "couleur": [0.92, 0.88, 1],
+       "intensite": 0.5
+      }
+     ]
+    }
+   ],
+   "octets": 46076
+  },
+  {
+   "chemin": "Mondes/singularite/fragment-coque.fbx",
+   "dossier": "Mondes",
+   "source": "monde-singularite.prm",
+   "objets": [
+    {
+     "nom": "fragment-coque",
+     "triangles": 456,
+     "matieres": ["PR_acier", "PR_coqueSing", "PR_feuRouge", "PR_jaune"],
+     "min": [-2.9245, 0.4518, -2.5],
+     "max": [2.9245, 3.079, 2.5],
+     "ancrages": []
+    }
+   ],
+   "octets": 30828
+  },
+  {
+   "chemin": "Mondes/tempete/cadre-brise.fbx",
+   "dossier": "Mondes",
+   "source": "monde-tempete.prm",
+   "objets": [
+    {
+     "nom": "cadre-brise",
+     "triangles": 444,
+     "matieres": ["PR_accent2", "PR_acier", "PR_acierStation", "PR_caoutchouc"],
+     "min": [-6.7, -1.0, -1.6795],
+     "max": [8.6719, 7.55, 0.8795],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-5.78, 2.4, 0.1],
+       "rayon": 0.8,
+       "couleur": [1, 0.7, 0.3],
+       "intensite": 0.7
+      },
+      {
+       "type": "halo",
+       "position": [6.2, 3.5, 0],
+       "rayon": 0.9,
+       "couleur": [1, 0.6, 0.25],
+       "intensite": 0.9
+      }
+     ]
+    }
+   ],
+   "octets": 31212
+  },
+  {
+   "chemin": "Mondes/tempete/cadre-station.fbx",
+   "dossier": "Mondes",
+   "source": "monde-tempete.prm",
+   "objets": [
+    {
+     "nom": "cadre-station",
+     "triangles": 384,
+     "matieres": ["PR_accent2", "PR_acierStation", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_neonBlanc"],
+     "min": [-6.7, -1.0, -0.45],
+     "max": [6.7, 7.55, 0.45],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-5.78, 2.4, 0.1],
+       "rayon": 0.8,
+       "couleur": [1, 0.7, 0.3],
+       "intensite": 0.7
+      }
+     ]
+    }
+   ],
+   "octets": 28876
+  },
+  {
+   "chemin": "Mondes/tempete/paratonnerre.fbx",
+   "dossier": "Mondes",
+   "source": "monde-tempete.prm",
+   "objets": [
+    {
+     "nom": "paratonnerre",
+     "triangles": 2100,
+     "matieres": ["PR_accent", "PR_acier", "PR_acierStation", "PR_alliage", "PR_ceramique", "PR_feuRouge"],
+     "min": [-9.0283, -1.2, -9.0283],
+     "max": [9.0283, 36.75, 9.0283],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 31, 0],
+       "rayon": 3.4,
+       "couleur": [0.6, 0.85, 1],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [0, 36.6, 0],
+       "rayon": 1.2,
+       "couleur": [1, 0.3, 0.25],
+       "intensite": 0.7
+      }
+     ]
+    }
+   ],
+   "octets": 78652
+  },
+  {
+   "chemin": "Obstacles/barriere.fbx",
+   "dossier": "Obstacles",
+   "source": "objets.prm",
+   "objets": [
+    {
+     "nom": "barriere",
+     "triangles": 1064,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_carbone", "PR_dangerFort", "PR_hachureNoire", "PR_hachureRouge", "PR_rouille"],
+     "min": [-1.1137, -0.041, -0.6],
+     "max": [1.1137, 1.68, 0.6],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0.99, 1.62, 0.05],
+       "rayon": 0.4,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.75
+      },
+      {
+       "type": "halo",
+       "position": [-0.99, 1.62, 0.05],
+       "rayon": 0.4,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.75
+      },
+      {
+       "type": "halo",
+       "position": [0, 1.5, -0.0],
+       "rayon": 0.9,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [0, 0.1, -0.6],
+       "rayon": 1.3,
+       "couleur": [1, 0.2, 0.15],
+       "intensite": 0.4
+      }
+     ]
+    }
+   ],
+   "octets": 52908
+  },
+  {
+   "chemin": "Obstacles/bloc-chute.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mobiles.prm",
+   "objets": [
+    {
+     "nom": "bloc-chute",
+     "triangles": 2484,
+     "matieres": ["PR_acier", "PR_acierPeint", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_braise", "PR_chaud", "PR_dangerFort", "PR_hachureNoire", "PR_jaune", "PR_jauneVif", "PR_joint", "PR_tuyere"],
+     "min": [-0.83, 0.026, -0.73],
+     "max": [0.83, 1.72, 0.73],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 0.15, -0.3],
+       "rayon": 1.2,
+       "couleur": [1, 0.45, 0.15],
+       "intensite": 0.7
+      },
+      {
+       "type": "halo",
+       "position": [0.46, 0.05, 0.38],
+       "rayon": 0.35,
+       "couleur": [1, 0.5, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.46, 0.05, -0.38],
+       "rayon": 0.35,
+       "couleur": [1, 0.5, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-0.46, 0.05, 0.38],
+       "rayon": 0.35,
+       "couleur": [1, 0.5, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-0.46, 0.05, -0.38],
+       "rayon": 0.35,
+       "couleur": [1, 0.5, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0, 1.11, -0.7],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [0, 1.11, 0.7],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [0.8, 1.11, 0],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [-0.8, 1.11, 0],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [0, 1.68, 0],
+       "rayon": 0.25,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      }
+     ]
+    }
+   ],
+   "octets": 87532
+  },
+  {
+   "chemin": "Obstacles/cargo.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mobiles.prm",
+   "objets": [
+    {
+     "nom": "cargo",
+     "triangles": 3272,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_chaud", "PR_dangerFort", "PR_feuRouge", "PR_hachureNoire", "PR_hachureRouge", "PR_joint", "PR_orangeCargo", "PR_poussee", "PR_tuyere"],
+     "min": [-1.008, 0.105, -0.87],
+     "max": [1.008, 1.788, 0.78],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0.86, 0.08, -0.36],
+       "rayon": 0.38,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [0.86, 0.08, 0.36],
+       "rayon": 0.38,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [-0.86, 0.08, -0.36],
+       "rayon": 0.38,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [-0.86, 0.08, 0.36],
+       "rayon": 0.38,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [0.86, 0.3, 0.8],
+       "rayon": 0.32,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-0.86, 0.3, 0.8],
+       "rayon": 0.32,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.86, 0.3, -0.88],
+       "rayon": 0.16,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-0.86, 0.3, -0.88],
+       "rayon": 0.16,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.3, 1.57, -0.4],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.65
+      },
+      {
+       "type": "halo",
+       "position": [-0.3, 1.57, -0.4],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.65
+      },
+      {
+       "type": "halo",
+       "position": [0.6, 0.33, -0.85],
+       "rayon": 0.25,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-0.6, 0.33, -0.85],
+       "rayon": 0.25,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0, 0.33, -0.9],
+       "rayon": 0.7,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.3
+      }
+     ]
+    }
+   ],
+   "octets": 108140
+  },
+  {
+   "chemin": "Obstacles/drone.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mobiles.prm",
+   "objets": [
+    {
+     "nom": "drone",
+     "triangles": 2500,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_carbone", "PR_dangerFort", "PR_feuRouge", "PR_hachureRouge", "PR_joint", "PR_verre"],
+     "min": [-0.938, 0.825, -0.888],
+     "max": [0.938, 1.67, 0.888],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 1.15, -0.47],
+       "rayon": 0.55,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.9
+      },
+      {
+       "type": "halo",
+       "position": [0.6, 1.23, 0.55],
+       "rayon": 0.32,
+       "couleur": [1, 0.28, 0.22],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [0.6, 1.23, -0.55],
+       "rayon": 0.32,
+       "couleur": [1, 0.28, 0.22],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [-0.6, 1.23, 0.55],
+       "rayon": 0.32,
+       "couleur": [1, 0.28, 0.22],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [-0.6, 1.23, -0.55],
+       "rayon": 0.32,
+       "couleur": [1, 0.28, 0.22],
+       "intensite": 0.3
+      },
+      {
+       "type": "halo",
+       "position": [0.22, 1.25, -0.46],
+       "rayon": 0.14,
+       "couleur": [1, 0.3, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-0.22, 1.25, -0.46],
+       "rayon": 0.14,
+       "couleur": [1, 0.3, 0.2],
+       "intensite": 0.5
+      }
+     ]
+    }
+   ],
+   "octets": 105548
+  },
+  {
+   "chemin": "Obstacles/eclaireur.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mobiles.prm",
+   "objets": [
+    {
+     "nom": "eclaireur",
+     "triangles": 1442,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_carbone", "PR_chaud", "PR_dangerFort", "PR_feuRouge", "PR_hachureRouge", "PR_joint", "PR_rouille", "PR_tuyere", "PR_verre"],
+     "min": [-1.14, 0.7, -0.98],
+     "max": [1.14, 1.4705, 1.44],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0.31, 0.83, 1.45],
+       "rayon": 0.45,
+       "couleur": [1, 0.3, 0.2],
+       "intensite": 0.9
+      },
+      {
+       "type": "halo",
+       "position": [-0.31, 0.83, 1.45],
+       "rayon": 0.45,
+       "couleur": [1, 0.3, 0.2],
+       "intensite": 0.9
+      },
+      {
+       "type": "halo",
+       "position": [0.12, 0.97, -0.56],
+       "rayon": 0.25,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [-0.12, 0.97, -0.56],
+       "rayon": 0.25,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.55
+      },
+      {
+       "type": "halo",
+       "position": [1.12, 0.81, -0.78],
+       "rayon": 0.28,
+       "couleur": [1, 0.28, 0.2],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [-1.12, 0.81, -0.78],
+       "rayon": 0.28,
+       "couleur": [1, 0.28, 0.2],
+       "intensite": 0.6
+      }
+     ]
+    }
+   ],
+   "octets": 74684
+  },
+  {
+   "chemin": "Obstacles/lance.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mobiles.prm",
+   "objets": [
+    {
+     "nom": "lance",
+     "triangles": 2418,
+     "matieres": ["PR_acier", "PR_acierPeint", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_braise", "PR_chaud", "PR_cristalSombre", "PR_danger", "PR_dangerFort", "PR_joint", "PR_tuyere"],
+     "min": [-1.0, -0.1212, -1.0],
+     "max": [1.0, 2.9, 1.0],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 1.3, -0.3],
+       "rayon": 1.4,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.75
+      },
+      {
+       "type": "halo",
+       "position": [0, 2.4, -0.05],
+       "rayon": 0.7,
+       "couleur": [1, 0.5, 0.25],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [0, 0.1, -0.55],
+       "rayon": 1.0,
+       "couleur": [1, 0.3, 0.15],
+       "intensite": 0.45
+      },
+      {
+       "type": "halo",
+       "position": [0, 1.59, -0.25],
+       "rayon": 0.4,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      }
+     ]
+    }
+   ],
+   "octets": 111516
+  },
+  {
+   "chemin": "Obstacles/laser.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "pylones",
+     "triangles": 2984,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_bronze", "PR_caoutchouc", "PR_dangerDoux", "PR_dangerFort", "PR_hachureJaune", "PR_hachureNoire", "PR_joint"],
+     "min": [-1.3562, 0.0, -0.347],
+     "max": [1.3562, 2.0, 0.34],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0.83, 0.78, -0.14],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.85
+      },
+      {
+       "type": "halo",
+       "position": [1.18, 1.78, -0.04],
+       "rayon": 0.2,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [-0.83, 0.78, -0.14],
+       "rayon": 0.3,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.85
+      },
+      {
+       "type": "halo",
+       "position": [-1.18, 1.78, -0.04],
+       "rayon": 0.2,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.5
+      }
+     ]
+    }
+   ],
+   "octets": 97452
+  },
+  {
+   "chemin": "Obstacles/porte.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "porte-cadre",
+     "triangles": 2264,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_dangerDoux", "PR_feuAmbre", "PR_hachureJaune", "PR_hachureNoire", "PR_joint", "PR_metalMoyen"],
+     "min": [-1.345, 0.0, -0.317],
+     "max": [1.345, 2.5, 0.31],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [1.17, 2.4, -0.06],
+       "rayon": 0.32,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [-1.17, 2.4, -0.06],
+       "rayon": 0.32,
+       "couleur": [1, 0.6, 0.2],
+       "intensite": 0.6
+      },
+      {
+       "type": "halo",
+       "position": [1.22, 1.02, -0.3],
+       "rayon": 0.45,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.2
+      },
+      {
+       "type": "halo",
+       "position": [-1.22, 1.02, -0.3],
+       "rayon": 0.45,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.2
+      }
+     ]
+    },
+    {
+     "nom": "porte-battant",
+     "triangles": 1232,
+     "matieres": ["PR_acier", "PR_battant", "PR_blindage", "PR_caoutchouc", "PR_dangerFort", "PR_hachureJaune", "PR_hachureNoire"],
+     "min": [-0.555, 0.05, -0.1075],
+     "max": [0.56, 1.995, 0.1075],
+     "ancrages": []
+    }
+   ],
+   "octets": 110220
+  },
+  {
+   "chemin": "Obstacles/rochers.fbx",
+   "dossier": "Obstacles",
+   "source": "objets.prm",
+   "objets": [
+    {
+     "nom": "rochers-0",
+     "triangles": 4372,
+     "matieres": ["PR_braise", "PR_rocheObjet", "PR_trancheRoche"],
+     "min": [-1.0103, 0.1113, -0.6728],
+     "max": [0.9212, 1.5213, 0.5533],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-0.45, 0.62, -0.1],
+       "rayon": 0.992,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.5, 0.7, 0.15],
+       "rayon": 0.88,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.05, 1.18, -0.05],
+       "rayon": 0.672,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      }
+     ]
+    },
+    {
+     "nom": "rochers-1",
+     "triangles": 3730,
+     "matieres": ["PR_braise", "PR_rocheObjet", "PR_trancheRoche"],
+     "min": [-1.0526, 0.2322, -0.5312],
+     "max": [1.064, 1.5255, 0.6267],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-0.45, 0.62, -0.1],
+       "rayon": 0.992,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.5, 0.7, 0.15],
+       "rayon": 0.88,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.05, 1.18, -0.05],
+       "rayon": 0.672,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      }
+     ]
+    },
+    {
+     "nom": "rochers-2",
+     "triangles": 3840,
+     "matieres": ["PR_braise", "PR_rocheObjet", "PR_trancheRoche"],
+     "min": [-1.0498, 0.1512, -0.644],
+     "max": [1.0259, 1.4803, 0.6291],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [-0.45, 0.62, -0.1],
+       "rayon": 0.992,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.5, 0.7, 0.15],
+       "rayon": 0.88,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      },
+      {
+       "type": "halo",
+       "position": [0.05, 1.18, -0.05],
+       "rayon": 0.672,
+       "couleur": [1, 0.45, 0.2],
+       "intensite": 0.5
+      }
+     ]
+    }
+   ],
+   "octets": 463212
+  },
+  {
+   "chemin": "Obstacles/rotor.fbx",
+   "dossier": "Obstacles",
+   "source": "objets-mecanismes.prm",
+   "objets": [
+    {
+     "nom": "rotor-moyeu",
+     "triangles": 1614,
+     "matieres": ["PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_dangerFort", "PR_hachureJaune"],
+     "min": [-0.4967, 0.0, -0.4967],
+     "max": [0.4967, 1.7115, 0.4967],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 1.56, -0.26],
+       "rayon": 0.6,
+       "couleur": [1, 0.25, 0.2],
+       "intensite": 0.8
+      }
+     ]
+    },
+    {
+     "nom": "rotor-pale",
+     "triangles": 470,
+     "matieres": ["PR_acier", "PR_blindage", "PR_blindageClair", "PR_dangerFort", "PR_hachureJaune", "PR_hachureNoire"],
+     "min": [0.159, -0.12, -0.4198],
+     "max": [2.746, 0.125, 0.4198],
+     "ancrages": []
+    }
+   ],
+   "octets": 80124
+  },
+  {
+   "chemin": "Piste/bord-ouvert.fbx",
+   "dossier": "Piste",
+   "source": "piste.prm",
+   "objets": [
+    {
+     "nom": "bord-ouvert",
+     "triangles": 650,
+     "matieres": ["PR_acier", "PR_caissonLumineux", "PR_caoutchouc", "PR_panneauPiste", "PR_railLumineux", "PR_railLumineux2", "PR_revetement", "PR_sillon", "PR_structurePiste"],
+     "min": [4.8, -0.55, -3.0],
+     "max": [6.8137, 1.7379, 3.0],
+     "ancrages": []
+    }
+   ],
+   "octets": 37212
+  },
+  {
+   "chemin": "Piste/bord-tunnel.fbx",
+   "dossier": "Piste",
+   "source": "piste.prm",
+   "objets": [
+    {
+     "nom": "bord-tunnel",
+     "triangles": 1602,
+     "matieres": ["PR_acier", "PR_blindageClair", "PR_caissonLumineux", "PR_panneauPiste", "PR_panneauPisteClair", "PR_railLumineux", "PR_railLumineux2", "PR_revetement", "PR_sillon", "PR_structurePiste"],
+     "min": [4.8, -0.55, -3.01],
+     "max": [7.1199, 5.6, 3.0],
+     "ancrages": []
+    }
+   ],
+   "octets": 58220
+  },
+  {
+   "chemin": "Piste/chaussee.fbx",
+   "dossier": "Piste",
+   "source": "piste.prm",
+   "objets": [
+    {
+     "nom": "chaussee",
+     "triangles": 444,
+     "matieres": ["PR_accentDoux", "PR_acier", "PR_caissonLumineux", "PR_ligne", "PR_revetement", "PR_revetement2", "PR_sillon", "PR_structurePiste"],
+     "min": [-4.8, -2.14, -3.0],
+     "max": [4.8, 0.002, 3.0],
+     "ancrages": []
+    }
+   ],
+   "octets": 32284
+  },
+  {
+   "chemin": "Piste/voute.fbx",
+   "dossier": "Piste",
+   "source": "piste.prm",
+   "objets": [
+    {
+     "nom": "voute",
+     "triangles": 868,
+     "matieres": ["PR_caissonLumineux", "PR_caoutchouc", "PR_jaune", "PR_panneauPiste", "PR_railLumineux", "PR_structurePiste"],
+     "min": [-5.4215, 5.2132, -3.0],
+     "max": [5.4215, 8.3, 3.01],
+     "ancrages": [
+      {
+       "type": "halo",
+       "position": [0, 7.6, 0],
+       "rayon": 3.0,
+       "couleur": [0.85, 0.92, 1],
+       "intensite": 0.18
+      }
+     ]
+    }
+   ],
+   "octets": 41884
+  },
+  {
+   "chemin": "Vaisseaux/aube.fbx",
+   "dossier": "Vaisseaux",
+   "source": "aube.prm",
+   "objets": [
+    {
+     "nom": "aube",
+     "triangles": 16614,
+     "matieres": ["PR_accent", "PR_accentDoux", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_carbone", "PR_chaud", "PR_coeur", "PR_coque", "PR_feuBlanc", "PR_feuRouge", "PR_joint", "PR_navVert", "PR_peinture2", "PR_tuyere", "PR_verre"],
+     "min": [-0.9971, -0.1636, -1.6305],
+     "max": [0.9971, 0.6386, 2.0446],
+     "ancrages": [
+      {
+       "type": "tuyere",
+       "position": [0.8, 0.02, -1.61],
+       "rayon": 0.17
+      },
+      {
+       "type": "tuyere",
+       "position": [-0.8, 0.02, -1.61],
+       "rayon": 0.17
+      },
+      {
+       "type": "emetteur",
+       "position": [0.45, 0.1, -0.1]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.45, 0.1, -0.1]
+      },
+      {
+       "type": "emetteur",
+       "position": [0.62, 0.08, -0.55]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.62, 0.08, -0.55]
+      }
+     ]
+    }
+   ],
+   "octets": 606780
+  },
+  {
+   "chemin": "Vaisseaux/bastion.fbx",
+   "dossier": "Vaisseaux",
+   "source": "bastion.prm",
+   "objets": [
+    {
+     "nom": "bastion",
+     "triangles": 16356,
+     "matieres": ["PR_accent", "PR_accentDoux", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_carbone", "PR_chaud", "PR_coeur", "PR_coque", "PR_feuRouge", "PR_jaune", "PR_joint", "PR_peinture2", "PR_phare", "PR_stop", "PR_tuyere", "PR_verre"],
+     "min": [-0.9853, -0.176, -1.5855],
+     "max": [0.9853, 0.6011, 1.9633],
+     "ancrages": [
+      {
+       "type": "tuyere",
+       "position": [0.25, 0.325, -1.585],
+       "rayon": 0.125
+      },
+      {
+       "type": "tuyere",
+       "position": [-0.25, 0.325, -1.585],
+       "rayon": 0.125
+      },
+      {
+       "type": "tuyere",
+       "position": [0.25, 0.02, -1.585],
+       "rayon": 0.115
+      },
+      {
+       "type": "tuyere",
+       "position": [-0.25, 0.02, -1.585],
+       "rayon": 0.115
+      },
+      {
+       "type": "emetteur",
+       "position": [0.72, 0.11236, 1.06]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.72, 0.11236, 1.06]
+      },
+      {
+       "type": "emetteur",
+       "position": [0.72, 0.2165, -0.0]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.72, 0.2165, -0.0]
+      }
+     ]
+    }
+   ],
+   "octets": 576412
+  },
+  {
+   "chemin": "Vaisseaux/faucon.fbx",
+   "dossier": "Vaisseaux",
+   "source": "faucon.prm",
+   "objets": [
+    {
+     "nom": "faucon",
+     "triangles": 18008,
+     "matieres": ["PR_accent", "PR_accentDoux", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_caoutchouc", "PR_carbone", "PR_chaud", "PR_coeur", "PR_coque", "PR_feuBlanc", "PR_feuRouge", "PR_joint", "PR_navVert", "PR_peinture2", "PR_tuyere", "PR_verre"],
+     "min": [-0.9876, -0.2087, -1.5604],
+     "max": [0.9876, 0.53, 2.18],
+     "ancrages": [
+      {
+       "type": "tuyere",
+       "position": [0, 0.06, -1.54],
+       "rayon": 0.2
+      },
+      {
+       "type": "tuyere",
+       "position": [0.36, 0.05, -1.31],
+       "rayon": 0.074
+      },
+      {
+       "type": "tuyere",
+       "position": [-0.36, 0.05, -1.31],
+       "rayon": 0.074
+      },
+      {
+       "type": "emetteur",
+       "position": [0.09, 0.1641, -0.1]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.09, 0.1641, -0.1]
+      },
+      {
+       "type": "emetteur",
+       "position": [0.72, -0.0085, -0.48]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.72, -0.0085, -0.48]
+      }
+     ]
+    }
+   ],
+   "octets": 640140
+  },
+  {
+   "chemin": "Vaisseaux/spectre.fbx",
+   "dossier": "Vaisseaux",
+   "source": "spectre.prm",
+   "objets": [
+    {
+     "nom": "spectre",
+     "triangles": 12584,
+     "matieres": ["PR_accent", "PR_accentDoux", "PR_acier", "PR_alliage", "PR_blindage", "PR_blindageClair", "PR_carbone", "PR_chaud", "PR_coeur", "PR_coque", "PR_feuBlanc", "PR_feuRouge", "PR_joint", "PR_navVert", "PR_peinture2", "PR_tuyere", "PR_verre"],
+     "min": [-0.996, -0.175, -1.3599],
+     "max": [0.996, 0.2885, 2.0399],
+     "ancrages": [
+      {
+       "type": "tuyere",
+       "position": [0.17, 0.056, -1.12],
+       "rayon": 0.066
+      },
+      {
+       "type": "tuyere",
+       "position": [-0.17, 0.056, -1.12],
+       "rayon": 0.066
+      },
+      {
+       "type": "emetteur",
+       "position": [0.5, 0.03247, -0.12]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.5, 0.03247, -0.12]
+      },
+      {
+       "type": "emetteur",
+       "position": [0.5, 0.03247, -0.62]
+      },
+      {
+       "type": "emetteur",
+       "position": [-0.5, 0.03247, -0.62]
+      }
+     ]
+    }
+   ],
+   "octets": 496140
+  }
+ ]
+}

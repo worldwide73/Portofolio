@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Contrôle de compilation du code Unity SANS Unity : le code du projet (Scripts/**) est compilé contre des
+       déclarations minimales de l'API Unity (Stubs/), dont chaque signature est recopiée du code source officiel
+       (UnityCsReference 6000.3, URP 17.3). Attrape fautes de frappe, de types et d'API ; ne prouve PAS que le
+       projet compile dans Unity (seul Unity le dit). Deux passes : lecteur Web (UNITY_WEBGL) et éditeur (UNITY_EDITOR).
+       Utilisation : dotnet build -c Joueur ; dotnet build -c Editeur -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Configurations>Joueur;Editeur</Configurations>
+    <NoWarn>CS0626;CS0067;CS0414;CS0649;CS0169;CS8618;CS0108</NoWarn>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Joueur'">
+    <DefineConstants>UNITY_WEBGL;ENABLE_INPUT_SYSTEM;PORTALRUSH_PAQUETS;UNITY_6000_3_OR_NEWER</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Editeur'">
+    <DefineConstants>UNITY_EDITOR;UNITY_WEBGL;ENABLE_INPUT_SYSTEM;PORTALRUSH_PAQUETS;UNITY_INCLUDE_TESTS;UNITY_6000_3_OR_NEWER</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Stubs/**/*.cs" />
+    <Compile Include="../../../unity/PortalRush/Assets/PortalRush/Scripts/Coeur/**/*.cs" LinkBase="Coeur" />
+    <Compile Include="../../../unity/PortalRush/Assets/PortalRush/Scripts/Jeu/**/*.cs" LinkBase="Jeu" />
+    <Compile Include="../../../unity/PortalRush/Assets/PortalRush/Scripts/Interface/**/*.cs" LinkBase="Interface" Condition="'$(AvecInterface)' == 'oui'" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' == 'Editeur'">
+    <Compile Include="../../../unity/PortalRush/Assets/PortalRush/Scripts/Installation/**/*.cs" LinkBase="Installation" />
+    <Compile Include="../../../unity/PortalRush/Assets/PortalRush/Scripts/Editeur/**/*.cs" LinkBase="Editeur" />
+  </ItemGroup>
+</Project>

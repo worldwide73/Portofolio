@@ -1,0 +1,4 @@
+Images de l'interface Unity de Portal Rush : dégradés et lueurs calculés par images.mjs (même dossier),
+sans aucune ressource extérieure. Elles appartiennent au projet (même licence que le reste du portfolio).
+Régénérer : node unity/PortalRush/Assets/PortalRush/UI/Images/images.mjs unity/PortalRush/Assets/PortalRush/UI/Images
+Réglage d'import conseillé dans Unity : Compression « None » (dégradés sans paliers), Wrap Mode « Clamp ».
