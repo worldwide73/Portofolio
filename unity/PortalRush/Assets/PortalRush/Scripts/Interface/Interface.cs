@@ -778,7 +778,7 @@ namespace PortalRush.Interface
     {
       if (Tutoriel.Actif) Tutoriel.Arreter();
       if (Partie != null) Session.Instance?.Abandonner();
-      Pont.Son("sortie");
+      // (La page joue elle-même le son de sortie à la fermeture, comme l'ancien jeu : pas de Son("sortie") ici.)
       Pont.Fermer();
       Montrer(EcranMenu, false);
     }

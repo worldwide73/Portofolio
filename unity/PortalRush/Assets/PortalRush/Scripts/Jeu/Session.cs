@@ -94,7 +94,10 @@ namespace PortalRush.Jeu
       documents = FindObjectsByType<UIDocument>(FindObjectsSortMode.None);
     }
 
-    static bool EffetsReduits => Pont.Vue != null && Pont.Vue.reglages != null && Pont.Vue.reglages.effetsReduits;
+    /** Comme animationsCoupees() de rush.ts : mouvement réduit du système, ou animations du site coupées. */
+    static bool AnimationsCoupees =>
+      (Pont.Config != null && Pont.Config.appareil != null && Pont.Config.appareil.mouvementReduit)
+      || (Pont.Vue != null && Pont.Vue.reglages != null && Pont.Vue.reglages.animations <= 0);
 
     // ==========================================================================
     // LANCER, METTRE EN PAUSE, ARRÊTER
@@ -113,7 +116,7 @@ namespace PortalRush.Jeu
       EnPause = false;
       finSignalee = false;
       reste = 0;
-      Compte = l.Tutoriel ? 0 : EffetsReduits ? 0.4 : 1.2;
+      Compte = l.Tutoriel ? 0 : AnimationsCoupees ? 0.4 : 1.2;
       departPointeur = null;
       Demarree?.Invoke(p);
       if (Compte <= 0) Decompte?.Invoke(0);
@@ -133,7 +136,7 @@ namespace PortalRush.Jeu
       if (Partie == null || Partie.Termine != null || pause == EnPause) return;
       EnPause = pause;
       // La reprise passe par un bref compte à rebours, pour se replacer (rien n'a bougé pendant la pause).
-      if (!pause && Lancement != null && !Lancement.Tutoriel) Compte = EffetsReduits ? 0.3 : 0.9;
+      if (!pause && Lancement != null && !Lancement.Tutoriel) Compte = AnimationsCoupees ? 0.3 : 0.9;
       Pont.Moteur(false, 0, false);
       PauseChangee?.Invoke(pause);
     }
@@ -183,7 +186,7 @@ namespace PortalRush.Jeu
         {
           double avant = Compte;
           Compte = Math.Max(0, Compte - dt);
-          double pas = EffetsReduits ? 0.15 : 0.3;
+          double pas = AnimationsCoupees ? 0.15 : 0.3;
           int etapeAvant = (int)Math.Ceiling(avant / pas);
           int etape = (int)Math.Ceiling(Compte / pas);
           if (etape != etapeAvant) Decompte?.Invoke(Math.Max(0, etape));

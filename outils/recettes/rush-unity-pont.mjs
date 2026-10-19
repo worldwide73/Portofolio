@@ -236,11 +236,16 @@ try {
     await p.evaluate(() => window.__dreamRadio.jouer());
     await p.waitForTimeout(400);
     await ouvrirHub(p);
-    await controle('B. À l\'ouverture du Hub : manifeste lu, fichiers du build préchargés (prefetch, faible priorité)', async () => {
-      await p.waitForFunction(() => document.querySelectorAll('link[rel="prefetch"][data-rush-unity]').length === 4, null, { timeout: 5000 });
+    const prefetch = () => p.evaluate(() => [...document.querySelectorAll('link[rel="prefetch"][data-rush-unity]')].map((l) => new URL(l.href).pathname).sort());
+    await controle('B. À l\'ouverture du Hub : manifeste lu, seuls les petits fichiers du build préchargés (prefetch, faible priorité)', async () => {
+      await p.waitForFunction(() => document.querySelectorAll('link[rel="prefetch"][data-rush-unity]').length === 2, null, { timeout: 5000 });
       assert.ok(requetes.some((u) => u.includes('portal-rush.json')));
-      const liens = await p.evaluate(() => [...document.querySelectorAll('link[rel="prefetch"][data-rush-unity]')].map((l) => new URL(l.href).pathname));
-      assert.deepEqual(liens.sort(), ['/rush-unity/Build/PortalRush.data.unityweb', '/rush-unity/Build/PortalRush.framework.js.unityweb', '/rush-unity/Build/PortalRush.loader.js', '/rush-unity/Build/PortalRush.wasm.unityweb']);
+      assert.deepEqual(await prefetch(), ['/rush-unity/Build/PortalRush.framework.js.unityweb', '/rush-unity/Build/PortalRush.loader.js']);
+    });
+    await p.hover('#hub [data-onglet="rush"]');
+    await controle('B. À l\'approche du bouton Portal Rush : le reste du build (données, WebAssembly) préchargé, une seule fois', async () => {
+      await p.waitForFunction(() => document.querySelectorAll('link[rel="prefetch"][data-rush-unity]').length === 4, null, { timeout: 5000 });
+      assert.deepEqual(await prefetch(), ['/rush-unity/Build/PortalRush.data.unityweb', '/rush-unity/Build/PortalRush.framework.js.unityweb', '/rush-unity/Build/PortalRush.loader.js', '/rush-unity/Build/PortalRush.wasm.unityweb']);
     });
     await cliquerRush(p);
     await controle('B. Le clic : le bouton se fissure, le tunnel part, la fenêtre Portal Rush s\'ouvre dessous avec la toile Unity', async () => {
@@ -531,7 +536,9 @@ try {
     await controle('E. Le portfolio revit : rouvrir la version Unity marche (2e ouverture, « Passer » d\'Échap)', async () => {
       await ouvrirHub(p);
       await cliquerRush(p);
-      await p.waitForTimeout(900);
+      // (Le voyage doit être parti : sur un serveur de développement froid, le code met un instant à arriver.)
+      await p.waitForFunction(() => document.querySelector('.voyage-temporel'), null, { timeout: 10000 });
+      await p.waitForTimeout(600);
       await p.keyboard.press('Escape');
       await p.waitForFunction(() => window.__rushUnity.etat().monde, null, { timeout: 15000 });
       const e = await etatUnity(p);

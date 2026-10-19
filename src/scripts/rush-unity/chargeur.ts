@@ -68,14 +68,29 @@ export function webgl2(): boolean {
   return avecWebgl2;
 }
 
-let precharge = false;
-/** Le préchargement discret : les fichiers du build demandés en faible priorité (« prefetch »), une seule fois. */
-export function precharger(): void {
-  if (precharge || !webgl2()) return;
-  precharge = true;
+/** Ce qui a déjà été demandé : rien, les petits fichiers (chargeur, framework), ou tout. */
+let precharge: 'rien' | 'leger' | 'complet' = 'rien';
+
+/** L'appareil demande d'économiser les données (ou la connexion est très lente) : pas de gros préchargement. */
+function economie(): boolean {
+  const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  return !!c && (c.saveData === true || c.effectiveType === 'slow-2g' || c.effectiveType === '2g');
+}
+
+/**
+ * Préchargement discret, en faible priorité. « leger » (ouverture du Hub) : le chargeur et le framework, quelques
+ * centaines de Ko. « complet » (approche du bouton Portal Rush) : aussi les données et le WebAssembly (plusieurs Mo),
+ * sauf en économie de données. Rien n'est jamais demandé au chargement du portfolio.
+ */
+export function precharger(niveau: 'leger' | 'complet' = 'complet'): void {
+  if (!webgl2() || precharge === 'complet' || (precharge === 'leger' && niveau === 'leger')) return;
+  const avant = precharge;
+  precharge = niveau === 'complet' && !economie() ? 'complet' : 'leger';
+  if (precharge === avant) return;
   void lireManifeste().then((m) => {
     if (!m) return;
-    for (const href of [m.loader, m.framework, m.code, m.data]) {
+    const fichiers = precharge === 'complet' ? (avant === 'leger' ? [m.code, m.data] : [m.loader, m.framework, m.code, m.data]) : [m.loader, m.framework];
+    for (const href of fichiers) {
       const lien = document.createElement('link');
       lien.rel = 'prefetch';
       lien.href = href;

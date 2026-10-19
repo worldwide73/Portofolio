@@ -24,19 +24,20 @@ function lire(): boolean {
 export const rushUnityDemandee = (): boolean => (demande ??= lire());
 
 /**
- * Le préchargement discret : rien au chargement du portfolio ; à l'ouverture de l'Orbital Hub, ou à l'approche d'un
- * bouton qui lance le jeu, le code de la version Unity et les fichiers du build sont demandés en faible priorité.
+ * Le préchargement discret : rien au chargement du portfolio ; à l'ouverture de l'Orbital Hub, le code de la version
+ * Unity et les petits fichiers du build ; à l'approche d'un bouton qui lance le jeu, le reste (données, WebAssembly),
+ * en faible priorité et jamais en économie de données (chargeur.ts).
  */
 export function approcheRushUnity(): void {
   if (!rushUnityDemandee()) return;
-  let fait = false;
-  const approcher = () => {
-    if (fait) return;
-    fait = true;
-    void import('./index').then((m) => m.prechargerRushUnity()).catch(() => undefined);
+  let fait: 'rien' | 'leger' | 'complet' = 'rien';
+  const approcher = (niveau: 'leger' | 'complet') => {
+    if (fait === 'complet' || fait === niveau) return;
+    fait = niveau;
+    void import('./index').then((m) => m.prechargerRushUnity(niveau)).catch(() => undefined);
   };
-  document.querySelector('#hub')?.addEventListener('toggle', (e) => (e as ToggleEvent).newState === 'open' && approcher());
-  const pres = (e: Event) => (e.target as Element | null)?.closest?.('[data-onglet="rush"], [data-jouer-rush]') && approcher();
+  document.querySelector('#hub')?.addEventListener('toggle', (e) => (e as ToggleEvent).newState === 'open' && approcher('leger'));
+  const pres = (e: Event) => (e.target as Element | null)?.closest?.('[data-onglet="rush"], [data-jouer-rush]') && approcher('complet');
   document.addEventListener('pointerover', pres, { passive: true });
   document.addEventListener('focusin', pres);
 }
