@@ -1,0 +1,971 @@
+/* ==========================================================================
+   PORTAL RUSH (Unity) — L'INTERFACE : JETONS, POLICES, COMPOSANTS COMMUNS
+
+   Direction « PR-OS » du jeu web (src/styles/rush.css) : le système de bord d'un engin de course.
+   - Typographie : Tektur (titres, chiffres, actions : la vitesse) et Geist Mono (lire, étiqueter), famille sœur de
+     Geist, la police du portfolio. Étiquettes en capitales espacées (écrites en capitales par le code).
+   - Formes : des plaques de verre sombre aux angles coupés (dessinées par Formes.cs, couleurs --plaque-*), des
+     traits d'un pixel, des repères de module (« CMP · 01 »), une seule touche lumineuse par élément.
+   - Couleurs : nuit profonde, glacier pour l'information, violet pour l'énergie, rouge réservé au danger, or réservé
+     aux records et aux étoiles. Le décor 3D reste visible derrière : jamais d'aplat opaque plein écran.
+   - Mouvement : transitions brèves seulement si « .anime » (effets réduits ou mouvement réduit : rien ne bouge).
+   Référence 1920 × 1080 (PanelSettings : Scale With Screen Size). Classes de taille : .etroit, .petit, .portrait, .bas.
+   ========================================================================== */
+@import url("Ecrans/Menus.uss");
+@import url("Ecrans/Hud.uss");
+@import url("Ecrans/Resultats.uss");
+@import url("Ecrans/Reglages.uss");
+
+/* La racine du document occupe tout l'écran (le thème par défaut le fait aussi). */
+.unity-ui-document__root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.pr {
+    --nuit: rgb(3, 6, 12);
+    --verre: rgba(6, 11, 21, 0.62);
+    --verre-fort: rgba(5, 9, 18, 0.88);
+    --glacier: rgb(168, 236, 255);
+    --cyan: rgb(98, 217, 255);
+    --blanc: rgb(242, 248, 255);
+    --texte: rgb(220, 232, 246);
+    --doux: rgba(205, 224, 246, 0.68);
+    --pale: rgba(205, 224, 246, 0.42);
+    --violet: rgb(169, 140, 255);
+    --rouge: rgb(255, 91, 84);
+    --or: rgb(255, 207, 106);
+    --trait: rgba(150, 205, 255, 0.15);
+    --trait-fort: rgba(160, 220, 255, 0.36);
+
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    -unity-font-definition: url("Polices/GeistMono-Regular.ttf");
+    font-size: 17px;
+    color: var(--texte);
+    white-space: normal;
+    -unity-text-align: upper-left;
+    letter-spacing: 0;
+}
+
+.pr.en-attente {
+    opacity: 0;
+}
+
+/* Pendant la sortie du tunnel (Intro), l'interface se tait. */
+.pr.en-intro .ecran,
+.pr.en-intro .barre,
+.pr.en-intro .cadre,
+.pr.en-intro .voile {
+    display: none;
+}
+
+/* ==========================================================================
+   LES POLICES ET LES TEXTES
+   ========================================================================== */
+.affiche {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+}
+
+.gras {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+}
+
+/* Les étiquettes : capitales espacées, petites. */
+.etiquette {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 13px;
+    letter-spacing: 2.6px;
+    color: var(--doux);
+}
+
+/* Les touches de clavier dessinées. */
+.touche {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    min-width: 30px;
+    height: 26px;
+    padding: 0 8px;
+    margin: 0 3px;
+    border-width: 1px 1px 2px 1px;
+    border-color: var(--trait-fort);
+    border-radius: 3px;
+    background-color: rgba(8, 14, 26, 0.72);
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--texte);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   LES CALQUES : voile, alerte, cadre, fondu
+   ========================================================================== */
+.calque {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Le voile : sous les écrans de détail, le décor s'assombrit (à gauche et en bas), sans disparaître. */
+.voile {
+    background-color: rgba(3, 6, 12, 0.32);
+}
+
+.voile.leger {
+    background-color: rgba(3, 6, 12, 0);
+}
+
+.voile__gauche {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 72%;
+    background-image: url("Images/voile-gauche.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.voile__bas {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 46%;
+    background-image: url("Images/voile-bas.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.voile__vignette {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url("Images/vignette.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.voile.leger .voile__gauche {
+    opacity: 0.45;
+}
+
+.voile.leger .voile__bas {
+    opacity: 0.8;
+}
+
+/* L'alerte : les bords de l'écran s'allument (Overdrive : violet ; dernier bouclier : rouge ; choc : un éclair). */
+.alerte__bord {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 160px;
+    background-image: url("Images/bord.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgb(255, 91, 84);
+    opacity: 0;
+}
+
+.alerte__bord--gauche {
+    left: 0;
+}
+
+.alerte__bord--droite {
+    right: 0;
+    scale: -1 1;
+}
+
+.pr.anime .alerte__bord {
+    transition-property: opacity;
+    transition-duration: 0.6s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.alerte.danger .alerte__bord {
+    opacity: 0.32;
+}
+
+.alerte.overdrive .alerte__bord {
+    -unity-background-image-tint-color: rgb(169, 140, 255);
+    opacity: 0.55;
+}
+
+.alerte.choc .alerte__bord {
+    -unity-background-image-tint-color: rgb(255, 91, 84);
+    opacity: 0.9;
+}
+
+.pr.anime .alerte.choc .alerte__bord {
+    transition-duration: 0s;
+}
+
+/* Le cadre : quatre équerres fines et le code des règles, comme l'écran de bord du jeu web. */
+.cadre__reperes {
+    position: absolute;
+    left: 14px;
+    top: 14px;
+    right: 14px;
+    bottom: 14px;
+    --reperes-couleur: rgba(168, 236, 255, 0.26);
+    --reperes-taille: 22;
+}
+
+.cadre__code {
+    position: absolute;
+    right: 30px;
+    bottom: 20px;
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 10px;
+    letter-spacing: 2.4px;
+    color: rgba(205, 224, 246, 0.3);
+}
+
+.pr.en-course .cadre {
+    opacity: 0.6;
+}
+
+.fondu {
+    background-color: rgb(3, 6, 12);
+    opacity: 0;
+}
+
+/* ==========================================================================
+   LA PLAQUE (Formes.Plaque) : verre sombre, angles coupés ; ses états
+   ========================================================================== */
+.plaque {
+    --plaque-fond: rgba(6, 11, 21, 0.62);
+    --plaque-bord: rgba(160, 220, 255, 0.22);
+    --plaque-accent: rgba(168, 236, 255, 0);
+    --plaque-lueur: rgba(98, 217, 255, 0);
+    --plaque-coupe: 12;
+    --plaque-trait: 1;
+    --plaque-accent-longueur: 44;
+    --plaque-forme: 0;
+}
+
+Button.plaque:hover {
+    --plaque-bord: rgba(168, 236, 255, 0.55);
+    --plaque-fond: rgba(14, 26, 44, 0.72);
+}
+
+Button.plaque:active {
+    --plaque-fond: rgba(30, 60, 90, 0.78);
+}
+
+.pr.clavier Button.plaque:focus {
+    --plaque-bord: rgb(168, 236, 255);
+    --plaque-accent: rgb(242, 248, 255);
+    --plaque-lueur: rgba(98, 217, 255, 0.7);
+    --plaque-fond: rgba(16, 32, 54, 0.8);
+}
+
+Button.plaque:disabled {
+    --plaque-fond: rgba(6, 11, 21, 0.4);
+    --plaque-bord: rgba(160, 220, 255, 0.1);
+    opacity: 0.55;
+}
+
+/* Les boutons : un léger glissement au survol et au focus. */
+.pr.anime Button {
+    transition-property: translate, scale, opacity;
+    transition-duration: 0.16s, 0.16s, 0.2s;
+    transition-timing-function: ease-out-cubic;
+}
+
+/* ==========================================================================
+   LES BOUTONS COMMUNS : lancer (action forte), action, entrée (liste), puce, icône
+   ========================================================================== */
+.lancer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    padding: 0 22px 0 28px;
+    --plaque-fond: rgba(98, 217, 255, 0.16);
+    --plaque-bord: rgba(168, 236, 255, 0.62);
+    --plaque-accent: rgba(242, 248, 255, 0.9);
+    --plaque-coupe: 14;
+}
+
+.lancer:hover {
+    --plaque-fond: rgba(98, 217, 255, 0.26);
+    --plaque-bord: rgb(168, 236, 255);
+    translate: 3px 0;
+}
+
+.pr.clavier .lancer:focus {
+    --plaque-fond: rgba(98, 217, 255, 0.3);
+    --plaque-lueur: rgba(98, 217, 255, 0.85);
+    translate: 3px 0;
+}
+
+.lancer__texte {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 24px;
+    letter-spacing: 2px;
+    color: var(--blanc);
+}
+
+.lancer__icone {
+    width: 26px;
+    height: 26px;
+    --icone-couleur: rgb(168, 236, 255);
+    --icone-trait: 2.2;
+}
+
+.action {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 56px;
+    min-width: 180px;
+    padding: 0 22px;
+    margin: 0 8px;
+}
+
+.action__texte {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 15px;
+    letter-spacing: 2.4px;
+    color: var(--texte);
+    -unity-text-align: middle-center;
+}
+
+.action__touche {
+    margin-left: 12px;
+}
+
+.action--danger {
+    --plaque-fond: rgba(255, 91, 84, 0.14);
+    --plaque-bord: rgba(255, 120, 110, 0.6);
+}
+
+.action--danger:hover {
+    --plaque-fond: rgba(255, 91, 84, 0.24);
+    --plaque-bord: rgb(255, 140, 130);
+}
+
+.pr.clavier .action--danger:focus {
+    --plaque-bord: rgb(255, 160, 150);
+    --plaque-lueur: rgba(255, 91, 84, 0.7);
+    --plaque-accent: rgb(255, 220, 215);
+}
+
+.action--danger .action__texte {
+    color: rgb(255, 205, 200);
+}
+
+/* Une entrée de liste (pause, menu). */
+.entree {
+    flex-direction: row;
+    align-items: center;
+    height: 62px;
+    padding: 0 20px;
+    margin-bottom: 8px;
+}
+
+.entree:hover,
+.pr.clavier .entree:focus {
+    translate: 6px 0;
+}
+
+.entree__index {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--pale);
+    width: 34px;
+}
+
+.entree__titre {
+    flex-grow: 1;
+    font-size: 19px;
+    color: var(--blanc);
+}
+
+.entree__touche {
+    margin-left: 10px;
+}
+
+.entree--principale {
+    --plaque-fond: rgba(98, 217, 255, 0.14);
+    --plaque-bord: rgba(168, 236, 255, 0.58);
+    --plaque-accent: rgba(242, 248, 255, 0.85);
+}
+
+/* La puce (difficulté choisie, dans la campagne). */
+.puce {
+    flex-direction: row;
+    align-items: center;
+    height: 48px;
+    padding: 0 14px 0 18px;
+    margin-left: 18px;
+    --plaque-coupe: 10;
+}
+
+.puce__libelle {
+    margin-right: 12px;
+}
+
+.puce__valeur {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+    font-size: 19px;
+    color: var(--blanc);
+}
+
+.puce__icone {
+    width: 18px;
+    height: 18px;
+    margin-left: 10px;
+    --icone-couleur: rgb(168, 236, 255);
+}
+
+.puce.paradoxe {
+    --plaque-bord: rgba(214, 120, 255, 0.7);
+}
+
+/* Les boutons-icônes (langue, records, réglages, fermer). */
+.icone-bouton {
+    width: 46px;
+    height: 46px;
+    margin-left: 10px;
+    align-items: center;
+    justify-content: center;
+    --plaque-coupe: 9;
+}
+
+.icone-bouton--petit {
+    width: 40px;
+    height: 40px;
+}
+
+.icone-bouton__icone {
+    width: 22px;
+    height: 22px;
+}
+
+.icone-bouton__code {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+}
+
+.icone-bouton.ouvert {
+    --plaque-bord: rgb(168, 236, 255);
+}
+
+/* Les icônes dessinées : leur couleur et leur trait (Formes.Dessiner). */
+.icone {
+    --icone-couleur: rgb(220, 232, 246);
+    --icone-trait: 1.6;
+}
+
+Button:hover .icone {
+    --icone-couleur: rgb(242, 248, 255);
+}
+
+.pr.clavier Button:focus .icone {
+    --icone-couleur: rgb(168, 236, 255);
+}
+
+/* Les étoiles (Formes.Etoile) : en creux, gagnées (or), nouvelles. */
+.etoile {
+    width: 22px;
+    height: 22px;
+    --etoile-fond: rgba(255, 207, 106, 0);
+    --etoile-bord: rgba(205, 224, 246, 0.42);
+}
+
+.etoile.gagnee {
+    --etoile-fond: rgb(255, 207, 106);
+    --etoile-bord: rgb(255, 230, 170);
+}
+
+.etoile--mini {
+    width: 12px;
+    height: 12px;
+    margin-right: 2px;
+}
+
+.etoile--petite {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+
+.etoile--grande {
+    width: 76px;
+    height: 76px;
+}
+
+/* ==========================================================================
+   LA BARRE DU HAUT
+   ========================================================================== */
+.barre {
+    position: absolute;
+    left: 44px;
+    right: 44px;
+    top: 26px;
+    height: 50px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.barre__gauche,
+.barre__droite {
+    flex-direction: row;
+    align-items: center;
+}
+
+.touche-echap {
+    flex-direction: row;
+    align-items: center;
+    height: 40px;
+    padding: 0 10px 0 0;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.touche-echap__touche {
+    margin: 0 10px 0 0;
+}
+
+.touche-echap__effet {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 12px;
+    letter-spacing: 2.4px;
+    color: var(--doux);
+}
+
+.touche-echap:hover .touche-echap__effet {
+    color: var(--glacier);
+}
+
+.touche-echap.pressee .touche-echap__touche {
+    translate: 0 2px;
+    border-color: var(--glacier);
+}
+
+.barre__module {
+    flex-direction: row;
+    align-items: center;
+    margin-left: 18px;
+    padding-left: 18px;
+    border-left-width: 1px;
+    border-left-color: var(--trait);
+    height: 22px;
+}
+
+.barre__point {
+    width: 6px;
+    height: 6px;
+    margin-right: 10px;
+    background-color: var(--cyan);
+    rotate: 45deg;
+}
+
+.barre__module-texte {
+    color: var(--glacier);
+}
+
+.langue {
+    position: relative;
+}
+
+.langue__liste {
+    position: absolute;
+    top: 54px;
+    right: -10px;
+    width: 240px;
+    padding: 14px 12px 10px 12px;
+    --plaque-fond: rgba(5, 9, 18, 0.94);
+    --plaque-bord: rgba(160, 220, 255, 0.4);
+}
+
+.langue__titre {
+    margin: 0 0 8px 6px;
+}
+
+.langue__choix {
+    flex-direction: row;
+    align-items: center;
+    height: 42px;
+    padding: 0 10px;
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.langue__choix:hover,
+.pr.clavier .langue__choix:focus {
+    background-color: rgba(98, 217, 255, 0.14);
+}
+
+.langue__choix.actif {
+    background-color: rgba(98, 217, 255, 0.08);
+}
+
+.langue__code {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+    font-size: 16px;
+    width: 40px;
+    color: var(--glacier);
+}
+
+.langue__nom {
+    font-size: 15px;
+    color: var(--texte);
+}
+
+/* L'infobulle des icônes. */
+.info {
+    position: absolute;
+    padding: 6px 10px;
+    background-color: rgba(5, 9, 18, 0.94);
+    border-width: 1px;
+    border-color: var(--trait-fort);
+    border-radius: 2px;
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 12px;
+    letter-spacing: 1.6px;
+    color: var(--texte);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   LES ÉCRANS : la mise en page commune, l'entrée
+   ========================================================================== */
+.ecran {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    padding: 108px 64px 52px 64px;
+}
+
+.pr.anime .ecran {
+    transition-property: opacity, translate;
+    transition-duration: 0.34s, 0.4s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr .ecran.entree {
+    opacity: 0;
+    translate: 0 14px;
+}
+
+/* (Une transition prend la durée de l'état d'arrivée : l'entrée est immédiate, le retour à l'état normal s'anime.) */
+.pr.anime .ecran.entree {
+    transition-duration: 0s;
+}
+
+.ecran__tete {
+    margin-bottom: 28px;
+}
+
+.ecran__tete--ligne {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.ecran__tete-droite {
+    flex-direction: row;
+    align-items: center;
+}
+
+.ecran__module {
+    color: var(--cyan);
+    margin-bottom: 6px;
+}
+
+.ecran__titre {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 58px;
+    letter-spacing: 1px;
+    color: var(--blanc);
+    text-shadow: 0 2px 18px rgba(2, 4, 8, 0.7);
+}
+
+.ecran__sous {
+    margin-top: 6px;
+    font-size: 17px;
+    color: var(--doux);
+    max-width: 900px;
+}
+
+.ecran__pied {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 26px;
+}
+
+.ecran__note {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--pale);
+}
+
+/* Les onglets (records, réglages). */
+.onglets {
+    flex-direction: row;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--trait);
+    margin-bottom: 18px;
+}
+
+.onglet {
+    flex-direction: row;
+    align-items: center;
+    height: 46px;
+    padding: 0 18px;
+    border-bottom-width: 2px;
+    border-bottom-color: rgba(0, 0, 0, 0);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.onglet:hover {
+    background-color: rgba(98, 217, 255, 0.06);
+}
+
+.pr.clavier .onglet:focus {
+    background-color: rgba(98, 217, 255, 0.14);
+}
+
+.onglet.actif {
+    border-bottom-color: var(--cyan);
+}
+
+.onglet__index {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 11px;
+    color: var(--pale);
+    margin-right: 10px;
+}
+
+.onglet__texte {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 13px;
+    letter-spacing: 2.4px;
+    color: var(--doux);
+}
+
+.onglet.actif .onglet__texte {
+    color: var(--blanc);
+}
+
+/* Les récompenses (à gagner, débloquées). */
+.recompense {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 15px;
+}
+
+.recompense__puce {
+    width: 6px;
+    height: 6px;
+    margin-right: 10px;
+    background-color: var(--or);
+    rotate: 45deg;
+}
+
+.recompense__texte {
+    flex-shrink: 1;
+    font-size: 15px;
+    color: var(--texte);
+}
+
+.recompense--vide {
+    color: var(--pale);
+    font-size: 14px;
+}
+
+.recompense--nouvelle .recompense__texte {
+    color: var(--blanc);
+}
+
+/* ==========================================================================
+   LA SÉQUENCE DE FIN : bandes de cinéma et titre
+   ========================================================================== */
+.cine__bande {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    background-color: rgb(0, 0, 0);
+}
+
+.cine__bande--haut {
+    top: 0;
+}
+
+.cine__bande--bas {
+    bottom: 0;
+}
+
+.cine.victoire .cine__bande {
+    height: 11%;
+}
+
+.pr.anime .cine__bande {
+    transition-property: height;
+    transition-duration: 0.6s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr.anime .cine.entree .cine__bande {
+    height: 0;
+    transition-duration: 0s;
+}
+
+.cine__texte {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 15%;
+    align-items: center;
+}
+
+.cine__titre {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 72px;
+    letter-spacing: 3px;
+    color: var(--blanc);
+    text-shadow: 0 0 24px rgba(98, 217, 255, 0.6);
+    -unity-text-align: middle-center;
+}
+
+.cine__trait {
+    width: 420px;
+    height: 2px;
+    margin: 10px 0;
+    background-image: url("Images/trait.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgb(168, 236, 255);
+}
+
+.cine__sous {
+    -unity-font-definition: url("Polices/GeistMono-Bold.ttf");
+    font-size: 15px;
+    letter-spacing: 3px;
+    color: var(--glacier);
+    -unity-text-align: middle-center;
+}
+
+.pr.anime .cine__texte {
+    transition-property: opacity, translate;
+    transition-duration: 0.8s;
+    transition-delay: 0.4s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr.anime .cine.entree .cine__texte {
+    opacity: 0;
+    translate: 0 18px;
+    transition-duration: 0s;
+    transition-delay: 0s;
+}
+
+/* ==========================================================================
+   LA FENÊTRE DE CONFIRMATION
+   ========================================================================== */
+.confirmation {
+    background-color: rgba(3, 6, 12, 0.62);
+    align-items: center;
+    justify-content: center;
+}
+
+.confirmation__fenetre {
+    width: 620px;
+    padding: 30px 34px 28px 34px;
+    --plaque-fond: rgba(5, 9, 18, 0.95);
+    --plaque-bord: rgba(255, 140, 130, 0.5);
+    --plaque-accent: rgba(255, 180, 170, 0.9);
+    --plaque-coupe: 16;
+}
+
+.pr.anime .confirmation__fenetre {
+    transition-property: opacity, scale;
+    transition-duration: 0.22s;
+    transition-timing-function: ease-out-back;
+}
+
+.pr .confirmation__fenetre.entree {
+    opacity: 0;
+    scale: 0.96 0.96;
+}
+
+.pr.anime .confirmation__fenetre.entree {
+    transition-duration: 0s;
+}
+
+.confirmation__module {
+    color: rgb(255, 160, 150);
+}
+
+.confirmation__titre {
+    -unity-font-definition: url("Polices/Tektur-Medium.ttf");
+    font-size: 34px;
+    margin: 8px 0 6px 0;
+    color: var(--blanc);
+}
+
+.confirmation__texte {
+    font-size: 16px;
+    color: var(--doux);
+    margin-bottom: 26px;
+}
+
+.confirmation__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+/* ==========================================================================
+   LES TAILLES D'ÉCRAN
+   ========================================================================== */
+.pr.etroit .ecran {
+    padding-left: 40px;
+    padding-right: 40px;
+}
+
+.pr.etroit .ecran__titre {
+    font-size: 46px;
+}
+
+.pr.bas .ecran {
+    padding-top: 92px;
+    padding-bottom: 32px;
+}
+
+.pr.bas .ecran__tete {
+    margin-bottom: 16px;
+}
+
+.pr.portrait .barre {
+    left: 24px;
+    right: 24px;
+}
+
+.pr.portrait .ecran {
+    padding: 96px 24px 32px 24px;
+}
+
+.pr.portrait .ecran__titre {
+    font-size: 40px;
+}

@@ -1,0 +1,22 @@
+<!-- PORTAL RUSH (Unity) — LE GARAGE : la baie (vaisseau 3D de la Vitrine), les vaisseaux et les pièces (Scripts/Interface/EcranGarage.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="garage" class="ecran ecran--garage" picking-mode="Ignore">
+        <ui:VisualElement class="ecran__tete" picking-mode="Ignore">
+            <ui:Label text="GAR · 04" class="etiquette ecran__module" />
+            <ui:Label name="garage-titre" class="ecran__titre" />
+            <ui:Label name="garage-sous" class="ecran__sous" />
+        </ui:VisualElement>
+        <ui:VisualElement class="garage__corps" picking-mode="Ignore">
+            <!-- La baie reste transparente : le vaisseau 3D y tourne (Vitrine, mode garage). -->
+            <ui:VisualElement class="garage__baie reperes" picking-mode="Ignore">
+                <ui:Label name="garage-repere" class="etiquette garage__repere" picking-mode="Ignore" />
+                <ui:VisualElement class="garage__fiche" picking-mode="Ignore">
+                    <ui:Label name="garage-vu-nom" class="garage__vu-nom" picking-mode="Ignore" />
+                    <ui:Label name="garage-vu-etat" class="etiquette garage__vu-etat" picking-mode="Ignore" />
+                    <ui:Label name="garage-vu-role" class="garage__vu-role" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="garage-liste" class="garage__liste" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

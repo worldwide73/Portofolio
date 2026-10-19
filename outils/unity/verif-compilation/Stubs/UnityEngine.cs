@@ -594,7 +594,6 @@ namespace UnityEngine
     public static Vector3 mousePosition => default;
     public static int touchCount => 0;
   }
-  public enum KeyCode { None = 0, Space = 32, A = 97, D = 100, P = 112, Q = 113, W = 119, Z = 122, UpArrow = 273, DownArrow = 274, RightArrow = 275, LeftArrow = 276, Escape = 27, Return = 13 }
 
   public sealed class WebGLInput
   {

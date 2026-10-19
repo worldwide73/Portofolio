@@ -34,6 +34,8 @@ png('vignette.png', 256, 256, (x, y) => { const dx = (x - 127.5) / 127.5, dy = (
 png('lueur.png', 128, 128, (x, y) => { const dx = (x - 63.5) / 63.5, dy = (y - 63.5) / 63.5; const d = Math.sqrt(dx * dx + dy * dy); return [255, 255, 255, d >= 1 ? 0 : Math.exp(-d * d * 4.2) * (1 - d)]; });
 // Trait lumineux horizontal (fort au centre, nul aux bouts).
 png('trait.png', 256, 4, (x) => { const t = Math.abs(x - 127.5) / 127.5; return [255, 255, 255, Math.pow(1 - t, 1.8)]; });
+// Lueur de bord : blanche au bord (à gauche), nulle vers l'intérieur (retournée pour le bord droit).
+png('bord.png', 256, 4, (x) => [255, 255, 255, Math.pow(1 - x / 255, 2.4)]);
 // Bande lumineuse verticale (fond d'une jauge, d'un faisceau).
 png('faisceau.png', 4, 256, (_, y) => { const t = y / 255; return [255, 255, 255, Math.pow(t, 2.2)]; });
 console.log('images écrites dans', sortie);

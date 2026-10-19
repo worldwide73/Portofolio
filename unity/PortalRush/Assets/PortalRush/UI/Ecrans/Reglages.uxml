@@ -1,0 +1,18 @@
+<!-- PORTAL RUSH (Unity) — LE PANNEAU DES RÉGLAGES, par-dessus l'écran en cours (Scripts/Interface/PanneauReglages.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="reglages-fond" class="calque panneau-fond">
+        <ui:VisualElement name="reglages-panneau" class="panneau plaque">
+            <ui:VisualElement class="panneau__tete" picking-mode="Ignore">
+                <ui:VisualElement class="panneau__titres" picking-mode="Ignore">
+                    <ui:Label text="SET · 06" class="etiquette" />
+                    <ui:Label name="reglages-titre" class="panneau__titre" />
+                </ui:VisualElement>
+                <ui:Button name="reglages-fermer" class="icone-bouton icone-bouton--petit plaque">
+                    <ui:VisualElement class="icone icone--fermer icone-bouton__icone" picking-mode="Ignore" />
+                </ui:Button>
+            </ui:VisualElement>
+            <ui:VisualElement name="reglages-onglets" class="panneau__onglets" picking-mode="Ignore" />
+            <ui:VisualElement name="reglages-pages" class="panneau__pages" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

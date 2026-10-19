@@ -31,7 +31,7 @@ namespace PortalRush.Interface
       note = L("defi-note");
       lancer = Interface.Trouver<Button>(racine, "defi-lancer");
       lancerTexte = L("defi-lancer-texte");
-      vue = new Vignette(Interface.Trouver<VisualElement>(racine, "defi-vue"));
+      vue = new Vignette(Interface.Trouver<VisualElement>(racine, "defi-vue")) { Coupe = 17 };
       vue.Theme = "defi";
       regles = Interface.Trouver<VisualElement>(racine, "defi-regles");
       for (int i = 0; i < 4; i++)

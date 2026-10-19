@@ -122,31 +122,36 @@ namespace PortalRush.Interface
       public Color Lueur = new Color(0, 0, 0, 0);
       public float Coupe = 12, Trait = 1, AccentLongueur = 44;
       public int Forme;
+
+      public void Lire(ICustomStyle c)
+      {
+        if (c.TryGetValue(PFond, out var fond)) Fond = fond;
+        if (c.TryGetValue(PBord, out var bord)) Bord = bord;
+        if (c.TryGetValue(PAccent, out var accent)) Accent = accent;
+        if (c.TryGetValue(PLueur, out var lueur)) Lueur = lueur;
+        if (c.TryGetValue(PCoupe, out var coupe)) Coupe = coupe;
+        if (c.TryGetValue(PTrait, out var trait)) Trait = trait;
+        if (c.TryGetValue(PAccentLongueur, out var longueur)) AccentLongueur = longueur;
+        if (c.TryGetValue(PForme, out var forme)) Forme = forme;
+      }
     }
 
     public static void Plaque(VisualElement el)
     {
       if (!Marquer(el, "plaque")) return;
-      var s = new StylePlaque();
-      el.RegisterCallback<CustomStyleResolvedEvent>(e =>
+      el.RegisterCallback<CustomStyleResolvedEvent>(_ => el.MarkDirtyRepaint());
+      el.generateVisualContent += mgc =>
       {
-        var c = e.customStyle;
-        if (c.TryGetValue(PFond, out var fond)) s.Fond = fond;
-        if (c.TryGetValue(PBord, out var bord)) s.Bord = bord;
-        if (c.TryGetValue(PAccent, out var accent)) s.Accent = accent;
-        if (c.TryGetValue(PLueur, out var lueur)) s.Lueur = lueur;
-        if (c.TryGetValue(PCoupe, out var coupe)) s.Coupe = coupe;
-        if (c.TryGetValue(PTrait, out var trait)) s.Trait = trait;
-        if (c.TryGetValue(PAccentLongueur, out var longueur)) s.AccentLongueur = longueur;
-        if (c.TryGetValue(PForme, out var forme)) s.Forme = forme;
-        el.MarkDirtyRepaint();
-      });
-      el.generateVisualContent += mgc => DessinerPlaque(mgc, s);
+        // (Le style est relu à chaque dessin : il peut avoir été résolu avant que le dessin soit branché.)
+        var s = new StylePlaque();
+        s.Lire(mgc.visualElement.customStyle);
+        DessinerPlaque(mgc, s);
+      };
     }
 
     static void DessinerPlaque(MeshGenerationContext mgc, StylePlaque s)
     {
-      var r = new Rect(0, 0, mgc.visualElement.layout.width, mgc.visualElement.layout.height);
+      var r = Taille(mgc.visualElement);
       if (r.width < 2 || r.height < 2) return;
       var p = mgc.painter2D;
       float coupe = Mathf.Min(s.Coupe, Mathf.Min(r.width, r.height) * 0.45f);
@@ -202,11 +207,15 @@ namespace PortalRush.Interface
     }
 
     /** La taille de l'élément, en coordonnées locales (celles du dessin : 0, 0 en haut à gauche). */
-    public static Rect Taille(VisualElement el) => new Rect(0, 0, el.layout.width, el.layout.height);
+    public static Rect Taille(VisualElement el)
+    {
+      float l = el.layout.width, h = el.layout.height;
+      return new Rect(0, 0, float.IsNaN(l) ? 0 : l, float.IsNaN(h) ? 0 : h);
+    }
 
     static Rect Retrait(Rect r, float d) => new Rect(r.x + d, r.y + d, Mathf.Max(0, r.width - 2 * d), Mathf.Max(0, r.height - 2 * d));
 
-    /** Le contour d'une plaque. Forme 0 : coins coupés en haut à gauche et en bas à droite ; 1 : les quatre ; 2 : aucun. */
+    /** Le contour d'une plaque. Forme 0 : coins coupés en haut à gauche et en bas à droite ; 1 : les quatre ; 2 : aucun ; 3 : en haut à gauche. */
     public static void Chemin(Painter2D p, Rect r, float coupe, int forme = 0)
     {
       float x0 = r.xMin, y0 = r.yMin, x1 = r.xMax, y1 = r.yMax;
@@ -217,6 +226,15 @@ namespace PortalRush.Interface
         p.LineTo(new Vector2(x1, y0));
         p.LineTo(new Vector2(x1, y1));
         p.LineTo(new Vector2(x0, y1));
+      }
+      else if (forme == 3)
+      {
+        // Seulement le coin du haut à gauche (une vue posée en haut d'une plaque).
+        p.MoveTo(new Vector2(x0 + coupe, y0));
+        p.LineTo(new Vector2(x1, y0));
+        p.LineTo(new Vector2(x1, y1));
+        p.LineTo(new Vector2(x0, y1));
+        p.LineTo(new Vector2(x0, y0 + coupe));
       }
       else if (forme == 1)
       {
@@ -253,15 +271,12 @@ namespace PortalRush.Interface
     public static void Reperes(VisualElement el)
     {
       if (!Marquer(el, "reperes")) return;
-      var s = new StyleReperes();
-      el.RegisterCallback<CustomStyleResolvedEvent>(e =>
-      {
-        if (e.customStyle.TryGetValue(RCouleur, out var c)) s.Couleur = c;
-        if (e.customStyle.TryGetValue(RTaille, out var t)) s.Taille = t;
-        el.MarkDirtyRepaint();
-      });
+      el.RegisterCallback<CustomStyleResolvedEvent>(_ => el.MarkDirtyRepaint());
       el.generateVisualContent += mgc =>
       {
+        var s = new StyleReperes();
+        if (mgc.visualElement.customStyle.TryGetValue(RCouleur, out var couleur)) s.Couleur = couleur;
+        if (mgc.visualElement.customStyle.TryGetValue(RTaille, out var taille)) s.Taille = taille;
         Rect b = Taille(mgc.visualElement);
         float l = b.width, h = b.height, t = s.Taille;
         if (l < 4 || h < 4) return;
@@ -298,15 +313,12 @@ namespace PortalRush.Interface
     public static void Etoile(VisualElement el)
     {
       if (!Marquer(el, "etoile")) return;
-      var s = new StyleEtoile();
-      el.RegisterCallback<CustomStyleResolvedEvent>(e =>
-      {
-        if (e.customStyle.TryGetValue(EFond, out var f)) s.Fond = f;
-        if (e.customStyle.TryGetValue(EBord, out var b)) s.Bord = b;
-        el.MarkDirtyRepaint();
-      });
+      el.RegisterCallback<CustomStyleResolvedEvent>(_ => el.MarkDirtyRepaint());
       el.generateVisualContent += mgc =>
       {
+        var s = new StyleEtoile();
+        if (mgc.visualElement.customStyle.TryGetValue(EFond, out var fond)) s.Fond = fond;
+        if (mgc.visualElement.customStyle.TryGetValue(EBord, out var bord)) s.Bord = bord;
         Rect b = Taille(mgc.visualElement);
         float rayon = Mathf.Min(b.width, b.height) * 0.5f - 1f;
         if (rayon < 2) return;
@@ -368,13 +380,13 @@ namespace PortalRush.Interface
       }
       var s = new StyleIcone { Icone = icone };
       el.userData = s;
-      el.RegisterCallback<CustomStyleResolvedEvent>(e =>
+      el.RegisterCallback<CustomStyleResolvedEvent>(_ => el.MarkDirtyRepaint());
+      el.generateVisualContent += mgc =>
       {
-        if (e.customStyle.TryGetValue(ICouleur, out var c)) s.Couleur = c;
-        if (e.customStyle.TryGetValue(ITrait, out var t)) s.Trait = t;
-        el.MarkDirtyRepaint();
-      });
-      el.generateVisualContent += mgc => DessinerIcone(mgc, s);
+        if (mgc.visualElement.customStyle.TryGetValue(ICouleur, out var couleur)) s.Couleur = couleur;
+        if (mgc.visualElement.customStyle.TryGetValue(ITrait, out var trait)) s.Trait = trait;
+        DessinerIcone(mgc, s);
+      };
     }
 
     static void DessinerIcone(MeshGenerationContext mgc, StyleIcone s)
@@ -612,14 +624,7 @@ namespace PortalRush.Interface
     public Anneau(VisualElement element)
     {
       el = element;
-      el.RegisterCallback<CustomStyleResolvedEvent>(e =>
-      {
-        if (e.customStyle.TryGetValue(AFond, out var f)) fond = f;
-        if (e.customStyle.TryGetValue(APlein, out var p)) plein = p;
-        if (e.customStyle.TryGetValue(ALueur, out var l)) lueur = l;
-        if (e.customStyle.TryGetValue(AEpaisseur, out var t)) epaisseur = t;
-        el.MarkDirtyRepaint();
-      });
+      el.RegisterCallback<CustomStyleResolvedEvent>(_ => el.MarkDirtyRepaint());
       el.generateVisualContent += Dessiner;
     }
 
@@ -637,6 +642,11 @@ namespace PortalRush.Interface
 
     void Dessiner(MeshGenerationContext mgc)
     {
+      var c0 = mgc.visualElement.customStyle;
+      if (c0.TryGetValue(AFond, out var f)) fond = f;
+      if (c0.TryGetValue(APlein, out var pl)) plein = pl;
+      if (c0.TryGetValue(ALueur, out var lu)) lueur = lu;
+      if (c0.TryGetValue(AEpaisseur, out var ep)) epaisseur = ep;
       Rect b = Formes.Taille(mgc.visualElement);
       float rayon = Mathf.Min(b.width, b.height) * 0.5f - epaisseur * 0.5f - 3f;
       if (rayon < 4) return;

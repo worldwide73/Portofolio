@@ -114,6 +114,16 @@ function fichiersCs(dossier) {
   }
   return liste;
 }
+function fichiersUxml(dossier) {
+  const liste = [];
+  if (!existsSync(dossier)) return liste;
+  for (const nom of readdirSync(dossier)) {
+    const chemin = join(dossier, nom);
+    if (statSync(chemin).isDirectory()) liste.push(...fichiersUxml(chemin));
+    else if (nom.endsWith('.uxml')) liste.push(chemin);
+  }
+  return liste;
+}
 function verifierCles(nouveaux) {
   const erreurs = [];
   const connues = new Set([...Object.keys(FR.textes), ...Object.keys(nouveaux.fr), ...Object.keys(FR.tailles)]);
@@ -174,7 +184,11 @@ function caracteres(buf) {
 function verifierPolices(nouveaux) {
   const erreurs = [];
   if (!existsSync(POLICES)) return { erreurs: ['dossier UI/Polices absent'], polices: 0 };
-  const tout = [...Object.values(FR.textes), ...Object.values(EN.textes), ...Object.values(nouveaux.fr), ...Object.values(nouveaux.en)].join('');
+  // Les textes, plus ce que le code et les UXML écrivent eux-mêmes (« Esc », « ← », « × », « −1 »…).
+  const litteraux = [];
+  for (const f of fichiersCs(INTERFACE)) for (const m of readFileSync(f, 'utf8').matchAll(/"((?:[^"\\\n]|\\.)*)"/g)) litteraux.push(m[1]);
+  for (const f of fichiersUxml(join(POLICES, '..'))) for (const m of readFileSync(f, 'utf8').matchAll(/\btext="([^"]*)"/g)) litteraux.push(m[1]);
+  const tout = [...Object.values(FR.textes), ...Object.values(EN.textes), ...Object.values(nouveaux.fr), ...Object.values(nouveaux.en), ...litteraux].join('');
   const utiles = [...new Set([...tout].map((c) => c.codePointAt(0)))].filter((c) => c > 32);
   const polices = readdirSync(POLICES).filter((n) => /\.(ttf|otf)$/i.test(n));
   for (const nom of polices) {

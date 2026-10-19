@@ -1,0 +1,41 @@
+<!-- PORTAL RUSH (Unity) — LA CAMPAGNE : les huit mondes et la préparation (Scripts/Interface/EcranCampagne.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="campagne" class="ecran ecran--campagne" picking-mode="Ignore">
+        <ui:VisualElement class="ecran__tete ecran__tete--ligne" picking-mode="Ignore">
+            <ui:VisualElement class="ecran__tete-gauche" picking-mode="Ignore">
+                <ui:Label text="CMP · 01" class="etiquette ecran__module" />
+                <ui:Label name="campagne-titre" class="ecran__titre" />
+            </ui:VisualElement>
+            <ui:VisualElement class="ecran__tete-droite" picking-mode="Ignore">
+                <ui:VisualElement class="campagne__total" picking-mode="Ignore">
+                    <ui:VisualElement class="etoile etoile--petite gagnee" picking-mode="Ignore" />
+                    <ui:Label name="campagne-etoiles" class="etiquette" />
+                </ui:VisualElement>
+                <ui:Button name="campagne-difficulte" class="puce plaque">
+                    <ui:Label name="campagne-difficulte-libelle" class="etiquette puce__libelle" picking-mode="Ignore" />
+                    <ui:Label name="campagne-difficulte-nom" class="puce__valeur" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--chevron puce__icone" picking-mode="Ignore" />
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="campagne__corps" picking-mode="Ignore">
+            <ui:VisualElement name="campagne-secteurs" class="secteurs" picking-mode="Ignore" />
+            <ui:VisualElement class="preparation plaque">
+                <ui:VisualElement name="prep-vue" class="preparation__vue" picking-mode="Ignore" />
+                <ui:Label name="prep-secteur" class="etiquette preparation__secteur" />
+                <ui:Label name="prep-nom" class="preparation__nom" />
+                <ui:Label name="prep-mecanique" class="preparation__mecanique" />
+                <ui:Label name="prep-etoiles-titre" class="etiquette preparation__sous-titre" />
+                <ui:VisualElement name="prep-etoiles" class="etoiles-liste" />
+                <ui:Label name="prep-recompenses-titre" class="etiquette preparation__sous-titre" />
+                <ui:VisualElement name="prep-recompenses" class="recompenses" />
+                <ui:Label name="prep-record" class="etiquette preparation__record" />
+                <ui:Label name="prep-verrou" class="preparation__verrou" />
+                <ui:Button name="prep-lancer" class="lancer plaque">
+                    <ui:Label name="prep-lancer-texte" class="lancer__texte" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--chevron lancer__icone" picking-mode="Ignore" />
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

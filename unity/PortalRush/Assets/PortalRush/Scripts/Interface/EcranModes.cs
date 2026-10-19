@@ -52,7 +52,7 @@ namespace PortalRush.Interface
         Texte = Interface.Trouver<Label>(b, nom + "-texte"),
         Etat = Interface.Trouver<Label>(b, nom + "-etat"),
         Detail = Interface.Trouver<Label>(b, nom + "-detail"),
-        Vue = new Vignette(Interface.Trouver<VisualElement>(b, nom + "-vue")),
+        Vue = new Vignette(Interface.Trouver<VisualElement>(b, nom + "-vue")) { Coupe = 19 },
       };
       c.Vue.Theme = theme;
       return c;

@@ -30,6 +30,7 @@ namespace PortalRush.Interface
     public static Label Texte(string texte, string classes = "", VisualElement? parent = null)
     {
       var l = new Label(texte);
+      NettoyerTexte(l);
       Classes(l, classes);
       parent?.Add(l);
       return l;
@@ -64,11 +65,22 @@ namespace PortalRush.Interface
       b.userData = action;
     }
 
-    /** Retire le style par défaut de Unity d'un bouton venu de l'UXML. */
+    /**
+     * Retire le style par défaut de Unity d'un bouton (venu de l'UXML ou créé ici) : le thème du jeu le dessine
+     * entièrement (plaques, états), sans les règles « .unity-button » du thème par défaut.
+     */
     public static void Nettoyer(Button b)
     {
       b.RemoveFromClassList(Button.ussClassName);
+      b.RemoveFromClassList(TextElement.ussClassName);
       b.text = "";
+    }
+
+    /** De même pour un texte : il hérite seulement des feuilles du jeu (police, taille, couleur de « .pr »). */
+    public static void NettoyerTexte(Label l)
+    {
+      l.RemoveFromClassList(Label.ussClassName);
+      l.RemoveFromClassList(TextElement.ussClassName);
     }
 
     public static void Classes(VisualElement el, string classes)
@@ -86,7 +98,17 @@ namespace PortalRush.Interface
       if (el.style.display.value != d || el.style.display.keyword != StyleKeyword.Undefined) el.style.display = d;
     }
 
-    public static bool Affiche(VisualElement? el) => el != null && el.resolvedStyle.display != DisplayStyle.None;
+    /**
+     * L'élément est-il affiché ? Le style posé par le code compte tout de suite (le style résolu, lui, ne suit qu'à la
+     * passe de style suivante).
+     */
+    public static bool Affiche(VisualElement? el)
+    {
+      if (el == null) return false;
+      var d = el.style.display;
+      if (d.keyword == StyleKeyword.Undefined) return d.value != DisplayStyle.None;
+      return el.resolvedStyle.display != DisplayStyle.None;
+    }
 
     /** Change un texte seulement s'il change (évite de refaire la mise en page du texte à chaque image). */
     public static void Ecrire(TextElement? el, string texte)
@@ -207,6 +229,7 @@ namespace PortalRush.Interface
       titre = Ui.Texte("", "option__titre", tete);
       sortie = Ui.Texte("", "curseur__sortie", tete);
       rail = Ui.Element("curseur__rail", Racine);
+      Ui.Element("curseur__piste", rail).pickingMode = PickingMode.Ignore;
       plein = Ui.Element("curseur__plein", rail);
       poignee = Ui.Element("curseur__poignee", rail);
       plein.pickingMode = PickingMode.Ignore;

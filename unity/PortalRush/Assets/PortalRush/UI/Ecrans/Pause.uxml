@@ -1,0 +1,11 @@
+<!-- PORTAL RUSH (Unity) — LA PAUSE (Scripts/Interface/EcranPause.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="pause" class="ecran ecran--pause" picking-mode="Ignore">
+        <ui:VisualElement class="pause__panneau plaque">
+            <ui:Label name="pause-sous" class="etiquette pause__sous" />
+            <ui:Label name="pause-titre" class="pause__titre" />
+            <ui:Label name="pause-partie" class="etiquette pause__partie" />
+            <ui:VisualElement name="pause-entrees" class="pause__entrees" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -5,66 +5,6 @@
 using System;
 using System.Collections.Generic;
 
-namespace UnityEngine.UIElements
-{
-  public enum PickingMode { Position = 0, Ignore = 1 }
-  public interface IPanel
-  {
-    VisualElement visualTree { get; }
-    VisualElement Pick(Vector2 point);
-    VisualElement? focusedElement { get; }
-  }
-  public class Focusable
-  {
-    public bool focusable { get; set; }
-    public int tabIndex { get; set; }
-    public void Focus() { }
-    public void Blur() { }
-  }
-  public partial class VisualElement : Focusable
-  {
-    public IPanel panel => null!;
-    public PickingMode pickingMode { get; set; }
-    public bool enabledInHierarchy => true;
-    public bool enabledSelf => true;
-    public string name { get; set; } = "";
-    public VisualElement parent => null!;
-  }
-  public static class RuntimePanelUtils
-  {
-    public static Vector2 ScreenToPanel(IPanel panel, Vector2 screenPosition) => screenPosition;
-  }
-  public enum PanelScaleMode { ConstantPixelSize, ConstantPhysicalSize, ScaleWithScreenSize }
-  public enum PanelScreenMatchMode { MatchWidthOrHeight, Shrink, Expand }
-  public class StyleSheet : ScriptableObject { }
-  public class ThemeStyleSheet : StyleSheet { }
-  public class VisualTreeAsset : ScriptableObject
-  {
-    public TemplateContainer Instantiate() => null!;
-    public void CloneTree(VisualElement target) { }
-  }
-  public class TemplateContainer : VisualElement { }
-  public class PanelSettings : ScriptableObject
-  {
-    public ThemeStyleSheet themeStyleSheet { get; set; } = null!;
-    public PanelScaleMode scaleMode { get; set; }
-    public Vector2Int referenceResolution { get; set; }
-    public PanelScreenMatchMode screenMatchMode { get; set; }
-    public float match { get; set; }
-    public float sortingOrder { get; set; }
-    public int targetDisplay { get; set; }
-    public bool clearColor { get; set; }
-    public float scale { get; set; }
-  }
-  public sealed class UIDocument : MonoBehaviour
-  {
-    public PanelSettings panelSettings { get; set; } = null!;
-    public VisualTreeAsset visualTreeAsset { get; set; } = null!;
-    public VisualElement rootVisualElement => null!;
-    public float sortingOrder { get; set; }
-  }
-}
-
 namespace UnityEngine.InputSystem
 {
   using UnityEngine.InputSystem.Controls;

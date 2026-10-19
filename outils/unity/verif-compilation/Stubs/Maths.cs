@@ -9,7 +9,7 @@ namespace UnityEngine
     public float x, y;
     public Vector2(float x, float y) { this.x = x; this.y = y; }
     public static Vector2 zero => default; public static Vector2 one => new Vector2(1, 1);
-    public static Vector2 up => new Vector2(0, 1); public static Vector2 right => new Vector2(1, 0);
+    public static Vector2 up => new Vector2(0, 1); public static Vector2 right => new Vector2(1, 0); public static Vector2 left => new Vector2(-1, 0); public static Vector2 down => new Vector2(0, -1);
     public float magnitude => 0; public float sqrMagnitude => 0; public Vector2 normalized => this;
     public static float Distance(Vector2 a, Vector2 b) => 0;
     public static float Dot(Vector2 a, Vector2 b) => 0;
@@ -124,7 +124,7 @@ namespace UnityEngine
     public static Color red => default; public static Color green => default; public static Color blue => default;
     public static Color cyan => default; public static Color magenta => default; public static Color yellow => default;
     public static Color gray => default; public static Color grey => default;
-    public float maxColorComponent => 0;
+    public float maxColorComponent => 0; public float grayscale => 0;
     public Color linear => this; public Color gamma => this;
     public static Color Lerp(Color a, Color b, float t) => a;
     public static Color LerpUnclamped(Color a, Color b, float t) => a;

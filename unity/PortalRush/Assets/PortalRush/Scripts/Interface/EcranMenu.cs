@@ -31,6 +31,9 @@ namespace PortalRush.Interface
     readonly Label radioMarque, radioTitre, radioDetail, radioListeTitre;
     readonly Curseur radioVolume;
     float prochainVolume;
+    readonly List<VisualElement> chevrons = new List<VisualElement>();
+    readonly List<VisualElement> barresOndes = new List<VisualElement>();
+    float temps;
 
     public EcranMenu(Interface ui, VisualElement racine) : base(ui, racine)
     {
@@ -89,7 +92,7 @@ namespace PortalRush.Interface
       var marque = Ui.Element("radio__marque", radioTitres);
       radioMarque = Ui.Texte("RUSH RADIO", "radio__nom", marque);
       ondes = Ui.Element("radio__ondes", marque);
-      for (int i = 0; i < 4; i++) Ui.Element("radio__onde", ondes);
+      for (int i = 0; i < 4; i++) barresOndes.Add(Ui.Element("radio__onde", ondes));
       radioTitre = Ui.Texte("", "radio__titre", radioTitres);
       radioDetail = Ui.Texte("", "radio__detail", radioTitres);
       radioPrecedente = Ui.Bouton("radio__saut", () => Pont.Radio("precedente"), radio);
@@ -104,6 +107,7 @@ namespace PortalRush.Interface
       radioListeTitre = Ui.Etiquette("", "radio__liste-titre", radioListe);
       radioPistes = Ui.Element("radio__pistes", radioListe);
       Ui.Afficher(radioListe, false);
+      racine.Query<VisualElement>(className: "chevron").ToList(chevrons);
     }
 
     public override string NomPont => "menu";
@@ -174,9 +178,20 @@ namespace PortalRush.Interface
       return true;
     }
 
+    /** Les chevrons de l'action principale défilent ; les ondes de RUSH RADIO battent pendant la lecture. */
     public override void Image(float dt)
     {
       if (prochainVolume > 0) prochainVolume -= dt;
+      temps += dt;
+      bool anime = !Interface.Reduit;
+      for (int i = 0; i < chevrons.Count; i++)
+        chevrons[i].style.opacity = anime ? 0.25f + 0.75f * Mathf.Max(0f, Mathf.Sin(temps * 4f - i * 0.9f)) : 0.7f;
+      bool lecture = radio.ClassListContains("lecture");
+      for (int i = 0; i < barresOndes.Count; i++)
+      {
+        float h = anime && lecture ? 0.3f + 0.7f * Mathf.Abs(Mathf.Sin(temps * (4.3f + i * 1.7f) + i * 1.3f)) : 0.3f;
+        barresOndes[i].style.scale = new Scale(new Vector2(1f, h));
+      }
     }
 
     // ==========================================================================

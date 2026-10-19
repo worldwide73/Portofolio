@@ -1,0 +1,932 @@
+/* ==========================================================================
+   PORTAL RUSH (Unity) — LE HUD : score, avancement, boss, boucliers, Overdrive, combo, annonces, entraînement
+   Lisible sur n'importe quel monde : une ombre sous chaque texte, des verres sombres sous les blocs.
+   ========================================================================== */
+.hud {
+    text-shadow: 0 1px 8px rgba(2, 4, 8, 0.8);
+}
+
+.pr.en-pause .hud {
+    opacity: 0.25;
+}
+
+.pr.en-cine .hud {
+    opacity: 0;
+}
+
+.pr.anime .hud {
+    transition-property: opacity;
+    transition-duration: 0.4s;
+}
+
+.hud__voile-haut {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 220px;
+    background-image: url("../Images/voile-haut.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    opacity: 0.8;
+}
+
+.hud__ligne {
+    flex-direction: row;
+    align-items: center;
+}
+
+.hud__ligne--droite {
+    justify-content: flex-end;
+}
+
+/* ---- En haut à gauche ---- */
+.hud__gauche {
+    position: absolute;
+    left: 44px;
+    top: 84px;
+}
+
+.hud__secteur {
+    color: var(--glacier);
+}
+
+.hud__phase {
+    margin-left: 12px;
+    color: var(--pale);
+}
+
+.hud__score-bloc {
+    flex-direction: row;
+    align-items: center;
+    margin: 2px 0;
+}
+
+.hud__score {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 62px;
+    letter-spacing: 1px;
+    color: var(--blanc);
+}
+
+.hud__score-bloc.a-gagne .hud__score {
+    text-shadow: 0 0 22px rgba(98, 217, 255, 0.9);
+}
+
+.hud.bat-record .hud__score {
+    color: var(--or);
+    text-shadow: 0 0 22px rgba(255, 207, 106, 0.7);
+}
+
+.hud__gain {
+    margin-left: 14px;
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 22px;
+    color: var(--cyan);
+}
+
+.pr.anime .hud__gain {
+    transition-property: opacity, translate;
+    transition-duration: 0.7s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr .hud__gain.entree {
+    translate: 0 8px;
+    opacity: 0.2;
+}
+
+.pr.anime .hud__gain.entree {
+    transition-duration: 0s;
+}
+
+.hud__record {
+    margin-left: 10px;
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 14px;
+    color: var(--texte);
+}
+
+/* ---- En haut au centre : l'avancement, l'objectif, le boss ---- */
+.hud__centre {
+    position: absolute;
+    top: 36px;
+    left: 50%;
+    width: 560px;
+    translate: -50% 0;
+    align-items: center;
+}
+
+.hud__progression {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(205, 224, 246, 0.16);
+}
+
+.hud__progression-plein {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--cyan);
+    transform-origin: left;
+    scale: 0 1;
+}
+
+.hud__reperes {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.hud__repere {
+    position: absolute;
+    top: -5px;
+    width: 1px;
+    height: 14px;
+    background-color: var(--trait-fort);
+}
+
+.hud__curseur {
+    position: absolute;
+    top: -6px;
+    width: 3px;
+    height: 16px;
+    margin-left: -1px;
+    background-color: var(--blanc);
+}
+
+.hud__objectif {
+    margin-top: 10px;
+    color: var(--texte);
+    -unity-text-align: middle-center;
+}
+
+.hud__boss {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    margin-top: 12px;
+}
+
+.hud__boss-libelle {
+    color: rgb(255, 180, 135);
+}
+
+.hud__boss-barre {
+    flex-grow: 1;
+    height: 8px;
+    margin: 0 12px;
+    background-color: rgba(255, 180, 135, 0.15);
+    border-width: 1px;
+    border-color: rgba(255, 180, 135, 0.35);
+}
+
+.hud__boss-vie {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: rgb(255, 122, 82);
+    transform-origin: left;
+}
+
+.hud__boss-phases {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.hud__boss-phases .hud__repere {
+    top: -3px;
+    height: 12px;
+    background-color: rgba(3, 6, 12, 0.9);
+    width: 2px;
+}
+
+.hud__boss-phase {
+    color: rgb(255, 205, 175);
+}
+
+/* ---- En haut à droite : boucliers, fragments, pause ---- */
+.hud__droite {
+    position: absolute;
+    right: 44px;
+    top: 34px;
+    align-items: flex-end;
+}
+
+.hud__boucliers {
+    flex-direction: row;
+    margin: 6px 0 10px 0;
+}
+
+.hud__bouclier {
+    width: 20px;
+    height: 24px;
+    margin-left: 5px;
+    --icone-couleur: rgb(168, 236, 255);
+}
+
+.hud__bouclier.perdu {
+    --icone-couleur: rgba(255, 91, 84, 0.3);
+}
+
+.pr.anime .hud__boucliers {
+    transition-property: translate;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out-back;
+}
+
+.pr .hud__boucliers.choc {
+    translate: -6px 0;
+}
+
+.pr.anime .hud__boucliers.choc {
+    transition-duration: 0s;
+}
+
+.hud.danger .hud__bouclier {
+    --icone-couleur: rgb(255, 120, 110);
+}
+
+.hud.danger .hud__bouclier.perdu {
+    --icone-couleur: rgba(255, 91, 84, 0.25);
+}
+
+.hud__fragment-icone {
+    width: 12px;
+    height: 14px;
+    margin-right: 8px;
+    --icone-couleur: rgb(150, 230, 255);
+}
+
+.hud__fragments {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 20px;
+    color: var(--blanc);
+    margin-left: 8px;
+}
+
+.hud__pause {
+    width: 46px;
+    height: 46px;
+    margin-top: 12px;
+    align-items: center;
+    justify-content: center;
+    --plaque-coupe: 8;
+}
+
+.hud__pause-icone {
+    width: 18px;
+    height: 18px;
+}
+
+/* ---- À gauche : l'Overdrive ---- */
+.hud__overdrive {
+    position: absolute;
+    left: 36px;
+    top: 50%;
+    translate: 0 -50%;
+    align-items: center;
+    width: 176px;
+}
+
+.hud__anneau {
+    width: 164px;
+    height: 164px;
+    align-items: center;
+    justify-content: center;
+    --anneau-fond: rgba(160, 220, 255, 0.14);
+    --anneau-plein: rgb(169, 140, 255);
+    --anneau-lueur: rgba(169, 140, 255, 0.22);
+    --anneau-epaisseur: 9;
+}
+
+.pr.anime .hud__anneau {
+    transition-property: scale;
+    transition-duration: 0.45s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr .hud__anneau.nourrie {
+    scale: 1.07 1.07;
+}
+
+.pr.anime .hud__anneau.nourrie {
+    transition-duration: 0s;
+}
+
+.hud__anneau-centre {
+    align-items: center;
+}
+
+.hud__od-icone {
+    width: 30px;
+    height: 30px;
+    --icone-couleur: rgba(169, 140, 255, 0.55);
+}
+
+.hud__od-valeur {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 24px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+    margin-top: 2px;
+}
+
+.hud__od-libelle {
+    margin-top: 2px;
+    color: var(--violet);
+}
+
+.hud__od-touche {
+    margin-top: 8px;
+    opacity: 0.4;
+}
+
+.pr.sans-aide .hud__od-touche {
+    display: none;
+}
+
+.hud__od-etat {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--pale);
+    -unity-text-align: middle-center;
+    white-space: normal;
+}
+
+/* Les états de l'Overdrive : verrouillé (éteint), en charge, prêt (il appelle), actif (il brûle), utilisé. */
+.od-verrouille .hud__anneau {
+    --anneau-plein: rgba(160, 220, 255, 0.3);
+    --anneau-lueur: rgba(0, 0, 0, 0);
+}
+
+.od-verrouille .hud__od-icone {
+    --icone-couleur: rgba(205, 224, 246, 0.25);
+}
+
+.od-verrouille .hud__od-libelle {
+    color: var(--pale);
+}
+
+.od-pret .hud__anneau {
+    --anneau-plein: rgb(200, 180, 255);
+    --anneau-lueur: rgba(169, 140, 255, 0.55);
+}
+
+.od-pret .hud__od-icone {
+    --icone-couleur: rgb(242, 248, 255);
+}
+
+.od-pret .hud__od-touche {
+    opacity: 1;
+    border-color: var(--violet);
+    color: var(--blanc);
+}
+
+.od-actif .hud__anneau {
+    --anneau-plein: rgb(255, 255, 255);
+    --anneau-lueur: rgba(200, 170, 255, 0.7);
+}
+
+.od-actif .hud__od-icone {
+    --icone-couleur: rgb(242, 248, 255);
+}
+
+.od-actif .hud__od-etat {
+    color: var(--violet);
+}
+
+.od-utilise .hud__anneau {
+    --anneau-plein: rgba(160, 220, 255, 0.2);
+    --anneau-lueur: rgba(0, 0, 0, 0);
+}
+
+.od-utilise .hud__od-icone {
+    --icone-couleur: rgba(205, 224, 246, 0.2);
+}
+
+/* ---- À droite : le combo ---- */
+.hud__combo {
+    position: absolute;
+    right: 44px;
+    top: 50%;
+    translate: 0 -50%;
+    align-items: flex-end;
+}
+
+.hud__mult {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 84px;
+    color: var(--glacier);
+    -unity-text-align: middle-right;
+}
+
+.pr.anime .hud__mult {
+    transition-property: scale, color;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out-back;
+}
+
+.pr .hud__mult.monte {
+    scale: 1.18 1.18;
+}
+
+.pr.anime .hud__mult.monte {
+    transition-duration: 0s;
+}
+
+.hud__combo.haut .hud__mult {
+    color: var(--cyan);
+    text-shadow: 0 0 26px rgba(98, 217, 255, 0.75);
+}
+
+.hud__combo.max .hud__mult {
+    color: var(--or);
+    text-shadow: 0 0 26px rgba(255, 207, 106, 0.75);
+}
+
+.hud__combo-valeur {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 20px;
+    color: var(--blanc);
+    margin-left: 8px;
+}
+
+.hud__delai {
+    width: 120px;
+    height: 3px;
+    margin-top: 8px;
+    background-color: rgba(205, 224, 246, 0.16);
+}
+
+.hud__delai-plein {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--cyan);
+    transform-origin: right;
+    scale: 0 1;
+}
+
+/* ---- L'Overdrive au doigt ---- */
+.hud__od-tactile {
+    position: absolute;
+    right: 44px;
+    bottom: 44px;
+    flex-direction: row;
+    align-items: center;
+    height: 64px;
+    padding: 0 20px;
+    --plaque-coupe: 12;
+    opacity: 0.6;
+}
+
+.hud__od-tactile.pret {
+    opacity: 1;
+    --plaque-bord: rgb(169, 140, 255);
+    --plaque-lueur: rgba(169, 140, 255, 0.7);
+}
+
+.hud__od-tactile-icone {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    --icone-couleur: rgb(169, 140, 255);
+}
+
+.hud.tutoriel .hud__od-tactile {
+    display: none;
+}
+
+/* ==========================================================================
+   LES ANNONCES ET LE COMPTE À REBOURS
+   ========================================================================== */
+.annonce {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 30%;
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 48px;
+    letter-spacing: 4px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+    text-shadow: 0 0 26px rgba(98, 217, 255, 0.55);
+}
+
+.pr.anime .annonce {
+    transition-property: scale, opacity;
+    transition-duration: 0.35s, 0.25s;
+    transition-timing-function: ease-out-back;
+}
+
+.pr .annonce.entree {
+    scale: 1.3 1.3;
+    opacity: 0;
+}
+
+.pr.anime .annonce.entree {
+    transition-duration: 0s;
+}
+
+.annonce--parfait {
+    color: var(--glacier);
+}
+
+.annonce--motif,
+.annonce--record {
+    color: var(--or);
+    text-shadow: 0 0 26px rgba(255, 207, 106, 0.6);
+}
+
+.annonce--choc {
+    color: rgb(255, 130, 120);
+    text-shadow: 0 0 26px rgba(255, 91, 84, 0.6);
+}
+
+.annonce--portail,
+.annonce--overdrive,
+.annonce--pret {
+    color: rgb(200, 180, 255);
+    text-shadow: 0 0 26px rgba(169, 140, 255, 0.65);
+}
+
+.annonce--phase {
+    color: var(--blanc);
+    font-size: 40px;
+}
+
+.compte {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 36%;
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 190px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+    text-shadow: 0 0 40px rgba(98, 217, 255, 0.6);
+}
+
+.compte.depart {
+    color: var(--cyan);
+}
+
+.pr.anime .compte {
+    transition-property: scale, opacity;
+    transition-duration: 0.28s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr .compte.entree {
+    scale: 1.5 1.5;
+    opacity: 0;
+}
+
+.pr.anime .compte.entree {
+    transition-duration: 0s;
+}
+
+.conseil {
+    position: absolute;
+    left: 50%;
+    bottom: 64px;
+    max-width: 820px;
+    translate: -50% 0;
+    padding: 12px 20px;
+    background-color: rgba(5, 9, 18, 0.8);
+    border-width: 1px;
+    border-color: var(--trait-fort);
+    border-left-width: 3px;
+    border-left-color: var(--cyan);
+    font-size: 16px;
+    color: var(--texte);
+    -unity-text-align: middle-center;
+}
+
+.pr.anime .conseil {
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}
+
+.pr .conseil.entree {
+    opacity: 0;
+}
+
+.pr.anime .conseil.entree {
+    transition-duration: 0s;
+}
+
+/* ==========================================================================
+   L'ENTRAÎNEMENT : la consigne, les touches attendues, l'avancée
+   ========================================================================== */
+.tuto {
+    position: absolute;
+    left: 50%;
+    bottom: 60px;
+    width: 720px;
+    translate: -50% 0;
+    padding: 20px 30px 18px 30px;
+    align-items: center;
+    --plaque-fond: rgba(5, 9, 18, 0.84);
+    --plaque-bord: rgba(168, 236, 255, 0.45);
+    --plaque-accent: rgb(168, 236, 255);
+    --plaque-coupe: 16;
+}
+
+.tuto.ok {
+    --plaque-bord: rgba(168, 236, 255, 0.9);
+}
+
+.tuto.rate {
+    --plaque-bord: rgba(255, 120, 110, 0.8);
+    --plaque-accent: rgb(255, 160, 150);
+}
+
+.tuto.info {
+    --plaque-bord: rgba(255, 207, 106, 0.8);
+    --plaque-accent: rgb(255, 207, 106);
+}
+
+.tuto__tete {
+    flex-direction: row;
+}
+
+.tuto__etape {
+    color: var(--cyan);
+    margin-right: 12px;
+}
+
+.tuto__titre {
+    color: var(--blanc);
+}
+
+.tuto__consigne {
+    margin-top: 10px;
+    font-size: 20px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+}
+
+.tuto__touches {
+    flex-direction: row;
+    margin-top: 14px;
+}
+
+.tuto__touche {
+    width: 74px;
+    height: 62px;
+    margin: 0 8px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px 1px 3px 1px;
+    border-color: var(--trait-fort);
+    border-radius: 6px;
+    background-color: rgba(8, 14, 26, 0.75);
+    opacity: 0.5;
+}
+
+.tuto__touche.attendue {
+    opacity: 1;
+    border-color: var(--cyan);
+    background-color: rgba(98, 217, 255, 0.16);
+}
+
+.tuto__fleche {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 24px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+}
+
+.tuto__lettre {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 11px;
+    color: var(--doux);
+    -unity-text-align: middle-center;
+}
+
+.tuto.sans-touches .tuto__touches,
+.tuto.sans-touches .tuto__tactile {
+    display: none;
+}
+
+.tuto__tactile {
+    flex-direction: row;
+    margin-top: 14px;
+}
+
+.tuto__zone {
+    width: 150px;
+    height: 54px;
+    margin: 0 8px;
+    border-width: 1px;
+    border-color: var(--trait-fort);
+    border-radius: 8px;
+    background-color: rgba(8, 14, 26, 0.6);
+    opacity: 0.5;
+}
+
+.tuto__zone.attendue {
+    opacity: 1;
+    border-color: var(--cyan);
+    background-color: rgba(98, 217, 255, 0.18);
+}
+
+.tuto__progres {
+    flex-direction: row;
+    margin-top: 16px;
+}
+
+.tuto__pas {
+    width: 52px;
+    height: 4px;
+    margin: 0 4px;
+    background-color: rgba(205, 224, 246, 0.18);
+}
+
+.tuto__pas.actif {
+    background-color: rgba(98, 217, 255, 0.5);
+}
+
+.tuto__pas.fait {
+    background-color: var(--cyan);
+}
+
+.tuto__ok {
+    position: absolute;
+    right: 18px;
+    top: 16px;
+    width: 34px;
+    height: 34px;
+    --icone-couleur: rgb(168, 236, 255);
+    --icone-trait: 2.6;
+}
+
+.tuto__ok.rate {
+    --icone-couleur: rgb(255, 140, 130);
+}
+
+.pr.anime .tuto__ok {
+    transition-property: scale, opacity;
+    transition-duration: 0.35s;
+    transition-timing-function: ease-out-back;
+}
+
+.pr .tuto__ok.entree {
+    scale: 0.4 0.4;
+    opacity: 0;
+}
+
+.pr.anime .tuto__ok.entree {
+    transition-duration: 0s;
+}
+
+.tuto__passer {
+    position: absolute;
+    right: 44px;
+    bottom: 44px;
+    height: 50px;
+    padding: 0 22px;
+    justify-content: center;
+    --plaque-coupe: 10;
+}
+
+.tuto__fin {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 38%;
+    align-items: center;
+}
+
+.tuto__fin-titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 66px;
+    letter-spacing: 2px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+    text-shadow: 0 0 30px rgba(98, 217, 255, 0.55);
+}
+
+.tuto__fin-trait {
+    width: 460px;
+    height: 2px;
+    margin: 14px 0;
+    background-image: url("../Images/trait.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgb(98, 217, 255);
+}
+
+.tuto__fin-sous {
+    font-size: 22px;
+    color: var(--glacier);
+    -unity-text-align: middle-center;
+}
+
+.pr.anime .tuto__fin {
+    transition-property: opacity, scale;
+    transition-duration: 0.7s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr .tuto__fin.entree {
+    opacity: 0;
+    scale: 0.94 0.94;
+}
+
+.pr.anime .tuto__fin.entree {
+    transition-duration: 0s;
+}
+
+/* ==========================================================================
+   LES TAILLES D'ÉCRAN
+   ========================================================================== */
+.pr.etroit .hud__centre {
+    width: 420px;
+}
+
+.pr.etroit .hud__score {
+    font-size: 50px;
+}
+
+.pr.etroit .hud__mult {
+    font-size: 66px;
+}
+
+.pr.portrait .hud__gauche {
+    left: 20px;
+    top: 80px;
+}
+
+.pr.portrait .hud__droite {
+    right: 20px;
+}
+
+.pr.portrait .hud__centre {
+    width: 60%;
+    top: 30px;
+}
+
+.pr.portrait .hud__score {
+    font-size: 44px;
+}
+
+.pr.portrait .hud__overdrive {
+    left: 12px;
+    top: auto;
+    bottom: 140px;
+    translate: 0 0;
+    width: 140px;
+}
+
+.pr.portrait .hud__anneau {
+    width: 120px;
+    height: 120px;
+}
+
+.pr.portrait .hud__combo {
+    right: 20px;
+    top: auto;
+    bottom: 220px;
+    translate: 0 0;
+}
+
+.pr.portrait .hud__mult {
+    font-size: 56px;
+}
+
+.pr.portrait .tuto {
+    width: 92%;
+    bottom: 140px;
+}
+
+.pr.portrait .tuto__passer {
+    right: 20px;
+    bottom: 40px;
+}
+
+.pr.portrait .compte {
+    font-size: 140px;
+}
+
+.pr.portrait .annonce {
+    font-size: 34px;
+}

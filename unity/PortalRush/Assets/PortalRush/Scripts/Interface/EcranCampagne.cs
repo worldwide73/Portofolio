@@ -41,7 +41,7 @@ namespace PortalRush.Interface
       difficulteLibelle = L("campagne-difficulte-libelle");
       difficulteNom = L("campagne-difficulte-nom");
       total = L("campagne-etoiles");
-      prepVue = new Vignette(Interface.Trouver<VisualElement>(racine, "prep-vue"));
+      prepVue = new Vignette(Interface.Trouver<VisualElement>(racine, "prep-vue")) { Coupe = 17 };
       prepSecteur = L("prep-secteur");
       prepNom = L("prep-nom");
       prepMecanique = L("prep-mecanique");
@@ -70,6 +70,7 @@ namespace PortalRush.Interface
         var image = Ui.Element("secteur__image", c.Bouton);
         c.Vue = new Vignette(Ui.Element("secteur__vue", image));
         c.Vue.Theme = Vues.Theme(id);
+        c.Vue.Coupe = 11;
         Ui.Texte(Textes.Deux(id), "secteur__numero", image);
         c.Verrou = Ui.Icone(Icone.Verrou, "secteur__verrou", image);
         var bas = Ui.Element("secteur__bas", c.Bouton);

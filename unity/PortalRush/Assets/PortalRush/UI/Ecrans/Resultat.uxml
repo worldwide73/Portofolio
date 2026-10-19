@@ -1,0 +1,37 @@
+<!-- PORTAL RUSH (Unity) — LES RÉSULTATS : victoire, défaite, fin de survie, fin du défi (Scripts/Interface/EcranResultat.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="resultat" class="ecran ecran--resultat" picking-mode="Ignore">
+        <ui:VisualElement name="res-portail" class="resultat__portail" picking-mode="Ignore">
+            <ui:VisualElement class="resultat__anneau resultat__anneau--1" picking-mode="Ignore" />
+            <ui:VisualElement class="resultat__anneau resultat__anneau--2" picking-mode="Ignore" />
+            <ui:VisualElement class="resultat__anneau resultat__anneau--3" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:VisualElement class="resultat__contenu" picking-mode="Ignore">
+            <ui:Label name="res-surtitre" class="etiquette resultat__surtitre" />
+            <ui:Label name="res-titre" class="resultat__titre" />
+            <ui:VisualElement name="res-etoiles-bloc" class="resultat__etoiles-bloc" picking-mode="Ignore">
+                <ui:Label name="res-etoiles-titre" class="etiquette resultat__etoiles-titre" />
+                <ui:VisualElement name="res-etoiles" class="resultat__etoiles" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="resultat__score-ligne" picking-mode="Ignore">
+                <ui:Label name="res-rang" class="resultat__rang" />
+                <ui:Label name="res-score" class="resultat__score" />
+            </ui:VisualElement>
+            <ui:Label name="res-record" class="etiquette resultat__record" />
+            <ui:Label name="res-attente" class="etiquette resultat__attente" />
+            <ui:VisualElement class="resultat__colonnes" picking-mode="Ignore">
+                <ui:VisualElement name="res-stats" class="resultat__stats plaque" />
+                <ui:VisualElement name="res-objectifs-bloc" class="resultat__bloc plaque">
+                    <ui:Label name="res-objectifs-titre" class="etiquette resultat__bloc-titre" />
+                    <ui:VisualElement name="res-objectifs" class="objectifs" />
+                </ui:VisualElement>
+                <ui:VisualElement name="res-recompenses-bloc" class="resultat__bloc plaque">
+                    <ui:Label name="res-recompenses-titre" class="etiquette resultat__bloc-titre" />
+                    <ui:VisualElement name="res-recompenses" class="recompenses" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="res-progres" class="etiquette resultat__progres" />
+            <ui:VisualElement name="res-actions" class="resultat__actions" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

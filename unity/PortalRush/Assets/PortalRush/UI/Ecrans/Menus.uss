@@ -1,0 +1,1486 @@
+/* ==========================================================================
+   PORTAL RUSH (Unity) — LES MENUS : menu principal, modes, campagne, difficultés, défi, garage, records
+   (Jetons et composants communs : ../Interface.uss.)
+   ========================================================================== */
+
+/* ==========================================================================
+   LE MENU PRINCIPAL : tout est centré, l'action principale au cœur
+   ========================================================================== */
+.ecran--menu {
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 200px;
+}
+
+.menu__centre {
+    width: 820px;
+    align-items: center;
+}
+
+.menu__surtitre {
+    color: var(--cyan);
+    margin-bottom: 6px;
+}
+
+.logotype {
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.logotype__ligne {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 150px;
+    letter-spacing: 10px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+    margin: -22px 0;
+    text-shadow: 0 6px 40px rgba(98, 217, 255, 0.28);
+}
+
+.logotype__ligne--contour {
+    color: rgba(0, 0, 0, 0);
+    -unity-text-outline-width: 1.4px;
+    -unity-text-outline-color: rgb(168, 236, 255);
+    text-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.logotype__trait {
+    width: 520px;
+    height: 2px;
+    margin-top: 18px;
+    background-image: url("../Images/trait.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgb(98, 217, 255);
+}
+
+.menu__accroche {
+    margin: 16px 0 30px 0;
+    font-size: 17px;
+    color: var(--doux);
+    -unity-text-align: middle-center;
+    max-width: 680px;
+}
+
+/* L'action principale : la plus lumineuse de l'écran. */
+.action-principale {
+    flex-direction: row;
+    align-items: center;
+    width: 660px;
+    height: 104px;
+    padding: 0 26px 0 34px;
+    --plaque-fond: rgba(98, 217, 255, 0.14);
+    --plaque-bord: rgba(168, 236, 255, 0.7);
+    --plaque-accent: rgb(242, 248, 255);
+    --plaque-lueur: rgba(98, 217, 255, 0.35);
+    --plaque-coupe: 18;
+    --plaque-accent-longueur: 90;
+}
+
+.action-principale:hover {
+    --plaque-fond: rgba(98, 217, 255, 0.22);
+    --plaque-bord: rgb(168, 236, 255);
+    --plaque-lueur: rgba(98, 217, 255, 0.6);
+    scale: 1.015 1.015;
+}
+
+.pr.clavier .action-principale:focus {
+    --plaque-fond: rgba(98, 217, 255, 0.24);
+    --plaque-bord: rgb(242, 248, 255);
+    --plaque-lueur: rgba(98, 217, 255, 0.85);
+    scale: 1.015 1.015;
+}
+
+.action-principale__lueur {
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    top: -60px;
+    bottom: -60px;
+    background-image: url("../Images/lueur.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgba(98, 217, 255, 0.32);
+}
+
+.action-principale__texte {
+    flex-grow: 1;
+}
+
+.action-principale__titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 38px;
+    letter-spacing: 3px;
+    color: var(--blanc);
+}
+
+.action-principale__desc {
+    margin-top: 2px;
+    font-size: 15px;
+    color: var(--glacier);
+}
+
+.action-principale__touches {
+    flex-direction: row;
+    margin-right: 14px;
+}
+
+.chevrons {
+    flex-direction: row;
+}
+
+.chevron {
+    width: 18px;
+    height: 26px;
+    margin-left: -4px;
+    --icone-couleur: rgb(168, 236, 255);
+    --icone-trait: 2.4;
+}
+
+.menu__bienvenue {
+    margin-top: 14px;
+    color: var(--glacier);
+    -unity-text-align: middle-center;
+}
+
+.menu__entrees {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 26px;
+}
+
+.entree--carte {
+    flex-direction: row;
+    width: 262px;
+    height: 92px;
+    margin: 0 7px;
+    padding: 0 16px;
+}
+
+.entree--carte:hover,
+.pr.clavier .entree--carte:focus {
+    translate: 0 -4px;
+}
+
+.entree__icone {
+    width: 28px;
+    height: 28px;
+    margin-right: 14px;
+    --icone-couleur: rgb(168, 236, 255);
+}
+
+.entree__textes {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.entree--carte .entree__titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 19px;
+    flex-grow: 0;
+}
+
+.entree__desc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--doux);
+}
+
+/* Le pied du menu : la progression à gauche, le meilleur score au centre, RUSH RADIO à droite. */
+.menu__pied {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    bottom: 38px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.menu__stats {
+    flex-direction: row;
+    width: 760px;
+}
+
+.stat {
+    margin-right: 30px;
+}
+
+.stat__ligne {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.stat__valeur {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 21px;
+    color: var(--blanc);
+    white-space: nowrap;
+}
+
+.stat__segments {
+    flex-direction: row;
+    margin-left: 10px;
+}
+
+.stat__segment {
+    width: 10px;
+    height: 4px;
+    margin-right: 3px;
+    background-color: rgba(205, 224, 246, 0.18);
+}
+
+.stat__segment.fait {
+    background-color: var(--cyan);
+}
+
+.meilleur-score {
+    align-items: center;
+    opacity: 0.85;
+}
+
+.meilleur-score__valeur {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 30px;
+    color: var(--or);
+    margin: 2px 0;
+}
+
+.meilleur-score__origine {
+    font-size: 11px;
+    color: var(--pale);
+}
+
+/* RUSH RADIO : le lecteur compact. */
+.radio {
+    flex-direction: row;
+    align-items: center;
+    width: 470px;
+    height: 70px;
+    padding: 0 12px;
+    --plaque-coupe: 12;
+}
+
+.radio__lecture {
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 23px;
+    border-width: 1px;
+    border-color: var(--trait-fort);
+    background-color: rgba(98, 217, 255, 0.1);
+}
+
+.radio__lecture:hover,
+.pr.clavier .radio__lecture:focus {
+    border-color: var(--glacier);
+    background-color: rgba(98, 217, 255, 0.22);
+}
+
+.radio__icone {
+    width: 18px;
+    height: 18px;
+    --icone-couleur: rgb(242, 248, 255);
+}
+
+.radio__icone--petite {
+    width: 14px;
+    height: 14px;
+}
+
+.radio__titres {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin: 0 10px;
+    padding: 4px 8px;
+    background-color: rgba(0, 0, 0, 0);
+    border-radius: 2px;
+}
+
+.radio__titres:hover,
+.pr.clavier .radio__titres:focus,
+.radio__titres.ouvert {
+    background-color: rgba(98, 217, 255, 0.1);
+}
+
+.radio__marque {
+    flex-direction: row;
+    align-items: center;
+}
+
+.radio__nom {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 11px;
+    letter-spacing: 2.6px;
+    color: var(--cyan);
+}
+
+.radio__ondes {
+    flex-direction: row;
+    align-items: flex-end;
+    height: 10px;
+    margin-left: 8px;
+}
+
+.radio__onde {
+    width: 2px;
+    height: 10px;
+    margin-right: 2px;
+    background-color: var(--cyan);
+    transform-origin: bottom;
+    scale: 1 0.3;
+}
+
+.radio__titre {
+    font-size: 15px;
+    color: var(--blanc);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.radio__detail {
+    font-size: 11px;
+    color: var(--pale);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.radio__saut {
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.radio__saut:hover,
+.pr.clavier .radio__saut:focus {
+    background-color: rgba(98, 217, 255, 0.14);
+}
+
+.radio__volume {
+    width: 96px;
+    margin-left: 8px;
+}
+
+.radio__volume .curseur__tete {
+    display: none;
+}
+
+.radio__liste {
+    position: absolute;
+    right: 0;
+    bottom: 80px;
+    width: 470px;
+    padding: 14px 10px 10px 10px;
+    --plaque-fond: rgba(5, 9, 18, 0.95);
+    --plaque-bord: rgba(160, 220, 255, 0.4);
+}
+
+.radio__liste-titre {
+    margin: 0 0 8px 8px;
+}
+
+.radio__piste {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px;
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.radio__piste:hover,
+.pr.clavier .radio__piste:focus {
+    background-color: rgba(98, 217, 255, 0.14);
+}
+
+.radio__piste.actif {
+    background-color: rgba(98, 217, 255, 0.08);
+}
+
+.radio__numero {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    width: 34px;
+    font-size: 12px;
+    color: var(--pale);
+}
+
+.radio__piste.actif .radio__numero {
+    color: var(--cyan);
+}
+
+.radio__piste-texte {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.radio__piste-titre {
+    font-size: 15px;
+    color: var(--blanc);
+}
+
+.radio__piste-detail,
+.radio__piste-genre {
+    font-size: 11px;
+    color: var(--pale);
+}
+
+/* ==========================================================================
+   LE CHOIX DU MODE : trois grandes cartes
+   ========================================================================== */
+.modes__cartes {
+    flex-direction: row;
+    justify-content: center;
+    flex-grow: 1;
+    align-items: center;
+}
+
+.mode {
+    width: 520px;
+    height: 600px;
+    margin: 0 14px;
+    padding: 0 0 26px 0;
+    overflow: hidden;
+    --plaque-coupe: 20;
+    --plaque-accent-longueur: 120;
+}
+
+.mode:hover,
+.pr.clavier .mode:focus {
+    translate: 0 -8px;
+}
+
+.pr.clavier .mode:focus {
+    --plaque-lueur: rgba(98, 217, 255, 0.8);
+}
+
+.mode__vue {
+    height: 280px;
+    margin: 1px 1px 0 1px;
+}
+
+.mode__tete {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 28px 0 28px;
+}
+
+.mode__index {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 13px;
+    letter-spacing: 2px;
+    color: var(--cyan);
+}
+
+.mode__icone {
+    width: 34px;
+    height: 34px;
+    --icone-couleur: rgb(168, 236, 255);
+}
+
+.mode__titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 36px;
+    letter-spacing: 2px;
+    margin: 6px 28px 0 28px;
+    color: var(--blanc);
+}
+
+.mode__texte {
+    margin: 8px 28px 0 28px;
+    font-size: 16px;
+    color: var(--doux);
+}
+
+.mode__pied {
+    flex-grow: 1;
+    justify-content: flex-end;
+    margin: 0 28px;
+}
+
+.mode__etat {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 21px;
+    color: var(--glacier);
+}
+
+.mode__detail {
+    margin-top: 6px;
+}
+
+/* ==========================================================================
+   LA CAMPAGNE : la carte des secteurs et la préparation
+   ========================================================================== */
+.campagne__total {
+    flex-direction: row;
+    align-items: center;
+}
+
+.campagne__corps {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.secteurs {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    margin-right: 26px;
+}
+
+.secteur {
+    width: 23.5%;
+    height: 262px;
+    padding: 0 0 12px 0;
+    margin: 0 1.5% 16px 0;
+    overflow: hidden;
+    --plaque-coupe: 12;
+}
+
+.secteur:hover,
+.pr.clavier .secteur:focus {
+    translate: 0 -4px;
+}
+
+.secteur.choisi {
+    --plaque-bord: rgb(168, 236, 255);
+    --plaque-accent: rgb(242, 248, 255);
+    --plaque-fond: rgba(14, 30, 50, 0.78);
+}
+
+.secteur.verrouille {
+    --plaque-fond: rgba(6, 11, 21, 0.45);
+    --plaque-bord: rgba(160, 220, 255, 0.12);
+}
+
+.secteur__image {
+    height: 150px;
+    margin: 1px;
+}
+
+.secteur__vue {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.secteur__numero {
+    position: absolute;
+    left: 14px;
+    bottom: 6px;
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 44px;
+    color: var(--blanc);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+}
+
+.secteur__verrou {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    width: 26px;
+    height: 26px;
+    --icone-couleur: rgba(220, 232, 246, 0.8);
+}
+
+.secteur__bas {
+    padding: 10px 14px 0 14px;
+}
+
+.secteur__nom {
+    font-size: 16px;
+    color: var(--blanc);
+}
+
+.secteur.verrouille .secteur__nom {
+    color: var(--pale);
+}
+
+.secteur__etoiles {
+    flex-direction: row;
+    margin-top: 6px;
+}
+
+.secteur__etat {
+    margin: 6px 14px 0 14px;
+    font-size: 11px;
+}
+
+.secteur.termine .secteur__etat {
+    color: var(--or);
+}
+
+.secteur.disponible .secteur__etat {
+    color: var(--glacier);
+}
+
+.preparation {
+    width: 600px;
+    flex-shrink: 0;
+    padding: 0 26px 24px 26px;
+    overflow: hidden;
+    --plaque-coupe: 18;
+    --plaque-accent: rgba(168, 236, 255, 0.85);
+    --plaque-fond: rgba(5, 9, 18, 0.78);
+}
+
+.preparation__vue {
+    height: 190px;
+    margin: 1px -25px 18px -25px;
+}
+
+.preparation__secteur {
+    color: var(--cyan);
+}
+
+.preparation__nom {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 40px;
+    color: var(--blanc);
+    margin-top: 4px;
+}
+
+.preparation__mecanique {
+    font-size: 15px;
+    color: var(--doux);
+    margin-bottom: 8px;
+}
+
+.preparation__sous-titre {
+    margin: 14px 0 8px 0;
+    font-size: 11px;
+}
+
+.etoiles-liste__ligne {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.etoiles-liste__ligne .etoile {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+}
+
+.etoiles-liste__texte {
+    font-size: 15px;
+    color: var(--doux);
+    flex-shrink: 1;
+}
+
+.etoiles-liste__ligne.gagnee .etoiles-liste__texte {
+    color: var(--blanc);
+}
+
+.preparation__record {
+    margin-top: 12px;
+    color: var(--or);
+}
+
+.preparation__verrou {
+    margin-top: 10px;
+    font-size: 15px;
+    color: rgb(255, 150, 140);
+}
+
+.preparation .lancer {
+    margin-top: 18px;
+}
+
+/* ==========================================================================
+   LES DIFFICULTÉS : cinq cartes, Paradoxe à part
+   ========================================================================== */
+.difficultes {
+    flex-direction: row;
+    justify-content: center;
+    flex-grow: 1;
+    align-items: center;
+}
+
+.difficulte {
+    width: 318px;
+    height: 470px;
+    margin: 0 8px;
+    padding: 22px 22px 18px 22px;
+    --plaque-coupe: 16;
+}
+
+.difficulte:hover,
+.pr.clavier .difficulte:focus {
+    translate: 0 -6px;
+}
+
+.difficulte.choisi {
+    --plaque-fond: rgba(14, 30, 50, 0.82);
+    --plaque-bord: rgb(168, 236, 255);
+    --plaque-accent: rgb(242, 248, 255);
+    --plaque-lueur: rgba(98, 217, 255, 0.5);
+}
+
+.difficulte.verrouille {
+    --plaque-fond: rgba(6, 11, 21, 0.45);
+    --plaque-bord: rgba(160, 220, 255, 0.12);
+}
+
+.difficulte__tete {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.difficulte__index {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 13px;
+    color: var(--pale);
+}
+
+.difficulte__mult {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 22px;
+    color: var(--glacier);
+}
+
+.difficulte__ultime {
+    margin-top: 14px;
+    color: rgb(222, 150, 255);
+}
+
+.difficulte__nom {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 40px;
+    margin-top: 16px;
+    color: var(--blanc);
+}
+
+.difficulte__role {
+    margin-top: 2px;
+    color: var(--cyan);
+}
+
+.difficulte__texte {
+    margin-top: 14px;
+    font-size: 15px;
+    color: var(--doux);
+    flex-grow: 1;
+}
+
+.difficulte__etoiles {
+    flex-direction: row;
+    margin-bottom: 8px;
+}
+
+.difficulte__record {
+    font-size: 11px;
+    color: var(--or);
+}
+
+.difficulte__verrou {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.difficulte__verrou-icone {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    --icone-couleur: rgb(255, 150, 140);
+}
+
+.difficulte__verrou-texte {
+    font-size: 13px;
+    color: rgb(255, 170, 160);
+    flex-shrink: 1;
+}
+
+.difficulte.verrouille .difficulte__nom,
+.difficulte.verrouille .difficulte__mult {
+    color: var(--pale);
+}
+
+/* Paradoxe : la difficulté ultime, en violet électrique. */
+.difficulte--paradoxe {
+    --plaque-fond: rgba(30, 10, 46, 0.7);
+    --plaque-bord: rgba(214, 120, 255, 0.5);
+}
+
+.difficulte--paradoxe .difficulte__mult,
+.difficulte--paradoxe .difficulte__role {
+    color: rgb(222, 150, 255);
+}
+
+.difficulte--paradoxe.choisi {
+    --plaque-bord: rgb(232, 170, 255);
+    --plaque-lueur: rgba(200, 110, 255, 0.6);
+    --plaque-accent: rgb(255, 230, 255);
+}
+
+.difficulte--cauchemar .difficulte__mult {
+    color: rgb(255, 160, 150);
+}
+
+.difficultes__verrou {
+    flex-grow: 1;
+    margin-right: 24px;
+    font-size: 15px;
+    color: rgb(255, 170, 160);
+    -unity-text-align: middle-right;
+}
+
+.ecran--difficultes .lancer {
+    width: 420px;
+}
+
+/* ==========================================================================
+   LE DÉFI DU JOUR
+   ========================================================================== */
+.defi__date {
+    color: var(--or);
+}
+
+.defi__corps {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.defi__gauche {
+    flex-grow: 1;
+    margin-right: 26px;
+    overflow: hidden;
+    --plaque-coupe: 18;
+}
+
+.defi__vue {
+    height: 300px;
+    margin: 1px;
+}
+
+.defi__regles {
+    padding: 22px 30px;
+}
+
+.defi__regle {
+    flex-direction: row;
+    margin-bottom: 14px;
+}
+
+.defi__regle-index {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    width: 40px;
+    font-size: 13px;
+    color: var(--or);
+}
+
+.defi__regle-texte {
+    flex-shrink: 1;
+    font-size: 17px;
+}
+
+.defi__droite {
+    width: 520px;
+}
+
+.defi__resultat {
+    padding: 20px 24px;
+    margin-bottom: 14px;
+}
+
+.defi__valeur {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 48px;
+    margin-top: 4px;
+    color: var(--or);
+}
+
+.defi__valeur.vide {
+    font-size: 22px;
+    color: var(--pale);
+}
+
+.defi__valeur--petite {
+    font-size: 24px;
+    color: var(--blanc);
+}
+
+.defi__note {
+    margin: 6px 0 20px 0;
+    font-size: 14px;
+    color: var(--doux);
+}
+
+/* ==========================================================================
+   LE GARAGE : la baie du vaisseau 3D, la flotte, les pièces
+   ========================================================================== */
+.garage__corps {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.garage__baie {
+    flex-grow: 1;
+    margin-right: 26px;
+    justify-content: space-between;
+    padding: 18px 22px;
+    --reperes-couleur: rgba(168, 236, 255, 0.5);
+    --reperes-taille: 30;
+}
+
+.garage__repere {
+    color: var(--cyan);
+}
+
+.garage__fiche {
+    max-width: 520px;
+}
+
+.garage__vu-nom {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 64px;
+    color: var(--blanc);
+    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.8);
+}
+
+.garage__vu-etat {
+    color: var(--glacier);
+}
+
+.garage__vu-etat.verrouille {
+    color: rgb(255, 170, 160);
+}
+
+.garage__vu-role {
+    margin-top: 8px;
+    font-size: 16px;
+    color: var(--doux);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
+}
+
+.garage__liste {
+    width: 900px;
+    flex-shrink: 0;
+}
+
+.garage__defile {
+    flex-grow: 1;
+}
+
+.garage__bloc {
+    margin-bottom: 20px;
+}
+
+.garage__bloc-tete {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.garage__index {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 11px;
+    color: var(--cyan);
+    margin-right: 10px;
+}
+
+.garage__flotte {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.vaisseau {
+    width: 438px;
+    padding: 16px 18px;
+    margin: 0 12px 12px 0;
+}
+
+.vaisseau.choisi {
+    --plaque-fond: rgba(14, 30, 50, 0.82);
+    --plaque-bord: rgb(168, 236, 255);
+    --plaque-accent: rgb(242, 248, 255);
+}
+
+.vaisseau.vu {
+    --plaque-bord: rgba(255, 207, 106, 0.7);
+}
+
+.vaisseau.verrouille {
+    --plaque-fond: rgba(6, 11, 21, 0.45);
+}
+
+.vaisseau__tete {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vaisseau__nom {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 24px;
+    color: var(--blanc);
+}
+
+.vaisseau__etat {
+    font-size: 10px;
+    color: var(--glacier);
+    flex-shrink: 1;
+    -unity-text-align: middle-right;
+    max-width: 250px;
+}
+
+.vaisseau.verrouille .vaisseau__etat {
+    color: rgb(255, 170, 160);
+}
+
+.vaisseau__role {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--doux);
+}
+
+.vaisseau__stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.vaisseau__stat {
+    width: 50%;
+    padding-right: 14px;
+    margin-bottom: 6px;
+}
+
+.vaisseau__stat-haut {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.vaisseau__stat-nom {
+    font-size: 11px;
+    color: var(--pale);
+}
+
+.vaisseau__stat-valeur {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 11px;
+    color: var(--texte);
+}
+
+.vaisseau__barre {
+    height: 3px;
+    margin-top: 3px;
+    background-color: rgba(205, 224, 246, 0.14);
+}
+
+.vaisseau__barre-plein {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--cyan);
+    transform-origin: left;
+}
+
+.garage__note {
+    font-size: 10px;
+    color: var(--pale);
+}
+
+.garage__pieces {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.piece {
+    flex-direction: row;
+    align-items: center;
+    width: 210px;
+    height: 70px;
+    padding: 0 12px;
+    margin: 0 10px 10px 0;
+    --plaque-coupe: 10;
+}
+
+.piece.equipee {
+    --plaque-bord: rgb(168, 236, 255);
+    --plaque-accent: rgb(242, 248, 255);
+    --plaque-fond: rgba(14, 30, 50, 0.82);
+}
+
+.piece__teinte {
+    width: 26px;
+    height: 26px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.4);
+    border-radius: 13px;
+    flex-direction: row;
+    overflow: hidden;
+}
+
+.piece__bande {
+    flex-grow: 1;
+}
+
+.piece__texte {
+    flex-shrink: 1;
+}
+
+.piece__nom {
+    font-size: 14px;
+    color: var(--blanc);
+}
+
+.piece__etat {
+    font-size: 10px;
+    color: var(--glacier);
+}
+
+.piece.verrouille .piece__etat {
+    color: var(--pale);
+}
+
+/* ==========================================================================
+   LES RECORDS
+   ========================================================================== */
+.records__vide {
+    align-self: center;
+    align-items: center;
+    width: 640px;
+    margin-top: 60px;
+    padding: 40px;
+}
+
+.records__vide-icone {
+    width: 64px;
+    height: 64px;
+    --icone-couleur: rgb(255, 207, 106);
+    --icone-trait: 1.4;
+}
+
+.records__vide-titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 30px;
+    margin: 16px 0 8px 0;
+    color: var(--blanc);
+}
+
+.records__vide-texte {
+    font-size: 16px;
+    color: var(--doux);
+    -unity-text-align: upper-center;
+    margin-bottom: 26px;
+}
+
+.records__plein {
+    flex-grow: 1;
+}
+
+.records__pages {
+    flex-grow: 1;
+}
+
+.records__page {
+    flex-grow: 1;
+}
+
+.records__cartes {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+
+.carte-record {
+    width: 32%;
+    height: 170px;
+    margin: 0 1.33% 16px 0;
+    padding: 20px 24px;
+}
+
+.carte-record__valeur {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 48px;
+    color: var(--blanc);
+    margin-top: 8px;
+}
+
+.carte-record.vide .carte-record__valeur {
+    color: var(--pale);
+}
+
+.carte-record__detail {
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--pale);
+}
+
+.records__defi {
+    flex-direction: row;
+}
+
+.table {
+    padding: 8px 0;
+}
+
+.table--etroite {
+    width: 900px;
+}
+
+.table__ligne {
+    flex-direction: row;
+    align-items: center;
+    min-height: 54px;
+    padding: 0 18px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--trait);
+}
+
+.table__ligne--tete {
+    min-height: 40px;
+}
+
+.table__cellule {
+    flex-grow: 1;
+    flex-basis: 0;
+    font-size: 15px;
+    color: var(--pale);
+}
+
+.table__cellule--nom {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1.6;
+    color: var(--texte);
+}
+
+.table__numero {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    width: 34px;
+    font-size: 12px;
+    color: var(--cyan);
+}
+
+.table__niveau {
+    font-size: 15px;
+    color: var(--texte);
+}
+
+.table__score {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 17px;
+    color: var(--pale);
+}
+
+.table__cellule.a-record .table__score,
+.table__cellule.a-record {
+    color: var(--blanc);
+}
+
+.table__detail {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.table__etoiles {
+    flex-direction: row;
+}
+
+.table__rang {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 11px;
+    margin-left: 6px;
+    color: var(--or);
+}
+
+/* ==========================================================================
+   LES TAILLES D'ÉCRAN
+   ========================================================================== */
+.pr.etroit .logotype__ligne {
+    font-size: 116px;
+}
+
+.pr.etroit .mode {
+    width: 400px;
+    height: 540px;
+}
+
+.pr.etroit .difficulte {
+    width: 250px;
+    padding: 18px;
+}
+
+.pr.etroit .difficulte__nom {
+    font-size: 30px;
+}
+
+.pr.etroit .preparation {
+    width: 480px;
+}
+
+.pr.etroit .garage__liste {
+    width: 640px;
+}
+
+.pr.etroit .vaisseau {
+    width: 300px;
+}
+
+.pr.etroit .menu__stats {
+    width: 520px;
+}
+
+.pr.etroit .stat {
+    margin-right: 16px;
+}
+
+.pr.bas .ecran--menu {
+    padding-bottom: 150px;
+}
+
+.pr.bas .logotype__ligne {
+    font-size: 104px;
+    margin: -16px 0;
+}
+
+.pr.bas .mode {
+    height: 470px;
+}
+
+.pr.bas .mode__vue {
+    height: 200px;
+}
+
+.pr.bas .secteur {
+    height: 220px;
+}
+
+.pr.bas .secteur__image {
+    height: 112px;
+}
+
+.pr.bas .difficulte {
+    height: 400px;
+}
+
+/* En portrait (téléphone tenu droit) : tout passe en colonne. */
+.pr.portrait .ecran--menu {
+    padding-bottom: 300px;
+}
+
+.pr.portrait .menu__centre {
+    width: 100%;
+}
+
+.pr.portrait .logotype__ligne {
+    font-size: 96px;
+}
+
+.pr.portrait .action-principale {
+    width: 100%;
+}
+
+.pr.portrait .menu__entrees {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+}
+
+.pr.portrait .entree--carte {
+    width: auto;
+    margin: 0 0 10px 0;
+}
+
+.pr.portrait .menu__pied {
+    flex-direction: column;
+    align-items: stretch;
+    left: 24px;
+    right: 24px;
+}
+
+.pr.portrait .menu__stats {
+    width: auto;
+    flex-wrap: wrap;
+}
+
+.pr.portrait .meilleur-score {
+    margin: 10px 0;
+}
+
+.pr.portrait .radio {
+    width: 100%;
+}
+
+.pr.portrait .modes__cartes,
+.pr.portrait .difficultes,
+.pr.portrait .campagne__corps,
+.pr.portrait .defi__corps,
+.pr.portrait .garage__corps {
+    flex-direction: column;
+}
+
+.pr.portrait .mode {
+    width: 100%;
+    height: 300px;
+    margin: 0 0 12px 0;
+}
+
+.pr.portrait .mode__vue {
+    height: 110px;
+}
+
+.pr.portrait .difficulte {
+    width: 100%;
+    height: auto;
+    margin: 0 0 8px 0;
+}
+
+.pr.portrait .secteur {
+    width: 48.5%;
+    height: 200px;
+}
+
+.pr.portrait .secteur__image {
+    height: 100px;
+}
+
+.pr.portrait .preparation,
+.pr.portrait .defi__droite,
+.pr.portrait .garage__liste {
+    width: 100%;
+}
+
+.pr.portrait .garage__baie {
+    height: 320px;
+    flex-grow: 0;
+    margin: 0 0 16px 0;
+}
+
+.pr.portrait .vaisseau {
+    width: 100%;
+}
+
+.pr.portrait .carte-record {
+    width: 48%;
+}

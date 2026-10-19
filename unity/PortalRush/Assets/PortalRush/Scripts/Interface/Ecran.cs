@@ -64,8 +64,7 @@ namespace PortalRush.Interface
     {
       for (VisualElement? e = el; e != null; e = e.hierarchy.parent)
       {
-        var s = e.resolvedStyle;
-        if (s.display == DisplayStyle.None || s.visibility == Visibility.Hidden) return false;
+        if (!Ui.Affiche(e) || e.resolvedStyle.visibility == Visibility.Hidden) return false;
         if (e == limite) break;
       }
       var b = el.worldBound;

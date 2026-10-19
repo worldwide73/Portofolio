@@ -1,0 +1,24 @@
+<!-- PORTAL RUSH (Unity) — LES RECORDS (Scripts/Interface/EcranRecords.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="records" class="ecran ecran--records" picking-mode="Ignore">
+        <ui:VisualElement class="ecran__tete" picking-mode="Ignore">
+            <ui:Label text="REC · 05" class="etiquette ecran__module" />
+            <ui:Label name="records-titre" class="ecran__titre" />
+            <ui:Label name="records-sous" class="ecran__sous" />
+        </ui:VisualElement>
+        <ui:VisualElement name="records-vide" class="records__vide plaque">
+            <ui:VisualElement class="icone icone--trophee records__vide-icone" picking-mode="Ignore" />
+            <ui:Label name="records-vide-titre" class="records__vide-titre" />
+            <ui:Label name="records-vide-texte" class="records__vide-texte" />
+            <ui:Button name="records-premiere" class="lancer plaque">
+                <ui:Label name="records-premiere-texte" class="lancer__texte" picking-mode="Ignore" />
+                <ui:VisualElement class="icone icone--chevron lancer__icone" picking-mode="Ignore" />
+            </ui:Button>
+        </ui:VisualElement>
+        <ui:VisualElement name="records-plein" class="records__plein" picking-mode="Ignore">
+            <ui:VisualElement name="records-onglets" class="records__onglets" picking-mode="Ignore" />
+            <ui:VisualElement name="records-pages" class="records__pages" picking-mode="Ignore" />
+            <ui:Label name="records-note" class="ecran__note" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

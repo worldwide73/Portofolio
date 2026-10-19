@@ -1,0 +1,419 @@
+/* ==========================================================================
+   PORTAL RUSH (Unity) — LA PAUSE ET LES RÉSULTATS
+   ========================================================================== */
+
+/* ==========================================================================
+   LA PAUSE : un panneau au centre, la course figée derrière
+   ========================================================================== */
+.ecran--pause {
+    align-items: center;
+    justify-content: center;
+}
+
+.pause__panneau {
+    width: 600px;
+    padding: 34px 34px 26px 34px;
+    --plaque-fond: rgba(5, 9, 18, 0.86);
+    --plaque-bord: rgba(168, 236, 255, 0.4);
+    --plaque-accent: rgb(168, 236, 255);
+    --plaque-coupe: 20;
+    --plaque-accent-longueur: 110;
+}
+
+.pause__sous {
+    color: var(--cyan);
+}
+
+.pause__titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 72px;
+    letter-spacing: 3px;
+    color: var(--blanc);
+    margin: 4px 0 0 0;
+}
+
+.pause__partie {
+    margin: 4px 0 24px 0;
+    font-size: 11px;
+}
+
+.pause__entrees {
+    width: 100%;
+}
+
+/* ==========================================================================
+   LES RÉSULTATS
+   ========================================================================== */
+.ecran--resultat {
+    align-items: center;
+    justify-content: center;
+}
+
+.resultat__contenu {
+    width: 1240px;
+    align-items: center;
+}
+
+.resultat__surtitre {
+    color: var(--cyan);
+    -unity-text-align: middle-center;
+}
+
+.resultat__titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 78px;
+    letter-spacing: 3px;
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+    margin: 4px 0 8px 0;
+    text-shadow: 0 0 34px rgba(98, 217, 255, 0.45);
+}
+
+.ecran--resultat.defaite .resultat__titre {
+    text-shadow: 0 0 30px rgba(255, 91, 84, 0.35);
+}
+
+/* Le portail derrière la victoire : trois anneaux de lumière. */
+.resultat__portail {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    width: 0;
+    height: 0;
+}
+
+.resultat__anneau {
+    position: absolute;
+    border-radius: 50%;
+    border-width: 2px;
+    border-color: rgba(168, 236, 255, 0.35);
+}
+
+.resultat__anneau--1 {
+    left: -260px;
+    top: -260px;
+    width: 520px;
+    height: 520px;
+}
+
+.resultat__anneau--2 {
+    left: -340px;
+    top: -340px;
+    width: 680px;
+    height: 680px;
+    border-color: rgba(168, 236, 255, 0.18);
+    border-width: 1px;
+}
+
+.resultat__anneau--3 {
+    left: -430px;
+    top: -430px;
+    width: 860px;
+    height: 860px;
+    border-color: rgba(255, 207, 106, 0.12);
+    border-width: 1px;
+}
+
+.pr.anime .resultat__anneau {
+    transition-property: scale, opacity;
+    transition-duration: 1.2s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr .ecran--resultat.entree .resultat__anneau {
+    scale: 0.6 0.6;
+    opacity: 0;
+}
+
+.pr.anime .ecran--resultat.entree .resultat__anneau {
+    transition-duration: 0s;
+}
+
+/* Les étoiles du secteur. */
+.resultat__etoiles-bloc {
+    align-items: center;
+    margin: 6px 0 10px 0;
+}
+
+.resultat__etoiles-titre {
+    margin-bottom: 10px;
+}
+
+.resultat__etoiles {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.etoile-resultat {
+    width: 300px;
+    align-items: center;
+    margin: 0 10px;
+    opacity: 0.75;
+}
+
+.etoile-resultat.gagnee {
+    opacity: 1;
+}
+
+.etoile-resultat__texte {
+    margin-top: 10px;
+    font-size: 15px;
+    color: var(--doux);
+    -unity-text-align: upper-center;
+}
+
+.etoile-resultat.gagnee .etoile-resultat__texte {
+    color: var(--blanc);
+}
+
+.etoile-resultat__nouvelle {
+    margin-top: 6px;
+    color: var(--or);
+}
+
+.pr.anime .etoile-resultat {
+    transition-property: scale, opacity;
+    transition-duration: 0.6s;
+    transition-delay: 0.35s;
+    transition-timing-function: ease-out-back;
+}
+
+.pr .etoile-resultat.entree {
+    scale: 1.6 1.6;
+    opacity: 0;
+}
+
+.pr.anime .etoile-resultat.entree {
+    transition-duration: 0s;
+    transition-delay: 0s;
+}
+
+.resultat__etoiles-bloc.petit .etoile--grande {
+    width: 40px;
+    height: 40px;
+}
+
+.resultat__etoiles-bloc.petit .etoile-resultat {
+    width: 260px;
+}
+
+/* Le rang et le score. */
+.resultat__score-ligne {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.resultat__rang {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 54px;
+    min-width: 96px;
+    height: 84px;
+    padding: 0 14px;
+    margin-right: 22px;
+    border-width: 2px;
+    border-color: var(--glacier);
+    border-radius: 4px;
+    background-color: rgba(98, 217, 255, 0.12);
+    color: var(--blanc);
+    -unity-text-align: middle-center;
+}
+
+.resultat__rang.rang--s {
+    border-color: var(--or);
+    color: var(--or);
+    background-color: rgba(255, 207, 106, 0.12);
+}
+
+.resultat__rang.rang--sss {
+    border-color: var(--or);
+    color: rgb(255, 240, 200);
+    background-color: rgba(255, 207, 106, 0.24);
+    text-shadow: 0 0 22px rgba(255, 207, 106, 0.8);
+}
+
+.resultat__score {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 96px;
+    letter-spacing: 2px;
+    color: var(--blanc);
+}
+
+.resultat__record {
+    margin-top: 4px;
+    color: var(--doux);
+    -unity-text-align: middle-center;
+}
+
+.resultat__record.nouveau {
+    color: var(--or);
+    font-size: 15px;
+}
+
+.resultat__attente {
+    margin-top: 6px;
+    color: var(--pale);
+}
+
+/* Les colonnes : statistiques, objectifs, déblocages. */
+.resultat__colonnes {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    margin-top: 22px;
+}
+
+.resultat__stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 470px;
+    padding: 18px 20px 6px 20px;
+    margin: 0 8px;
+}
+
+.stat-resultat {
+    width: 33%;
+    margin-bottom: 14px;
+}
+
+.stat-resultat__valeur {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    font-size: 24px;
+    color: var(--blanc);
+    margin-top: 2px;
+}
+
+.stat-resultat__libelle {
+    font-size: 10px;
+}
+
+.resultat__bloc {
+    width: 360px;
+    padding: 18px 20px;
+    margin: 0 8px;
+}
+
+.resultat__bloc-titre {
+    margin-bottom: 10px;
+}
+
+.objectif {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.objectif__icone {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    --icone-couleur: rgb(255, 120, 110);
+    --icone-trait: 2;
+}
+
+.objectif.atteint .objectif__icone {
+    --icone-couleur: rgb(168, 236, 255);
+}
+
+.objectif__texte {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 15px;
+    color: var(--doux);
+}
+
+.objectif.atteint .objectif__texte {
+    color: var(--blanc);
+}
+
+.objectif__mesure {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 12px;
+    color: var(--pale);
+    margin-left: 8px;
+}
+
+.resultat__progres {
+    margin-top: 14px;
+    max-width: 1000px;
+    -unity-text-align: middle-center;
+    color: var(--glacier);
+}
+
+.resultat__actions {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 26px;
+}
+
+.resultat__actions .lancer {
+    min-width: 300px;
+    margin: 0 8px;
+}
+
+.resultat__actions .lancer .action__texte {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 22px;
+    color: var(--blanc);
+}
+
+/* ==========================================================================
+   LES TAILLES D'ÉCRAN
+   ========================================================================== */
+.pr.etroit .resultat__contenu {
+    width: 100%;
+}
+
+.pr.etroit .resultat__stats {
+    width: 400px;
+}
+
+.pr.etroit .resultat__bloc {
+    width: 300px;
+}
+
+.pr.bas .resultat__titre {
+    font-size: 56px;
+}
+
+.pr.bas .resultat__score {
+    font-size: 70px;
+}
+
+.pr.bas .etoile--grande {
+    width: 52px;
+    height: 52px;
+}
+
+.pr.portrait .resultat__colonnes,
+.pr.portrait .resultat__actions,
+.pr.portrait .resultat__etoiles {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.pr.portrait .resultat__stats,
+.pr.portrait .resultat__bloc,
+.pr.portrait .etoile-resultat {
+    width: auto;
+    margin: 0 0 10px 0;
+}
+
+.pr.portrait .pause__panneau {
+    width: 100%;
+}
+
+.pr.portrait .resultat__titre {
+    font-size: 48px;
+}
+
+.pr.portrait .resultat__score {
+    font-size: 64px;
+}

@@ -43,6 +43,7 @@ namespace PortalRush.Interface
     float tempsAnnonce = -1, tempsGain = -1, tempsConseil = -1, tempsCompte = -1, tempsGagne = -1;
     string etatOd = "";
     int multEcrit = -1, comboEcrit = -1, fragmentsEcrits = -1, boucliersEcrits = -1;
+    int phaseEcrite = -1, bossPhaseEcrite = -1, chargesEcrites = -1, jaugeEcrite = -1;
     string objectifEcrit = "";
 
     public Hud(Interface ui, VisualElement racine)
@@ -78,7 +79,7 @@ namespace PortalRush.Interface
       odLibelle = L("hud-od-libelle");
       odTouche = L("hud-od-touche");
       odEtat = L("hud-od-etat");
-      comboBloc = E("hud-combo");
+      comboBloc = E("hud-combo-bloc");
       mult = L("hud-mult");
       comboLibelle = L("hud-combo-libelle");
       combo = L("hud-combo");
@@ -140,6 +141,7 @@ namespace PortalRush.Interface
       if (p != null) Secteur(p, ui.Lancement);
       objectifEcrit = "";
       etatOd = "";
+      phaseEcrite = bossPhaseEcrite = -1;
     }
 
     void Secteur(Partie p, Lancement? l)
@@ -201,6 +203,7 @@ namespace PortalRush.Interface
       scoreAffiche = 0;
       scoreEcrit = -1;
       multEcrit = comboEcrit = fragmentsEcrits = boucliersEcrits = -1;
+      phaseEcrite = bossPhaseEcrite = chargesEcrites = jaugeEcrite = -1;
       objectifEcrit = "";
       etatOd = "";
       string theme = Noms.De(p.NiveauBase.Theme);
@@ -234,7 +237,12 @@ namespace PortalRush.Interface
         scoreEcrit = s;
         Ui.Ecrire(score, Textes.Nombre(s));
       }
-      Ui.Ecrire(phase, p.Scriptee ? "" : Textes.Majuscules(Textes.De($"phases.{Vues.Phase(p.PhaseCourante.Nom)}")));
+      int ph = p.Scriptee ? -2 : p.PhaseIndex;
+      if (ph != phaseEcrite)
+      {
+        phaseEcrite = ph;
+        Ui.Ecrire(phase, p.Scriptee ? "" : Textes.Majuscules(Textes.De($"phases.{Vues.Phase(p.PhaseCourante.Nom)}")));
+      }
       // L'avancement (l'entraînement : ses cinq étapes).
       float avance = p.Scriptee ? Mathf.Min(1f, (float)ui.Tutoriel.Phase / 5f) : (float)p.Avancement;
       Ui.Remplir(progressionPlein, avance);
@@ -248,7 +256,11 @@ namespace PortalRush.Interface
       if (p.Boss != null)
       {
         Ui.Remplir(bossVie, (float)(p.Boss.Vie / Math.Max(1, p.Boss.Max)));
-        Ui.Ecrire(bossPhase, Textes.Majuscules(Textes.Remplir("annonces.phase", "n", p.Boss.Phase.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        if (p.Boss.Phase != bossPhaseEcrite)
+        {
+          bossPhaseEcrite = p.Boss.Phase;
+          Ui.Ecrire(bossPhase, Textes.Majuscules(Textes.Remplir("annonces.phase", "n", p.Boss.Phase.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        }
       }
       if (p.Boucliers != boucliersEcrits)
       {
@@ -306,8 +318,9 @@ namespace PortalRush.Interface
     {
       bool actif = p.Overdrive > 0;
       anneau.Valeur = (float)Math.Min(1, actif ? p.Overdrive / Math.Max(0.001, p.Profil.Overdrive.Duree) : p.Jauge);
-      string e = Noms.De(p.EtatOverdrive);
-      if (e != etatOd)
+      string e = NomOverdrive(p.EtatOverdrive);
+      bool changeEtat = e != etatOd;
+      if (changeEtat)
       {
         foreach (var c in new[] { "od-verrouille", "od-charge", "od-pret", "od-actif", "od-utilise" }) overdrive.RemoveFromClassList(c);
         overdrive.AddToClassList("od-" + e);
@@ -318,6 +331,12 @@ namespace PortalRush.Interface
         if (e == "pret" && !Interface.Reduit) ui.Impulsion(anneauElement, "nourrie");
         etatOd = e;
       }
+      // (Les textes ne sont refaits que si l'état, les charges ou le pourcentage changent.)
+      int charges = actif ? p.Charges : -1;
+      int pourcent = actif ? -1 : e == "charge" || e == "pret" ? Mathf.RoundToInt((float)p.Jauge * 100f) : -2;
+      if (charges == chargesEcrites && pourcent == jaugeEcrite && !changeEtat) return;
+      chargesEcrites = charges;
+      jaugeEcrite = pourcent;
       string etat = actif
         ? Textes.Remplir("hud.charges", "n", p.Charges.ToString(System.Globalization.CultureInfo.InvariantCulture))
         : e == "verrouille" ? Textes.Remplir("hud.odVerrouille", "n", Textes.Nombre(p.SeuilOverdrive))
@@ -325,8 +344,21 @@ namespace PortalRush.Interface
         : e == "charge" ? Textes.De("hud.odCharge") : "";
       Ui.Ecrire(odEtat, Textes.Majuscules(etat));
       Ui.Ecrire(odValeur, actif ? "×" + Textes.Virgule(p.MultOverdrive, 1)
-        : e == "charge" || e == "pret" ? Mathf.RoundToInt((float)p.Jauge * 100f).ToString(System.Globalization.CultureInfo.InvariantCulture) + "%"
+        : pourcent >= 0 ? pourcent.ToString(System.Globalization.CultureInfo.InvariantCulture) + "%"
         : "");
+    }
+
+    /** Le nom de l'état (sans allouer une chaîne à chaque image, comme le ferait Noms.De). */
+    static string NomOverdrive(EtatOverdrive e)
+    {
+      switch (e)
+      {
+        case EtatOverdrive.Verrouille: return "verrouille";
+        case EtatOverdrive.Charge: return "charge";
+        case EtatOverdrive.Pret: return "pret";
+        case EtatOverdrive.Actif: return "actif";
+        default: return "utilise";
+      }
     }
 
     void Minuteries(float dt)

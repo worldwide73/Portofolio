@@ -33,6 +33,9 @@ namespace PortalRush.Interface
       }
     }
 
+    /** Le coin coupé en haut à gauche (px), pour épouser la plaque qui la porte. */
+    public float Coupe { get; set; }
+
     /** Verrouillé : la vue s'éteint (couleurs pâlies). */
     public bool Verrou
     {
@@ -65,9 +68,9 @@ namespace PortalRush.Interface
         accent2 = Color.Lerp(accent2, new Color(g, g, g), 0.8f) * 0.6f;
         horizon = Color.Lerp(horizon, Color.black, 0.5f);
       }
-      // Le ciel : la nuit, puis des bandes de plus en plus claires vers l'horizon.
+      // Le ciel : la nuit, puis des bandes de plus en plus claires vers l'horizon (coin coupé comme la plaque).
       p.fillColor = Formes.Nuit;
-      Rectangle(p, 0, 0, l, h);
+      Formes.Chemin(p, new Rect(0, 0, l, h), Coupe, Coupe > 0 ? 3 : 2);
       p.Fill();
       float yh = h * 0.47f;
       for (int i = 0; i < 9; i++)
@@ -75,7 +78,7 @@ namespace PortalRush.Interface
         float t = i / 8f;
         p.fillColor = Alpha(horizon, Mathf.Lerp(0.15f, 0.95f, t * t));
         float y0 = yh * (0.25f + 0.75f * t);
-        Rectangle(p, 0, y0, l, yh - y0 + 1);
+        Bande(p, y0, yh + 1, l);
         p.Fill();
       }
       // Quelques étoiles, toujours aux mêmes places pour un monde.
@@ -87,6 +90,7 @@ namespace PortalRush.Interface
       {
         float x = (float)hasard.NextDouble() * l, y = (float)hasard.NextDouble() * yh * 0.85f;
         float r = 0.6f + (float)hasard.NextDouble() * 0.9f;
+        if (x + y < Coupe + 2) continue;
         Rectangle(p, x, y, r, r);
         p.Fill();
       }
@@ -211,6 +215,7 @@ namespace PortalRush.Interface
           for (int i = 0; i < 14; i++)
           {
             float x = l * (i / 13f);
+            if (x < Coupe + l * 0.12f) continue;
             p.strokeColor = Alpha(a, 0.18f);
             p.lineWidth = 1f;
             p.BeginPath();
@@ -266,6 +271,19 @@ namespace PortalRush.Interface
           }
           break;
       }
+    }
+
+    /** Une bande horizontale de y0 à y1, coupée par le coin en haut à gauche. */
+    void Bande(Painter2D p, float y0, float y1, float l)
+    {
+      float c = Coupe;
+      p.BeginPath();
+      p.MoveTo(new Vector2(Mathf.Max(0, c - y0), y0));
+      p.LineTo(new Vector2(l, y0));
+      p.LineTo(new Vector2(l, y1));
+      p.LineTo(new Vector2(Mathf.Max(0, c - y1), y1));
+      if (y0 < c && y1 > c) p.LineTo(new Vector2(0, c));
+      p.ClosePath();
     }
 
     static void Rectangle(Painter2D p, float x, float y, float l, float h)

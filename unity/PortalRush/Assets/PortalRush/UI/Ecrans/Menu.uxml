@@ -1,0 +1,68 @@
+<!-- PORTAL RUSH (Unity) — LE MENU PRINCIPAL (Scripts/Interface/EcranMenu.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="menu" class="ecran ecran--menu" picking-mode="Ignore">
+        <ui:VisualElement class="menu__centre" picking-mode="Ignore">
+            <ui:Label name="menu-surtitre" class="etiquette menu__surtitre" />
+            <ui:VisualElement class="logotype" picking-mode="Ignore">
+                <ui:Label text="PORTAL" class="logotype__ligne" picking-mode="Ignore" />
+                <ui:Label text="RUSH" class="logotype__ligne logotype__ligne--contour" picking-mode="Ignore" />
+                <ui:VisualElement class="logotype__trait" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:Label name="menu-accroche" class="menu__accroche" />
+            <!-- L'action principale : Continuer (ou Commencer), Entrée ou Espace. -->
+            <ui:Button name="menu-continuer" class="action-principale plaque">
+                <ui:VisualElement class="action-principale__lueur" picking-mode="Ignore" />
+                <ui:VisualElement class="action-principale__texte" picking-mode="Ignore">
+                    <ui:Label name="menu-continuer-titre" class="action-principale__titre" picking-mode="Ignore" />
+                    <ui:Label name="menu-continuer-desc" class="action-principale__desc" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:VisualElement class="action-principale__touches" picking-mode="Ignore">
+                    <ui:Label name="menu-touche-entree" class="touche" picking-mode="Ignore" />
+                    <ui:Label name="menu-touche-espace" class="touche" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:VisualElement class="chevrons" picking-mode="Ignore">
+                    <ui:VisualElement class="icone icone--chevron chevron chevron--1" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--chevron chevron chevron--2" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--chevron chevron chevron--3" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:Button>
+            <ui:Label name="menu-bienvenue" class="etiquette menu__bienvenue" />
+            <ui:VisualElement class="menu__entrees" picking-mode="Ignore">
+                <ui:Button name="menu-modes" class="entree entree--carte plaque">
+                    <ui:Label text="01" class="entree__index" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--modes entree__icone" picking-mode="Ignore" />
+                    <ui:VisualElement class="entree__textes" picking-mode="Ignore">
+                        <ui:Label name="menu-modes-titre" class="entree__titre" picking-mode="Ignore" />
+                        <ui:Label name="menu-modes-desc" class="entree__desc" picking-mode="Ignore" />
+                    </ui:VisualElement>
+                </ui:Button>
+                <ui:Button name="menu-garage" class="entree entree--carte plaque">
+                    <ui:Label text="02" class="entree__index" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--garage entree__icone" picking-mode="Ignore" />
+                    <ui:VisualElement class="entree__textes" picking-mode="Ignore">
+                        <ui:Label name="menu-garage-titre" class="entree__titre" picking-mode="Ignore" />
+                        <ui:Label name="menu-garage-desc" class="entree__desc" picking-mode="Ignore" />
+                    </ui:VisualElement>
+                </ui:Button>
+                <ui:Button name="menu-tutoriel" class="entree entree--carte plaque">
+                    <ui:Label text="03" class="entree__index" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--recommencer entree__icone" picking-mode="Ignore" />
+                    <ui:VisualElement class="entree__textes" picking-mode="Ignore">
+                        <ui:Label name="menu-tutoriel-titre" class="entree__titre" picking-mode="Ignore" />
+                        <ui:Label name="menu-tutoriel-desc" class="entree__desc" picking-mode="Ignore" />
+                    </ui:VisualElement>
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <!-- Le pied : la progression, le meilleur score (discret), RUSH RADIO. -->
+        <ui:VisualElement class="menu__pied" picking-mode="Ignore">
+            <ui:VisualElement name="menu-stats" class="menu__stats" picking-mode="Ignore" />
+            <ui:VisualElement class="meilleur-score" picking-mode="Ignore">
+                <ui:Label name="menu-meilleur-libelle" class="etiquette" />
+                <ui:Label name="menu-meilleur" class="meilleur-score__valeur" />
+                <ui:Label name="menu-meilleur-origine" class="etiquette meilleur-score__origine" />
+            </ui:VisualElement>
+            <ui:VisualElement name="radio" class="radio plaque" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

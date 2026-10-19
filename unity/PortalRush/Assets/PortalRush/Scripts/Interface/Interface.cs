@@ -233,6 +233,7 @@ namespace PortalRush.Interface
       r.Query<TemplateContainer>().ForEach(t => t.pickingMode = PickingMode.Ignore);
       r.Query<VisualElement>(className: "calque").ForEach(c => c.pickingMode = PickingMode.Ignore);
       r.Query<Button>().ForEach(Ui.Nettoyer);
+      r.Query<Label>().ForEach(Ui.NettoyerTexte);
       Formes.Habiller(r);
 
       voile = Trouver<VisualElement>(r, "voile");
@@ -936,7 +937,7 @@ namespace PortalRush.Interface
           e.StopPropagation();
           EcranResultat.Rejouer();
         }
-        else if (Courant == EcranPause && !Reglages.Ouvert && !Confirmation.Ouverte)
+        else if (Courant == EcranPause && !Reglages.Ouvert)
         {
           e.StopPropagation();
           EcranPause.DemanderRecommencer();

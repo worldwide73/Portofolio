@@ -173,7 +173,7 @@ namespace PortalRush.Interface
           suivant++;
           Pont.Son("parfait");
           if (suivant >= attendu.Length) Reussir();
-          else Afficher(0, Consigne(0), attendu[suivant] == "gauche", attendu[suivant] == "droite", "✓", "ok");
+          else Afficher(0, Consigne(0), attendu[suivant] == "gauche", attendu[suivant] == "droite", "coche", "ok");
         }
         // (Le vaisseau ralenti repart dès qu'on a bougé.)
         if (enAttente)
@@ -191,7 +191,7 @@ namespace PortalRush.Interface
         compte++;
         // La jauge se remplit en partie (jamais pleine : l'Overdrive se mérite en course).
         p.Jauge = Math.Min(0.6, compte * 0.12);
-        if (compte == 3) Afficher(2, Textes.De("tutoriel.energie"), false, false, "✓", "ok");
+        if (compte == 3) Afficher(2, Textes.De("tutoriel.energie"), false, false, "coche", "ok");
       }
     }
 
@@ -199,7 +199,7 @@ namespace PortalRush.Interface
     {
       Pont.Son("pret");
       int n = (int)Phase;
-      Afficher(n, Textes.De("tutoriel.bravo"), false, false, "✓", "ok", true);
+      Afficher(n, Textes.De("tutoriel.bravo"), false, false, "coche", "ok", true);
       Phase = n + 0.5; // (entre deux phases : rien ne compte)
       Minuter(n == 2 ? 2.6f : 0.9f, () => Entrer(n + 1));
     }
@@ -208,7 +208,7 @@ namespace PortalRush.Interface
     void Rater()
     {
       int n = (int)Math.Floor(Phase);
-      Afficher(n, Textes.De("tutoriel.rate"), false, false, "↺", "rate");
+      Afficher(n, Textes.De("tutoriel.rate"), false, false, "rejouer", "rate");
       Phase = n + 0.5;
       partie?.Vider();
       Minuter(1.1f, () => Entrer(n));

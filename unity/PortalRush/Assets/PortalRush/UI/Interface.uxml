@@ -1,0 +1,111 @@
+<!-- PORTAL RUSH (Unity) — LE DOCUMENT DE L'INTERFACE (UIDocument de l'objet « Interface », thème PortalRush.tss).
+     Les écrans sont dans Ecrans/*.uxml ; les textes sont écrits par Scripts/Interface (Textes.De), dans la langue du site. -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Template name="Hud" src="Ecrans/Hud.uxml" />
+    <ui:Template name="Menu" src="Ecrans/Menu.uxml" />
+    <ui:Template name="Modes" src="Ecrans/Modes.uxml" />
+    <ui:Template name="Campagne" src="Ecrans/Campagne.uxml" />
+    <ui:Template name="Difficultes" src="Ecrans/Difficultes.uxml" />
+    <ui:Template name="Defi" src="Ecrans/Defi.uxml" />
+    <ui:Template name="Garage" src="Ecrans/Garage.uxml" />
+    <ui:Template name="Records" src="Ecrans/Records.uxml" />
+    <ui:Template name="Pause" src="Ecrans/Pause.uxml" />
+    <ui:Template name="Resultat" src="Ecrans/Resultat.uxml" />
+    <ui:Template name="Reglages" src="Ecrans/Reglages.uxml" />
+    <ui:VisualElement name="interface" class="pr" picking-mode="Ignore">
+        <!-- Le voile : le décor 3D reste visible, assombri sous les menus. -->
+        <ui:VisualElement name="voile" class="calque voile" picking-mode="Ignore">
+            <ui:VisualElement class="voile__gauche" picking-mode="Ignore" />
+            <ui:VisualElement class="voile__bas" picking-mode="Ignore" />
+            <ui:VisualElement class="voile__vignette" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <!-- Les bords de l'écran s'allument : Overdrive (violet), dernier bouclier (rouge), choc. -->
+        <ui:VisualElement name="alerte" class="calque alerte" picking-mode="Ignore">
+            <ui:VisualElement class="alerte__bord alerte__bord--gauche" picking-mode="Ignore" />
+            <ui:VisualElement class="alerte__bord alerte__bord--droite" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <!-- Le cadre du système de bord : quatre équerres et le code des règles. -->
+        <ui:VisualElement name="cadre" class="calque cadre" picking-mode="Ignore">
+            <ui:VisualElement class="cadre__reperes reperes" picking-mode="Ignore" />
+            <ui:Label name="cadre-code" class="cadre__code" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:Instance template="Hud" name="hud" class="calque" picking-mode="Ignore" />
+        <ui:VisualElement name="ecrans" class="calque" picking-mode="Ignore">
+            <ui:Instance template="Menu" name="hote-menu" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Modes" name="hote-modes" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Campagne" name="hote-campagne" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Difficultes" name="hote-difficultes" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Defi" name="hote-defi" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Garage" name="hote-garage" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Records" name="hote-records" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Pause" name="hote-pause" class="calque" picking-mode="Ignore" />
+            <ui:Instance template="Resultat" name="hote-resultat" class="calque" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <!-- La séquence de fin d'un secteur : bandes de cinéma et titre. -->
+        <ui:VisualElement name="cine" class="calque cine" picking-mode="Ignore">
+            <ui:VisualElement class="cine__bande cine__bande--haut" picking-mode="Ignore" />
+            <ui:VisualElement class="cine__bande cine__bande--bas" picking-mode="Ignore" />
+            <ui:VisualElement class="cine__texte" picking-mode="Ignore">
+                <ui:Label name="cine-titre" class="cine__titre" picking-mode="Ignore" />
+                <ui:VisualElement class="cine__trait" picking-mode="Ignore" />
+                <ui:Label name="cine-sous" class="cine__sous" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <!-- La barre du haut. -->
+        <ui:VisualElement name="barre" class="barre" picking-mode="Ignore">
+            <ui:VisualElement class="barre__gauche" picking-mode="Ignore">
+                <ui:Button name="echap" class="touche-echap">
+                    <ui:Label text="Esc" class="touche touche-echap__touche" picking-mode="Ignore" />
+                    <ui:Label name="echap-effet" class="touche-echap__effet" picking-mode="Ignore" />
+                </ui:Button>
+                <ui:VisualElement name="module" class="barre__module" picking-mode="Ignore">
+                    <ui:VisualElement class="barre__point" picking-mode="Ignore" />
+                    <ui:Label name="module-texte" class="etiquette barre__module-texte" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="barre-droite" class="barre__droite" picking-mode="Ignore">
+                <ui:VisualElement class="langue" picking-mode="Ignore">
+                    <ui:Button name="btn-langue" class="icone-bouton plaque">
+                        <ui:Label name="langue-code" class="icone-bouton__code" picking-mode="Ignore" />
+                    </ui:Button>
+                    <ui:VisualElement name="langues" class="langue__liste plaque">
+                        <ui:Label name="langues-titre" class="etiquette langue__titre" />
+                        <ui:Button name="langue-fr" class="langue__choix">
+                            <ui:Label text="FR" class="langue__code" picking-mode="Ignore" />
+                            <ui:Label name="langue-fr-nom" class="langue__nom" picking-mode="Ignore" />
+                        </ui:Button>
+                        <ui:Button name="langue-en" class="langue__choix">
+                            <ui:Label text="EN" class="langue__code" picking-mode="Ignore" />
+                            <ui:Label name="langue-en-nom" class="langue__nom" picking-mode="Ignore" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Button name="btn-records" class="icone-bouton plaque">
+                    <ui:VisualElement class="icone icone--trophee icone-bouton__icone" picking-mode="Ignore" />
+                </ui:Button>
+                <ui:Button name="btn-reglages" class="icone-bouton plaque">
+                    <ui:VisualElement class="icone icone--roue icone-bouton__icone" picking-mode="Ignore" />
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Instance template="Reglages" name="hote-reglages" class="calque" picking-mode="Ignore" />
+        <!-- La fenêtre de confirmation (recommencer, abandonner, quitter). -->
+        <ui:VisualElement name="confirmation" class="calque confirmation">
+            <ui:VisualElement name="confirmation-fenetre" class="confirmation__fenetre plaque">
+                <ui:Label name="confirmation-module" class="etiquette confirmation__module" />
+                <ui:Label name="confirmation-titre" class="confirmation__titre" />
+                <ui:Label name="confirmation-texte" class="confirmation__texte" />
+                <ui:VisualElement class="confirmation__actions">
+                    <ui:Button name="confirmation-oui" class="action action--danger plaque">
+                        <ui:Label name="confirmation-oui-texte" class="action__texte" picking-mode="Ignore" />
+                    </ui:Button>
+                    <ui:Button name="confirmation-non" class="action plaque">
+                        <ui:Label name="confirmation-non-texte" class="action__texte" picking-mode="Ignore" />
+                    </ui:Button>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label name="info" class="info" picking-mode="Ignore" />
+        <ui:VisualElement name="fondu" class="calque fondu" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>
