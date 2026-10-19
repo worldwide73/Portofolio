@@ -1,3 +1,30 @@
+## Portal Rush → Unity (18–19 octobre 2026, en cours) — remplace la suite de V4-H, V4-F et V4-G ci-dessous
+
+Légende : V = vérifié (comment), É = écrit et contrôlé hors Unity, jamais exécuté dans Unity, C = en cours, À = à faire.
+
+| Demande | État | Preuve |
+|---|---|---|
+| Unity Web, pas un jeu séparé ; version stable adaptée au Web | V (choix) | Unity 6.3 LTS 6000.3.26f1, URP 17.3, WebGL2 ; sources dans `docs/UNITY_MIGRATION.md` §3 |
+| WebGPU évalué sans en dépendre | V (choix) | WebGL2 seul dans `Configuration.cs` ; statut expérimental sourcé (§3.3) |
+| Dire précisément ce qui manque ici, préparer le PC | V | `docs/UNITY_MIGRATION.md` §5–7, `outils/unity/unity.ps1` (essayé avec un faux Unity seulement) |
+| Audit et correspondance ancien → Unity | V | `docs/UNITY_MIGRATION.md` §1–2 |
+| Gameplay porté en C# à l'identique | V | 29/29 parties de référence identiques bit pour bit (`outils/unity/coeur-tests`) |
+| Ancien jeu conservé et inchangé | V (partiel) | jeu par défaut, Unity seulement avec `?rush=unity` ; `.prm` inchangés (sha256) ; site construit (18 pages) ; recettes de l'ancien jeu à relancer après l'intégration |
+| Routes larges, courbes, reliefs, dévers, bordures profilées, rails lumineux, 3 voies | É | `Parcours.cs`, `Route.cs`, textures `outils/unity/textures.py` (aperçus vérifiés) |
+| 8 mondes à l'architecture distincte | É (prototype) | `Ambiances.cs` (palettes du jeu web), `Decor.cs` (modules Blender par monde, tunnels) ; production graphique à poursuivre |
+| 4 vaisseaux et obstacles Blender réutilisés | V (export) / É (jeu) | 43 FBX, orientation vérifiée coin par coin contre les `.prm` |
+| Qualité URP Web (PBR, normal maps, HDR, tonemapping, bloom maîtrisé, AO, AA, effets de vitesse) | É | `Configuration.cs`, `Scene.cs` (post-traitement), `Effets.cs` |
+| Qualité Auto / Élevée / Équilibrée / Économie | É | `Qualite.cs`, trois assets URP |
+| Interface refaite entièrement (fonctions conservées) | É | `Scripts/Interface`, `UI/` (11 écrans, HUD) |
+| Intro cinématique sans écran noir | É | page (fissure, tunnel) + `Intro.cs` (sortie du tunnel), option `retenir/fondre` de `tunnel.ts` |
+| Tutoriel conservé | É | `Interface/Tutoriel.cs` (portage de `tutoriel.ts`) |
+| Intégration au portfolio, pont JS ↔ Unity, focus, langue | C | `src/scripts/rush-unity/`, `Plugins/WebGL/PortalRushPont.jslib`, `Jeu/Pont/` |
+| Sauvegardes conservées (même format, local) | C | le JavaScript garde `portal-rush-3` et `ranger` ; recette du pont en cours |
+| Audio : DREAM RADIO suspendue puis reprise, RUSH RADIO, sons du jeu | C | Unity muet, sons et musique par le moteur audio du portfolio |
+| Performance et mobile sans écran noir | À | rien de mesuré ; repli sur l'ancien jeu prévu |
+| Compilation et build Unity | À | contrôle hors Unity seulement (`outils/unity/verif-compilation`) |
+| Publication | Non (accord requis) | CSP de `netlify.toml` à adapter le moment venu |
+
 ## Portal Rush V4 et le son (16–17 octobre 2026, en cours)
 
 | Demande | État | Preuve |

@@ -195,8 +195,23 @@ public sealed class Pont : MonoBehaviour
   public static void Radio(string action, string? piste = null);
   public static void ChangerLangue(string langue);
   public static void Fermer();
+  // Ajouts (Pont.cs, 18 octobre 2026, voir §5.6) :
+  public static EtatRadio? RadioEtat { get; }   // dernier état de RUSH RADIO
+  public static bool AudioDebloque { get; }
+  public static void Son(string nom);           // un son d'interface ou de cinématique (sons.ts : sonRush)
+  public static void ChoisirDifficulte(Difficulte d);
+  public static void Erreur(string message);    // avant « config » : la page revient à l'ancien jeu
+  public bool simulerIntro, simulerTutoriel;    // éditeur : la config simulée (faux par défaut)
 }
 ```
+
+Qui appelle quoi : `Session` appelle `EvenementJeu` (chaque évènement), `Moteur` (vitesse **en m/s**, celle de la
+partie : Pont la ramène de 0 à 1 et y joint l'avancée, les boucliers et le boss de `Session.Instance.Partie`) et
+`Fin` (dès la fin de la partie, avant la séquence de fin) ; `Intro` appelle `Ecran("intro")` ; l'interface appelle
+le reste. Pont n'abonne rien lui-même. Il envoie **lui-même** `pret`, une fois, à la fin de sa première image.
+Dans l'éditeur, il simule la page : `config` deux images après le démarrage (vue d'un profil neuf, `intro` et
+`tutorielAFaire` faux sauf si `simulerIntro` / `simulerTutoriel`), puis `vue`, `bilan` minimal, `radio`, `langue`
+en réponse, sans rien enregistrer ; chaque message est écrit dans la console (`Journaliser`).
 
 ### 5.4 Protocole des messages
 
@@ -206,12 +221,12 @@ Chaque message est un objet JSON `{"type": "...", ...}`.
 
 | type | champs | effet |
 |---|---|---|
-| `config` | `vue`, `langue`, `intro` (bool : jouer la sortie du tunnel), `tutorielAFaire`, `audioDebloque`, `appareil` {`mobile`, `dpr`, `economie`} | premier message après le chargement |
+| `config` | `vue`, `langue`, `intro` (bool : jouer la sortie du tunnel), `tutorielAFaire`, `audioDebloque`, `appareil` {`mobile`, `dpr`, `economie`, *`mouvementReduit`*, *`animations`*}, *`ecran`* | premier message, en réponse à `pret` (rien n'est envoyé avant) |
 | `vue` | `vue` | la progression ou les réglages ont changé |
 | `bilan` | `bilan` (avec `vue`) | réponse à `fin` |
 | `langue` | `langue` | la langue du site a changé |
 | `radio` | `etat` | état de RUSH RADIO |
-| `pause` / `reprendre` | — | onglet caché, fenêtre recouverte… |
+| `pause` / `reprendre` | — | onglet caché ou fenêtre quittée / de nouveau visible (`reprendre` ne relance pas la course : le joueur quitte lui-même l'écran de pause, comme dans le jeu web) |
 | `fermer` | — | la page demande la fermeture (Unity coupe tout et répond `fermer`) |
 | `audio` | `debloque` | l'audio du navigateur est débloqué |
 
@@ -219,26 +234,31 @@ Chaque message est un objet JSON `{"type": "...", ...}`.
 
 | type | champs | effet côté page |
 |---|---|---|
-| `pret` | `version` | première image dessinée : la page peut fondre sa transition vers Unity |
-| `ecran` | `nom` : `intro`, `menu`, `niveaux`, `garage`, `records`, `reglages`, `jeu`, `pause`, `fin`, `tutoriel` | musique de menu / de jeu, DREAM RADIO |
+| `pret` | `version` | Pont écoute et la première image est dessinée (envoyé par Pont lui-même) : la page répond `config` ; sans `intro`, elle fond aussitôt sa transition |
+| `ecran` | `nom` : `intro`, `menu`, `niveaux`, `garage`, `records`, `reglages`, `jeu`, `pause`, `fin`, `tutoriel` | musique adaptative ; `intro` : la page fond son tunnel ; l'écran suivant : son d'ouverture, RUSH RADIO ; `pause` : le petit son de la pause ; `fin` (= l'écran des résultats) : son de victoire ou de défaite, puis celui des étoiles nouvelles |
 | `evenement` | `nom` (nom du moteur, ex. `fragment`, `fin-overdrive`), `valeur`, `voie` | sons et musique adaptative, comme `rush.ts` |
-| `moteur` | `actif`, `vitesse`, `overdrive` | son du moteur (`moteurRush`) |
-| `fin` | `mode`, `difficulte`, `niveau`, `vehicule`, `graine`, `resultat` (forme exacte de `Resultat` du jeu web) | `ranger(...)`, `enregistrer(...)`, puis répond `bilan` |
+| `moteur` | `actif`, `vitesse` (0 à 1), `overdrive`, *`avancement`*, *`boucliers`*, *`boss`* | son du moteur (`moteurRush`) et musique adaptative (comme `suivreSon` de `rush.ts`) |
+| `fin` | `mode`, `difficulte`, `niveau`, `vehicule`, `graine`, `resultat` (forme exacte de `Resultat` du jeu web) | vérifie tout, `ranger(...)` (qui enregistre), répond `bilan` ; musique et souffle d'ouverture de la séquence de fin (comme `finDePartie`). Envoyé **dès la fin de la partie** ; un message invalide ne touche pas la sauvegarde et reçoit un `bilan` neutre |
 | `reglages` | `reglages` (objet complet) | enregistre, applique volume et qualité, répond `vue` |
 | `vehicule` | `id` | change le vaisseau choisi, répond `vue` |
 | `equiper` | `emplacement`, `piece` | équipe la pièce, répond `vue` |
 | `tutoriel` | `etat`, `phase` | `noterTutoriel`, répond `vue` |
 | `radio` | `action` (`lecture`, `pause`, `suivante`, `precedente`, `piste`), `piste` | pilote RUSH RADIO, répond `radio` |
 | `langue` | `langue` | change la langue du site, répond `langue` |
-| `fermer` | — | ferme le jeu, restaure le portfolio, rend le focus |
-| `erreur` | `message` | journal, repli éventuel vers l'ancien jeu |
+| `fermer` | — | ferme le jeu, restaure le portfolio, rend le focus ; la page joue elle-même le son de sortie (comme l'ancien jeu) : ne pas envoyer `son: sortie` juste avant |
+| `erreur` | `message` | journal ; avant `config`, repli vers l'ancien jeu |
+| *`son`* | `nom` (un son de `sonRush` : `deplacement`, `pret`, `fragment`, `ouverture`, `victoire`…) | joue ce son (interface, cinématiques, record battu en course) |
+| *`difficulte`* | `difficulte` | garde la difficulté choisie (si elle est ouverte), répond `vue` |
+
+Les noms en *italique* sont des ajouts du 18 octobre 2026 (voir §5.6).
 
 ### 5.5 Formes des données (`JsonUtility`)
 
 ```csharp
 [Serializable] public class Reglages { public double volume; public bool effetsReduits; public bool secousses;
   public bool aideCommandes; public string tactile; public bool musique; public double volumeMusique; public bool muet;
-  public string piste; public string sequenceFin; public string qualite; }
+  public string piste; public string sequenceFin; public string qualite;
+  public bool sons; public double animations; }                       // ajout : réglages du site montrés par le jeu
 [Serializable] public class ConditionVue { public string type; public double mesure; public double cible; public bool faite;
   public int niveau; public string rang; public string difficulte; public string stat; }
 [Serializable] public class ScoreNiveau { public string difficulte; public bool reussi; public bool[] etoiles;
@@ -250,7 +270,8 @@ Chaque message est un objet JSON `{"type": "...", ...}`.
   public bool debloquee; public bool equipee; public ConditionVue condition; }
 [Serializable] public class Equipement { public string coque; public string trainee; public string overdrive; public string noyau; }
 [Serializable] public class InfiniVue { public string difficulte; public double score; public double distance; }
-[Serializable] public class DefiVue { public double graine; public double meilleur; public double dernier; public int tentatives; }
+[Serializable] public class DefiVue { public double graine; public double meilleur; public double dernier; public int tentatives;
+  public int reussis; }                                                // ajout : défis menés au bout, tous jours confondus
 [Serializable] public class Totaux { public int parties; public int overdrives; public int parfaits; public double distance;
   public int multiplicateurMax; public double infiniMax; public bool rangS; public int meilleurCombo;
   public int meilleursParfaits; public double meilleureDistance; }
@@ -259,20 +280,46 @@ Chaque message est un objet JSON `{"type": "...", ...}`.
 [Serializable] public class Vue { public int version; public string langue; public Reglages reglages; public TutorielVue tutoriel;
   public int niveauMax; public string difficulte; public string vehicule; public DifficulteVue[] difficultes;
   public NiveauVue[] niveaux; public VehiculeVue[] vehicules; public PieceVue[] pieces; public Equipement equipement;
-  public InfiniVue[] infini; public DefiVue defi; public Totaux totaux; public double meilleurScore; public DerniereVue derniere; }
+  public InfiniVue[] infini; public DefiVue defi; public Totaux totaux; public double meilleurScore; public DerniereVue derniere;
+  public RepriseVue reprise; public PieceSuivanteVue prochainePiece; }                       // ajouts
+[Serializable] public class RepriseVue { public bool premiere; public int niveau; public string difficulte; }   // « Continuer »
+[Serializable] public class PieceSuivanteVue { public string id; public double mesure; public double cible; }  // id "" : aucune
 [Serializable] public class Bilan { public bool[] etoiles; public int[] nouvellesEtoiles; public bool record; public double ancienRecord;
   public int niveauDebloque; public bool cauchemarDebloque; public bool paradoxeDebloque; public string[] pieces;
   public string[] vehicules; public Vue vue; }
-[Serializable] public class PisteRadio { public string id; public string titre; public string auteur; }
+[Serializable] public class PisteRadio { public string id; public string titre; public string auteur;
+  public string licence; public string lien; public bool adaptative; }   // ajout : crédits (CC BY-SA) et couches
 [Serializable] public class EtatRadio { public bool lecture; public string piste; public PisteRadio[] pistes; }
-[Serializable] public class Appareil { public bool mobile; public double dpr; public bool economie; }
+[Serializable] public class Appareil { public bool mobile; public double dpr; public bool economie;
+  public bool mouvementReduit; public double animations; }             // ajout
 [Serializable] public class Config { public Vue vue; public string langue; public bool intro; public bool tutorielAFaire;
-  public bool audioDebloque; public Appareil appareil; }
+  public bool audioDebloque; public Appareil appareil; public string ecran; }   // ajout : ecran
 ```
 
 Ces classes vivent dans `Scripts/Jeu/Pont/Messages.cs` (espace de noms `PortalRush.Jeu`). La vue est calculée par le
 JavaScript avec les fonctions existantes (`etoilesDe`, `avancement`, `difficulteOuverte`, `scoreEtoile`…) : Unity
 n'a aucune règle de progression à réimplémenter. `niveauDebloque = 0` signifie « aucun ».
+
+Précisions (18 octobre 2026) : `Vue.version` est la version du format de sauvegarde (3) ; `Vue.difficulte` est la
+difficulté choisie ramenée à une difficulté ouverte (`difficulteJouable`) ; `Bilan.etoiles` est vide hors campagne
+réussie ; `evenement.voie` vaut −1 quand le moteur n'en donne pas ; `moteur.boucliers` absent = inconnu (pas de danger).
+Les messages Unity → page ont aussi leurs classes (`MessageFin`, `ResultatJson`…) dans `Messages.cs`. Le côté page a
+les mêmes formes en TypeScript : `src/scripts/rush-unity/protocole.ts`.
+
+### 5.6 Ajustements du pont (18 octobre 2026) et pourquoi
+
+| Ajout | Pourquoi |
+|---|---|
+| `son` (Unity → page) | Le son de Unity est coupé (§6) : les sons de ses menus, de ses cinématiques (souffle d'ouverture d'une victoire) et du record battu en course doivent passer par `sons.ts`, comme dans le jeu web. |
+| `moteur` : `avancement`, `boucliers`, `boss` ; `vitesse` de 0 à 1 | La musique adaptative de `rush.ts` (`suivreSon`) dose les couches avec la vitesse **et** l'avancée, et le danger avec le dernier bouclier et le boss. Pont les lit dans la partie en cours (`Session` passe la vitesse en m/s). |
+| `difficulte` (Unity → page) | Le jeu web garde la difficulté choisie dès qu'on la change ; sans ce message, elle ne serait gardée qu'à la fin d'une partie. |
+| `config.ecran` | Le portfolio ouvre parfois le jeu sur un autre écran que le menu (« commandes » depuis l'assistant du Hub, « reglages »). |
+| `appareil.mouvementReduit`, `appareil.animations` | Mouvement réduit du système ou animations coupées du site : le jeu web remplace alors ses transitions par des fondus brefs ; Unity doit le savoir (le réglage `effetsReduits` du jeu n'en est qu'une partie). |
+| `Reglages.sons`, `Reglages.animations` | Le panneau de réglages du jeu web montre aussi ces deux réglages du site ; la page les applique (`regler`). Toujours partir d'une copie de `Pont.Vue.reglages` (`Reglages.Copie()`) pour renvoyer l'objet complet. |
+| `Vue.reprise`, `Vue.prochainePiece`, `DefiVue.reussis` | « Continuer », « Prochaine pièce » et le nombre de défis réussis sont des règles du jeu web (`reprise`, `prochainePiece`, `defisReussis`) : la page les calcule, Unity les affiche. |
+| `PisteRadio.licence`, `lien`, `adaptative` | Les morceaux CC BY-SA doivent être crédités ; le lecteur du jeu web dit aussi quelles pistes ont des couches. |
+| `pret` envoyé par Pont lui-même ; rien avant | En Unity 6, un `SendMessage` juste après `createUnityInstance` peut ne pas trouver l'objet : la page attend `pret` pour envoyer `config`. |
+| Ordre des sons de fin | `fin` part dès la fin de la partie (Session) ; l'écran `fin` est celui des résultats : la page y joue victoire / défaite, comme `terminer()` de `rush.ts`. |
 
 ## 6. Intégration au portfolio
 
@@ -285,6 +332,13 @@ n'a aucune règle de progression à réimplémenter. `niveauDebloque = 0` signif
   et envoie `pret` à sa première image, la page fond alors sa transition : pas d'écran noir.
 - Activation : drapeau `?rush=unity` (et réglage de développement) tant que la version n'est pas validée ; repli
   automatique sur l'ancien jeu si le build manque, si WebGL2 est absent ou si le chargement échoue.
+  Mise en œuvre (18 octobre 2026, `src/scripts/rush-unity/`) : `?rush=unity` est retenu pour l'onglet
+  (`sessionStorage`, le changement de langue réécrit l'adresse) ; `?rush=web` revient à l'ancien jeu ; clé de
+  développement `localStorage['portal-rush-moteur'] = 'unity'`. Sans drapeau, seul `drapeau.ts` est chargé et ne fait
+  rien (les pages construites sont identiques). Le tunnel de la page se prolonge en croisière tant que Unity n'a pas
+  repris l'image ; à `intro`, il fond (sans éclair) ; le son du voyage est écrit pour couvrir les deux tunnels. Voyage
+  passé ou mouvement réduit : `intro` faux, une lumière d'attente (jamais du noir) jusqu'à `pret`. Échec ou délai
+  (60 s) : l'ancien jeu s'ouvre à l'arrivée du même voyage, sans second tunnel.
 - Focus clavier : la toile Unity reçoit le focus à l'ouverture ; `Échap` lui est transmis ; à la fermeture, le focus
   revient au bouton Portal Rush du Hub. Unity ne capture pas le clavier quand la toile n'a pas le focus.
 - Audio : à l'ouverture, DREAM RADIO s'atténue et se suspend (et reprend à la fermeture dans son état précédent),
@@ -334,4 +388,4 @@ suivant compile les assemblages gardés.
 | Le code Unity compile (contrôle partiel) | ici (.NET, stubs) | `dotnet build -c Joueur` puis `-c Editeur` dans `outils/unity/verif-compilation` (API Unity déclarée d'après le source officiel 6000.3 / URP 17.3 ; ne remplace pas Unity) |
 | Rejeu dans Unity | PC (Unity) | Test Runner › EditMode, ou `outils/unity/unity.ps1 -Tests` |
 | Compilation Unity, scène, build Web | PC (Unity) | `outils/unity/unity.ps1` (voir `docs/UNITY_MIGRATION.md`) |
-| Pont et chargeur côté page | ici (Playwright) | recette avec une instance Unity simulée |
+| Pont et chargeur côté page | ici (Playwright) | `node outils/recettes/rush-unity-pont.mjs` (instance Unity simulée, serveur local lancé) |
