@@ -27,7 +27,10 @@ float bruit(vec3 x) {
 }
 float fbm(vec3 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * bruit(p); p *= 2.03; a *= 0.5; } return s; }
 vec3 filmique(vec3 x) { x *= 0.9; return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
-vec3 ecran(vec3 c) { return pow(filmique(c), vec3(1.0 / 2.2)); }
+// (V4-H) En HDR (« uHdr », avec le post-traitement), on écrit la lumière telle quelle, non bornée : la courbe
+// filmique est appliquée à la fin (post.ts), après le halo, qui ne prend alors que ce qui dépasse vraiment le blanc.
+uniform float uHdr;
+vec3 ecran(vec3 c) { return uHdr > 0.5 ? max(c, 0.0) : pow(filmique(c), vec3(1.0 / 2.2)); }
 `;
 
 /**
@@ -35,7 +38,7 @@ vec3 ecran(vec3 c) { return pow(filmique(c), vec3(1.0 / 2.2)); }
  * sur le côté et en hauteur, et la piste s'incline dans les virages. « uPlie » vaut 0 pour le lointain.
  * Les normales suivent (au premier ordre), pour que la lumière reste juste dans les virages et les côtes.
  */
-const PLIER = /* glsl */ `
+export const PLIER_GLSL = /* glsl */ `
 // uPliX : a1, k1, a2, k2 (virages) ; uPliY : A1 à A4 (harmoniques du relief) ; uPhase : θ1, θ2, θ du relief, q.
 uniform vec4 uPliX, uPliY, uPhase; uniform float uDevers, uPlie;
 // Une harmonique du relief : son déplacement en hauteur et sa pente, à la distance r.
@@ -90,21 +93,40 @@ export function uniformesMonde() {
     uPliY: { value: [0, 0, 0, 0] },
     uPhase: { value: [0, 0, 0, 0] },
     uDevers: { value: 0 },
+    // (V4-H) Les textures procédurales (textures.ts), la carte d'ombres (ombres.ts), les lumières ponctuelles.
+    // (Les textures sont posées par la scène dès sa création : une texture blanche 1 × 1 en attendant.)
+    tPlaques: { value: null as unknown },
+    tBrut: { value: null as unknown },
+    tNormales: { value: null as unknown },
+    uTextures: { value: 0 },
+    tOmbre: { value: null as unknown },
+    uMatOmbre: { value: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as ArrayLike<number> },
+    uOmbre: { value: 0 },
+    uTexelOmbre: { value: 1 / 1024 },
+    // Huit lumières : position (xyz) et portée (w) ; couleur × intensité (rgb). Nombre allumé : uNbLum.
+    // (De vrais tableaux : OGL n'envoie un tableau d'uniformes que sous cette forme.)
+    uLumPos: { value: new Array<number>(32).fill(0) },
+    uLumCoul: { value: new Array<number>(24).fill(0) },
+    uNbLum: { value: 0 },
+    // L'ombre de contact sous le vaisseau (sans carte d'ombres) : x, z, rayon, force.
+    uContact: { value: [0, 0, 0, 0] },
+    // Rendu en HDR (1) ou directement à l'écran (0).
+    uHdr: { value: 0 },
   };
 }
 export type Monde = ReturnType<typeof uniformesMonde>;
 /** Les uniformes du pli pour un programme (les mêmes objets que le monde : une mise à jour suffit). */
-const pli = (monde: Monde, plie = 1) => ({ uPliX: monde.uPliX, uPliY: monde.uPliY, uPhase: monde.uPhase, uDevers: monde.uDevers, uPlie: { value: plie } });
+const pli = (monde: Monde, plie = 1) => ({ uPliX: monde.uPliX, uPliY: monde.uPliY, uPhase: monde.uPhase, uDevers: monde.uDevers, uPlie: { value: plie }, uHdr: monde.uHdr });
 
 // « vMonde » : la position sur le parcours droit (lignes de la piste, trous) ; « vPlie » : la position à l'image.
 const SURFACE_VERT = /* glsl */ `${ENTETE}
 in vec3 position; in vec3 normal; in vec3 couleur; in vec4 matiere;
 uniform mat4 modelMatrix; uniform mat4 viewMatrix; uniform mat4 projectionMatrix;
-${PLIER}
-out vec3 vMonde; out vec3 vNormale; out vec3 vCouleur; out vec4 vMatiere; out vec3 vLocal; out vec3 vPlie;
+${PLIER_GLSL}
+out vec3 vMonde; out vec3 vNormale; out vec3 vCouleur; out vec4 vMatiere; out vec3 vLocal; out vec3 vPlie; out vec3 vNLocale;
 void main() {
   vec4 m = modelMatrix * vec4(position, 1.0);
-  vMonde = m.xyz; vLocal = position;
+  vMonde = m.xyz; vLocal = position; vNLocale = normal;
   vec3 n = normalize(mat3(modelMatrix) * normal);
   vPlie = plier(m.xyz, n);
   vNormale = n;
@@ -112,32 +134,82 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(vPlie, 1.0);
 }`;
 
-const SURFACE_FRAG = /* glsl */ `${ENTETE}
+const SURFACE_FRAG = /* glsl */ `${ENTETE}/*VARIANTE*/
 ${COMMUN}
-in vec3 vMonde; in vec3 vNormale; in vec3 vCouleur; in vec4 vMatiere; in vec3 vLocal; in vec3 vPlie;
+in vec3 vMonde; in vec3 vNormale; in vec3 vCouleur; in vec4 vMatiere; in vec3 vLocal; in vec3 vPlie; in vec3 vNLocale;
 uniform vec3 cameraPosition;
+uniform mat4 modelMatrix;
 uniform vec3 uSoleilDir, uSoleil, uCiel, uSol, uBrouillard, uAccent, uAccent2, uDanger, uPeinture, uCoeur;
 uniform vec2 uBrume;
 uniform float uTemps, uDistance, uIntensite, uBoost, uExposition;
 uniform vec4 uTrou0, uTrou1, uTrou2, uTrou3, uTrou4, uTrou5;
 uniform float uDecoupe;
+// (V4-H) Les textures, l'ombre du soleil, les lumières ponctuelles, l'ombre de contact.
+uniform sampler2D tPlaques, tBrut, tNormales, tOmbre;
+uniform float uTextures, uEchelleTex, uDetail;
+uniform mat4 uMatOmbre; uniform float uOmbre, uTexelOmbre;
+uniform vec4 uLumPos[8]; uniform vec3 uLumCoul[8]; uniform int uNbLum;
+uniform vec4 uContact;
 bool dansTrou(vec4 t) { return t.y > 0.0 && abs(vMonde.x - t.x) < t.y && vMonde.z < t.z && vMonde.z > t.w; }
 // Propres à l'objet dessiné :
 uniform vec3 uTeinte; uniform float uEmission; uniform float uOpacite; uniform float uImpact; uniform vec3 uImpactCouleur;
+// (V4-H) Les dégâts du vaisseau : 0 intact, 1 au dernier souffle.
+uniform float uDegats;
 out vec4 sortie;
+
+// L'ombre du soleil : la carte, lue en 3 × 3 points (bords adoucis), fondue en bordure de zone.
+float ombreSoleil(float nl) {
+#ifndef AVEC_OMBRES
+  return 1.0;
+#else
+  if (uOmbre < 0.5) return 1.0;
+  vec4 l = uMatOmbre * vec4(vPlie, 1.0);
+  vec3 c = l.xyz / l.w * 0.5 + 0.5;
+  if (c.x <= 0.0 || c.x >= 1.0 || c.y <= 0.0 || c.y >= 1.0 || c.z >= 1.0) return 1.0;
+  float biais = 0.0004 + 0.0016 * (1.0 - nl);
+  float s = 0.0;
+  for (int i = -1; i <= 1; i++)
+    for (int j = -1; j <= 1; j++) s += c.z - biais > texture(tOmbre, c.xy + vec2(i, j) * uTexelOmbre * 1.25).r ? 0.0 : 1.0;
+  s /= 9.0;
+  vec2 e = smoothstep(0.0, 0.07, c.xy) * smoothstep(1.0, 0.93, c.xy);
+  return mix(1.0, s, e.x * e.y);
+#endif
+}
+
+// Le reflet de l'environnement : la voûte et l'horizon du monde, deux grandes sources douces (elles dessinent
+// le métal), et, vers le bas, les lignes lumineuses de la piste qui défilent.
+vec3 environnement(vec3 R, float rugo, float ombre) {
+#ifndef AVEC_TEXTURES
+  // (Économie : le reflet d'avant V4-H, un simple dégradé.)
+  return mix(uSol * 1.5, uCiel * 2.2, smoothstep(-0.25, 0.55, R.y)) + uAccent * 0.08 * (1.0 - abs(R.y));
+#endif
+  vec3 c = mix(uSol * 1.4, uCiel * 2.0, smoothstep(-0.3, 0.5, R.y));
+  c += uCiel * 1.6 * exp(-abs(R.y - 0.04) * mix(26.0, 5.0, rugo)); // l'horizon, plus clair
+  float boite1 = smoothstep(0.62, 0.9, dot(R, normalize(vec3(-0.5, 0.75, -0.42))));
+  float boite2 = smoothstep(0.7, 0.93, dot(R, normalize(vec3(0.6, 0.5, 0.62))));
+  // (Ces deux grandes sources sont le reflet du soleil et du ciel clair : l'ombre les éteint.)
+  c += uSoleil * (boite1 * 0.9 + boite2 * 0.45) * mix(1.0, 0.35, rugo) * ombre;
+  if (R.y < 0.0) {
+    float s = uDistance - vMonde.z;
+    float lignes = smoothstep(0.82, 0.98, abs(fract((vPlie.x + R.x / max(-R.y, 0.05) * 0.3) / 1.3) - 0.5) * 2.0);
+    c += uAccent * lignes * 0.35 * smoothstep(0.0, -0.4, R.y) * (1.0 - rugo) * (0.6 + 0.4 * sin(s * 0.2 - uTemps * 3.0));
+  }
+  return c;
+}
+
 void main() {
   // La piste est percée au-dessus d'un couloir effondré (seulement la couche des plaques).
   if (uDecoupe > 0.5 && vMonde.y > -0.47 && vMonde.y < 0.06 && (dansTrou(uTrou0) || dansTrou(uTrou1) || dansTrou(uTrou2) || dansTrou(uTrou3) || dansTrou(uTrou4) || dansTrou(uTrou5))) discard;
   vec3 N = normalize(vNormale);
-  if (!gl_FrontFacing) N = -N;
+  float face = gl_FrontFacing ? 1.0 : -1.0;
+  N *= face;
   vec3 V = normalize(cameraPosition - vPlie);
   vec3 L = normalize(uSoleilDir);
   float metal = vMatiere.x, rugo = vMatiere.y, emi = vMatiere.z; int canal = int(vMatiere.w + 0.5);
   vec3 base = vCouleur;
+  bool peint = canal == ${CANAL.peinture} || canal == ${CANAL.peinture2};
   if (canal == ${CANAL.peinture}) base = uPeinture;
   else if (canal == ${CANAL.peinture2}) base = uAccent2 * 0.8;
-  // Un grain très léger sur les matières (usure, reprises de peinture) : rien n'est parfaitement uni.
-  if (emi == 0.0) base *= 0.93 + 0.14 * bruit(vLocal * 7.0 + 3.1);
   vec3 lueur = base;
   if (canal == ${CANAL.accent} || canal == ${CANAL.ligne}) lueur = uAccent;
   else if (canal == ${CANAL.accent2}) lueur = uAccent2;
@@ -145,19 +217,126 @@ void main() {
   else if (canal == ${CANAL.coeur}) lueur = uCoeur;
   base *= uTeinte;
 
-  // La lumière : soleil + ciel/sol + reflet d'environnement + reflet spéculaire.
-  float diffus = max(dot(N, L), 0.0);
+  // ---- Les textures (projection triplanaire dans le repère de l'objet) ----
+  float cavite = 1.0;
+  float d = length(vPlie - cameraPosition);
+#ifdef AVEC_TEXTURES
+  if (uTextures > 0.5 && uDetail > 0.0 && emi == 0.0) {
+    vec3 nl = normalize(vNLocale) * face;
+    vec3 w = pow(abs(nl), vec3(6.0));
+    w /= w.x + w.y + w.z;
+    // (V4-H7) Le revêtement de la route : un détail plus large et beaucoup plus discret (pas de carrelage).
+    bool route = canal == ${CANAL.revetement};
+    vec3 pl = vLocal * uEchelleTex * (route ? 0.45 : 1.0);
+    bool brut = metal < 0.3 && rugo > 0.7;
+    vec4 dX, dY, dZ;
+    if (brut) { dX = texture(tBrut, pl.zy); dY = texture(tBrut, pl.xz); dZ = texture(tBrut, pl.xy); }
+    else { dX = texture(tPlaques, pl.zy); dY = texture(tPlaques, pl.xz); dZ = texture(tPlaques, pl.xy); }
+    vec4 dt = dX * w.x + dY * w.y + dZ * w.z;
+    vec4 qX = texture(tNormales, pl.zy), qY = texture(tNormales, pl.xz), qZ = texture(tNormales, pl.xy);
+    vec2 gX = (brut ? qX.ba : qX.rg) * 2.0 - 1.0;
+    vec2 gY = (brut ? qY.ba : qY.rg) * 2.0 - 1.0;
+    vec2 gZ = (brut ? qZ.ba : qZ.rg) * 2.0 - 1.0;
+    // (Le détail s'efface au loin, où il ne ferait que scintiller.)
+    float k = uDetail * (1.0 - smoothstep(40.0, 140.0, d));
+    float kp = peint ? 0.55 : route ? 0.22 : 1.0;
+    vec3 delta = (vec3(0.0, gX.y, gX.x) * w.x + vec3(gY.x, 0.0, gY.y) * w.y + vec3(gZ.x, gZ.y, 0.0) * w.z) * k * kp;
+    N = normalize(N + mat3(modelMatrix) * delta);
+    base *= mix(1.0, dt.r * 1.5, k * (peint ? 0.6 : route ? 0.06 : 1.0));
+    rugo = clamp(rugo + (dt.g - 0.5) * 0.9 * k * (route ? 0.45 : 1.0), 0.04, 1.0);
+    cavite = mix(1.0, dt.b, k * (route ? 0.12 : 1.0));
+  } else
+#endif
+  if (emi == 0.0) {
+    // Sans textures : le grain très léger d'avant (usure, reprises de peinture).
+    base *= 0.93 + 0.14 * bruit(vLocal * 7.0 + 3.1);
+  }
+
+  // ---- Les dégâts (le vaisseau) : des brûlures qui gagnent la coque à chaque bouclier perdu, et, vers la
+  // fin, des fissures incandescentes qui palpitent dans les zones brûlées ----
+  vec3 incandescence = vec3(0.0);
+#ifdef AVEC_DEGATS
+  if (uDegats > 0.01 && emi == 0.0) {
+    float nb = fbm(vLocal * 2.6 + 11.0);
+    float seuil = 1.0 - uDegats * 0.62;
+    // La brûlure : un cœur noirci, une auréole de suie qui s'estompe.
+    float brule = smoothstep(seuil - 0.03, seuil + 0.16, nb);
+    float coeur = smoothstep(seuil + 0.08, seuil + 0.22, nb);
+    base = mix(base, base * 0.35 + vec3(0.02, 0.016, 0.012), brule * 0.75);
+    base = mix(base, vec3(0.012, 0.01, 0.009), coeur * 0.8);
+    rugo = mix(rugo, 0.95, brule);
+    metal = mix(metal, 0.1, brule);
+    // Les fentes : des lignes de crête fines (bruit « ridged »), seulement au cœur des brûlures, qui palpitent.
+    float crete = 1.0 - abs(bruit(vLocal * 6.5 + 3.0) * 2.0 - 1.0);
+    crete = max(crete, 1.0 - abs(bruit(vLocal * 13.0 + 9.0) * 2.0 - 1.0) * 1.15);
+    float fente = smoothstep(0.92, 0.985, crete) * coeur * smoothstep(0.4, 0.75, uDegats);
+    incandescence = vec3(1.0, 0.3, 0.05) * fente * (0.6 + 0.4 * sin(uTemps * 9.0 + nb * 25.0)) * 3.0;
+  }
+#endif
+
+  // ---- La lumière : soleil (et son ombre), ciel/sol, reflets, lumières ponctuelles ----
+  float nl = max(dot(N, L), 0.0);
+  float ombre = ombreSoleil(nl);
+  // L'ombre de contact (sans carte d'ombres) : une tache douce sous le vaisseau.
+  if (uContact.w > 0.0) {
+    float dc = length((vPlie.xz - uContact.xy) / vec2(uContact.z, uContact.z * 1.6));
+    ombre *= 1.0 - uContact.w * (1.0 - smoothstep(0.35, 1.0, dc)) * step(vPlie.y, 0.2);
+  }
   vec3 ambiance = mix(uSol, uCiel, N.y * 0.5 + 0.5);
   vec3 H = normalize(L + V);
-  float brillance = mix(160.0, 8.0, rugo);
+  float brillance = mix(220.0, 8.0, rugo);
   float spec = pow(max(dot(N, H), 0.0), brillance) * (1.0 - rugo * 0.85) * (brillance + 8.0) / 60.0;
-  float fresnel = pow(1.0 - max(dot(N, V), 0.0), 5.0);
+  float nv = max(dot(N, V), 0.0);
+  float fresnel = pow(1.0 - nv, 5.0);
   vec3 R = reflect(-V, N);
-  vec3 env = mix(uSol * 1.5, uCiel * 2.2, smoothstep(-0.25, 0.55, R.y)) + uAccent * 0.08 * (1.0 - abs(R.y));
+  vec3 env = environnement(R, rugo, ombre);
+  // (V4-H7) Sur la chaussée : le reflet des rails lumineux du pied des bords (x = ±4,92, y ≈ 0,07 ; le second,
+  // plus haut, de la seconde couleur), étiré par la rugosité — les longues traînées de lumière sur la route.
+  if (canal == ${CANAL.revetement} && R.y > 0.0) {
+    // (Le ciel s'y reflète peu : la route reste sombre, ce sont les lumières qui s'y étirent.)
+    env *= 0.4;
+    for (int k = 0; k < 4; k++) {
+      float xr = (k == 0 || k == 2) ? 4.92 : -4.92;
+      float yr = k < 2 ? 0.07 : 0.25;
+      if (k >= 2) xr *= 1.06;
+      float dx = xr - vMonde.x;
+      if (dx * R.x <= 0.0) continue;
+      float t = dx / R.x;
+      float largeur = 0.06 + rugo * 0.9;
+      float trace = exp(-pow((t * R.y - yr) / largeur, 2.0)) * exp(-t * 0.04);
+      env += (k < 2 ? uAccent * 3.2 : uAccent2 * 2.0) * trace;
+    }
+  }
+  // Dans l'ombre, le ciel aussi est en partie caché par ce qui la porte : ambiance et reflets baissent.
+  float voile = mix(0.5, 1.0, ombre);
   vec3 f0 = mix(vec3(0.04), base, metal);
-  vec3 couleur = base * (1.0 - metal) * (ambiance + uSoleil * diffus);
-  couleur += env * mix(f0, vec3(1.0), fresnel) * (1.0 - rugo * 0.75);
-  couleur += uSoleil * spec * mix(vec3(0.5), base + 0.3, metal) * diffus;
+  vec3 couleur = base * (1.0 - metal) * (ambiance * cavite * voile + uSoleil * nl * ombre);
+  couleur += env * mix(f0, vec3(1.0), fresnel) * (1.0 - rugo * 0.75) * cavite * voile;
+  couleur += uSoleil * spec * mix(vec3(0.5), base + 0.3, metal) * nl * ombre * mix(1.0, cavite, 0.6);
+  // Le vernis des peintures : un second reflet, net, par-dessus la couleur.
+#ifdef AVEC_TEXTURES
+  if (peint) {
+    float verni = pow(max(dot(N, H), 0.0), 600.0) * 6.0;
+    couleur += uSoleil * verni * nl * ombre * 0.5 + env * 0.06 * (0.25 + fresnel * 3.0) * cavite;
+  }
+#endif
+  // Les lumières ponctuelles (réacteurs, fragments, feux de danger, portails).
+#ifdef AVEC_LUMIERES
+  for (int i = 0; i < 8; i++) {
+    if (i >= uNbLum) break;
+    vec4 lp = uLumPos[i];
+    vec3 dl = lp.xyz - vPlie;
+    float dist = length(dl);
+    if (dist > lp.w) continue;
+    vec3 Ld = dl / dist;
+    float att = 1.0 - dist / lp.w;
+    att *= att;
+    float ndl = max(dot(N, Ld), 0.0);
+    vec3 Hl = normalize(Ld + V);
+    float sl = pow(max(dot(N, Hl), 0.0), brillance) * (1.0 - rugo * 0.8) * (brillance + 8.0) / 60.0;
+    couleur += uLumCoul[i] * att * (base * (1.0 - metal) * ndl + mix(vec3(0.4), base + 0.3, metal) * sl * ndl) * cavite;
+  }
+#endif
   // Un peu de lumière de la piste sur ce qui est proche du sol (la piste éclaire les flancs).
   couleur += uAccent * 0.05 * exp(-abs(vMonde.y) * 0.9) * (1.0 - metal * 0.5) * (0.6 + uIntensite);
 
@@ -172,9 +351,9 @@ void main() {
       force *= 0.75 + (smoothstep(0.86, 1.0, onde) * 2.2 + uBoost * 0.8) * (0.35 + uIntensite);
     } else if (canal == ${CANAL.ligne}) {
       // Les lignes de guidage : des tirets posés sur la piste, qui passent sous le vaisseau ; ils s'allongent en Overdrive.
-      float d = fract(s / 4.5);
+      float dd = fract(s / 4.5);
       float rempli = mix(0.38, 0.86, uBoost);
-      float tiret = smoothstep(0.0, 0.03, d) * (1.0 - smoothstep(rempli, rempli + 0.03, d));
+      float tiret = smoothstep(0.0, 0.03, dd) * (1.0 - smoothstep(rempli, rempli + 0.03, dd));
       force *= 0.16 + tiret * (1.0 + uIntensite * 0.6 + uBoost * 0.5);
     } else if (canal == ${CANAL.clignote}) {
       // Les feux à éclats (navigation, balises) : un éclair bref, chaque feu à son rythme.
@@ -189,24 +368,48 @@ void main() {
     couleur += lueur * force * 3.2;
   }
   couleur += uImpactCouleur * uImpact * (0.4 + fresnel * 2.0);
+  couleur += incandescence;
 
   // La profondeur : le brouillard du monde (l'émission le perce un peu).
-  float d = length(vPlie - cameraPosition);
   float b = smoothstep(uBrume.x, uBrume.y, d);
   couleur = mix(couleur, uBrouillard, b * (1.0 - min(emi, 1.0) * 0.45));
   sortie = vec4(ecran(couleur * uExposition), uOpacite);
 }`;
 
-/** Un programme de surface (solide). « transparent » : verre, bulles. */
-export function surface(gl: Gl, monde: Monde, options: { transparent?: boolean; profondeur?: boolean } = {}) {
+/**
+ * Les variantes du shader de surface. Un rendu logiciel (sans carte graphique) exécute toutes les branches,
+ * même celles qu'un réglage désactive : la qualité « Économie » compile donc un shader sans textures, sans
+ * ombres et sans lumières ponctuelles (aussi léger que celui d'avant V4-H), et les autres qualités le shader complet.
+ */
+export interface VarianteSurface {
+  textures: boolean;
+  ombres: boolean;
+  lumieres: boolean;
+}
+const fragmentSurface = (v: VarianteSurface, degats: boolean) =>
+  SURFACE_FRAG.replace('/*VARIANTE*/', [v.textures && '#define AVEC_TEXTURES', v.ombres && '#define AVEC_OMBRES', v.lumieres && '#define AVEC_LUMIERES', degats && '#define AVEC_DEGATS'].filter(Boolean).join('\n') + '\n');
+const variantes = new WeakMap<Program, { degats: boolean; cle: string }>();
+/** Recompile un programme de surface dans une autre variante (les maillages qui l'utilisent n'ont rien à faire). */
+export function varianteSurface(p: Program, v: VarianteSurface): void {
+  const info = variantes.get(p);
+  const cle = `${+v.textures}${+v.ombres}${+v.lumieres}`;
+  if (!info || info.cle === cle) return;
+  info.cle = cle;
+  p.setShaders({ vertex: SURFACE_VERT, fragment: fragmentSurface(v, info.degats) });
+}
+
+/** Un programme de surface (solide). « transparent » : verre, bulles. « degats » : le vaisseau (brûlures). */
+export function surface(gl: Gl, monde: Monde, options: { transparent?: boolean; profondeur?: boolean; echelle?: number; detail?: number; degats?: boolean } = {}) {
+  const complet: VarianteSurface = { textures: true, ombres: true, lumieres: true };
   const p = new Program(gl, {
     vertex: SURFACE_VERT,
-    fragment: SURFACE_FRAG,
-    uniforms: { uPlie: { value: 1 }, ...monde, uTeinte: { value: [1, 1, 1] }, uEmission: { value: 1 }, uOpacite: { value: 1 }, uImpact: { value: 0 }, uImpactCouleur: { value: [1, 0.2, 0.15] } },
+    fragment: fragmentSurface(complet, !!options.degats),
+    uniforms: { uPlie: { value: 1 }, ...monde, uTeinte: { value: [1, 1, 1] }, uEmission: { value: 1 }, uOpacite: { value: 1 }, uImpact: { value: 0 }, uImpactCouleur: { value: [1, 0.2, 0.15] }, uDegats: { value: 0 }, uEchelleTex: { value: options.echelle ?? 0.5 }, uDetail: { value: options.detail ?? 1 } },
     transparent: !!options.transparent,
     depthWrite: options.profondeur ?? !options.transparent,
     cullFace: false,
   });
+  variantes.set(p, { degats: !!options.degats, cle: '111' });
   return p;
 }
 
@@ -216,7 +419,7 @@ export function surface(gl: Gl, monde: Monde, options: { transparent?: boolean; 
 const HALO_VERT = /* glsl */ `${ENTETE}
 in vec3 position; in vec2 uv; in vec3 couleur;
 uniform mat4 modelMatrix; uniform mat4 viewMatrix; uniform mat4 projectionMatrix;
-${PLIER}
+${PLIER_GLSL}
 out vec2 vUv; out vec3 vCouleur; out float vDist;
 void main() {
   vec4 m = modelMatrix * vec4(position, 1.0);
@@ -236,7 +439,7 @@ void main() {
   a += exp(-r * 18.0) * 0.6;
   float b = 1.0 - smoothstep(uBrume.x, uBrume.y * 1.1, vDist) * 0.85;
   vec3 c = vCouleur * a * b * uForce;
-  sortie = vec4(pow(filmique(c * 1.6), vec3(1.0 / 2.2)), 1.0);
+  sortie = vec4(ecran(c * 1.6), 1.0);
 }`;
 export function halo(gl: Gl, monde: Monde) {
   const p = new Program(gl, {
@@ -291,7 +494,7 @@ void main() {
   float d = length(vPlie - cameraPosition);
   a *= 1.0 - smoothstep(uBrume.x, uBrume.y * 1.15, d) * 0.9;
   vec3 c = uCouleur * a * uForce;
-  sortie = vec4(pow(filmique(c * 1.5), vec3(1.0 / 2.2)), 1.0);
+  sortie = vec4(ecran(c * 1.5), 1.0);
 }`;
 export function energie(gl: Gl, monde: Monde, forme: number) {
   const p = new Program(gl, {
@@ -386,6 +589,7 @@ export function ciel(gl: Gl, monde: Monde) {
     fragment: CIEL_FRAG,
     uniforms: {
       uInverse: { value: new Float32Array(16) },
+      uHdr: monde.uHdr,
       uSoleilDir: monde.uSoleilDir,
       uSoleil: monde.uSoleil,
       uBrouillard: monde.uBrouillard,
@@ -531,7 +735,7 @@ export function anneau(gl: Gl, monde: Monde) {
 const POINTS_VERT = /* glsl */ `${ENTETE}
 in vec3 position; in vec4 couleur; in float taille;
 uniform mat4 modelMatrix; uniform mat4 viewMatrix; uniform mat4 projectionMatrix; uniform float uEchelle;
-${PLIER}
+${PLIER_GLSL}
 out vec4 vCouleur;
 void main() {
   vec3 n = vec3(0.0, 1.0, 0.0);
@@ -546,7 +750,7 @@ in vec4 vCouleur; out vec4 sortie;
 void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
   float a = pow(max(0.0, 1.0 - r), 2.0) * vCouleur.a;
-  sortie = vec4(pow(filmique(vCouleur.rgb * a * 2.0), vec3(1.0 / 2.2)), 1.0);
+  sortie = vec4(ecran(vCouleur.rgb * a * 2.0), 1.0);
 }`;
 export function points(gl: Gl, monde: Monde) {
   const p = new Program(gl, {
@@ -564,7 +768,7 @@ export function points(gl: Gl, monde: Monde) {
 const TRAIT_VERT = /* glsl */ `${ENTETE}
 in vec3 position; in vec4 couleur;
 uniform mat4 modelMatrix; uniform mat4 viewMatrix; uniform mat4 projectionMatrix;
-${PLIER}
+${PLIER_GLSL}
 out vec4 vCouleur;
 void main() {
   vCouleur = couleur;
@@ -574,7 +778,7 @@ void main() {
 const TRAIT_FRAG = /* glsl */ `${ENTETE}
 ${COMMUN}
 in vec4 vCouleur; out vec4 sortie;
-void main() { sortie = vec4(pow(filmique(vCouleur.rgb * vCouleur.a * 1.4), vec3(1.0 / 2.2)), 1.0); }`;
+void main() { sortie = vec4(ecran(vCouleur.rgb * vCouleur.a * 1.4), 1.0); }`;
 export function traits(gl: Gl, monde: Monde) {
   const p = new Program(gl, { vertex: TRAIT_VERT, fragment: TRAIT_FRAG, uniforms: pli(monde), transparent: true, depthWrite: false, cullFace: false });
   p.setBlendFunc(gl.ONE, gl.ONE);

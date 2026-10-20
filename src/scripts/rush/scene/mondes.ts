@@ -11,6 +11,7 @@
 
 import { Assembleur, Halos, mat, type Matiere, type RGB, type V3 } from './geometrie';
 import { M, VOIE } from './modeles';
+import { decor } from './assets';
 
 export const TRONCON = 48;
 const SEG = 6;
@@ -68,6 +69,7 @@ export const rnd = (graine: number) => {
 // LA PISTE : trois voies de plaques, joints, rainures, séparateurs lumineux,
 // bordures, poutres porteuses. Commune à tous les mondes, matières au choix.
 // ==========================================================================
+type Bord = 'ouvert' | 'tunnel' | null;
 interface StylePiste {
   plaque: Matiere;
   plaque2?: Matiere;
@@ -76,8 +78,51 @@ interface StylePiste {
   /** Plaques manquantes ou fendues sur les bords (piste abîmée). */
   abime?: number;
   graine?: number;
+  /** (V4-H7) Le bord de la route modélisée : en demi-tube ouvert (défaut) ou mur de tunnel ; par module de 6 m. */
+  bords?: Bord | ((i: number, sx: number) => Bord);
+  /** (V4-H7) La voûte du tunnel, par module de 6 m. */
+  voute?: (i: number) => boolean;
+  /** (V4-H7) Mâts à chevrons sur les bords ouverts (défaut : oui). */
+  chevrons?: boolean;
 }
+/** (V4-H7) Le bord de la chaussée (x) et le haut du couronnement des bords ouverts, pour poser le décor. */
+export const BORD_ROUTE = 4.8;
+export const BORD_EXTERIEUR = 6.7;
+
+/**
+ * (V4-H7) La route modélisée dans Blender (piste.prm) : chaussée continue, bords relevés en demi-tube aux rails
+ * lumineux, ou murs de tunnel et voûte. Modules de 6 m, découpés tous les 1,5 m (le pli reste lisse).
+ */
+function routeModulaire(a: Assembleur, s: StylePiste) {
+  const r = rnd(s.graine ?? 7);
+  const M6 = 6;
+  for (let i = 0; i < TRONCON / M6; i++) {
+    const z = -i * M6 - M6 / 2;
+    a.pousser().deplacer(0, 0, z).importer(decor.chaussee).retirer();
+    for (const sx of [-1, 1]) {
+      const genre = typeof s.bords === 'function' ? s.bords(i, sx) : s.bords === undefined ? 'ouvert' : s.bords;
+      if (!genre) continue;
+      const m = decor[`bord-${genre}`] ?? decor['bord-ouvert'];
+      if (s.abime && r() < s.abime) {
+        // Un bord arraché : le module, affaissé et basculé vers l'extérieur, parfois manquant.
+        if (r() < 0.35) continue;
+        a.pousser().deplacer(sx * BORD_ROUTE, -0.35 - r() * 0.4, z).tourner(0, (r() - 0.5) * 0.12, sx * -(0.12 + r() * 0.2)).deplacer(-sx * BORD_ROUTE, 0, 0).echelle(sx, 1, 1).importer(m).retirer();
+        continue;
+      }
+      a.pousser().deplacer(0, 0, z).echelle(sx, 1, 1).importer(m);
+      // Le mât à chevrons, posé sur le couronnement, tous les 12 m.
+      if (genre === 'ouvert' && s.chevrons !== false && decor.chevron && i % 2 === 0) a.deplacer(2.05, 1.06, 0).importer(decor.chevron);
+      a.retirer();
+    }
+    if (s.voute?.(i) && decor.voute) a.pousser().deplacer(0, 0, z).importer(decor.voute).retirer();
+  }
+}
+
 export function piste(a: Assembleur, s: StylePiste) {
+  if (decor.chaussee && decor['bord-ouvert']) {
+    routeModulaire(a, s);
+    return;
+  }
   const r = rnd(s.graine ?? 7);
   for (let i = 0; i < TRONCON / SEG; i++) {
     const z = -i * SEG - SEG / 2;
@@ -104,13 +149,31 @@ export function piste(a: Assembleur, s: StylePiste) {
     a.boite(sx * VOIE * 0.5, -0.015, -TRONCON / 2, 0.15, 0.04, TRONCON, M.joint);
     a.boite(sx * VOIE * 0.5, 0.004, -TRONCON / 2, 0.05, 0.012, TRONCON, M.ligne);
   }
-  // Les bordures : un muret biseauté, une ligne de guidage lumineuse, des panneaux sur la face externe.
+  // (V4-H7) Les marquages au sol : un peigne de hachures jaunes le long des bords de la chaussée.
+  for (const sx of [-1, 1])
+    for (let zz = 0.3; zz < TRONCON; zz += 0.5) {
+      const xa = sx > 0 ? 3.44 : -3.76,
+        xb = xa + 0.32;
+      a.quad([xa, 0.006, -zz], [xb, 0.006, -zz - 0.14 * sx], [xb, 0.006, -zz - 0.14 * sx - 0.13], [xa, 0.006, -zz - 0.13], M.jaune);
+    }
+  // Les bordures. (V4-H7) Le module modélisé dans Blender (bordure basse, muret incliné à gorge lumineuse,
+  // liseré blanc, chemin de câbles, poutre), avec un mât à chevrons tous les 12 m ; sinon les murets d'origine.
+  const mod = decor.bordure;
   for (const sx of [-1, 1]) {
     for (let i = 0; i < TRONCON / SEG; i++) {
       const z = -i * SEG - SEG / 2;
       if (s.abime && r() < s.abime) {
-        a.pousser().deplacer(sx * 4.25, 0.05, z).tourner(0, 0, sx * (0.15 + r() * 0.3));
-        a.boite(0, 0, 0, 0.5, 0.4, SEG * (0.4 + r() * 0.4), s.bord, 0.06);
+        const pente = sx * (0.15 + r() * 0.3),
+          long = 0.4 + r() * 0.4;
+        a.pousser().deplacer(sx * 4.25, 0.05, z).tourner(0, 0, pente);
+        if (mod) a.deplacer(-sx * 4.25, 0, 0).echelle(sx, 1, long).importer(mod);
+        else a.boite(0, 0, 0, 0.5, 0.4, SEG * long, s.bord, 0.06);
+        a.retirer();
+        continue;
+      }
+      if (mod) {
+        a.pousser().deplacer(0, 0, z).echelle(sx, 1, 1).importer(mod);
+        if (decor.chevron && i % 2 === 0) a.importer(decor.chevron);
         a.retirer();
         continue;
       }
@@ -134,6 +197,18 @@ export function piste(a: Assembleur, s: StylePiste) {
     }
     for (let i = 0; i < TRONCON / SEG; i++) a.boite(0, -0.75, -i * SEG - SEG / 2, 7.2, 0.28, 0.32, M.metalSombre, 0.04);
   }
+}
+
+/**
+ * (V4-H7) Pose un module importé (modèle Blender) en (x, y, z), éventuellement en miroir (sx = −1), avec ses
+ * halos (points « halos » du modèle : [x, y, z, rayon, r, v, b, intensité]).
+ */
+export function poserModule(a: Assembleur, h: Halos, nom: string, x: number, y: number, z: number, sx = 1): boolean {
+  const m = decor[nom];
+  if (!m) return false;
+  a.pousser().deplacer(x, y, z).echelle(sx, 1, 1).importer(m).retirer();
+  for (const [hx, hy, hz, r, cr, cv, cb, i] of m.points.halos ?? []) h.ajouter(x + hx * sx, y + hy, z + hz, r, [cr, cv, cb], i ?? 1);
+  return true;
 }
 
 // ---- Des pièces d'architecture réutilisées ----
@@ -185,7 +260,13 @@ export function tour(a: Assembleur, h: Halos, x: number, z: number, haut: number
 // au loin, une planète bleue, sa lune et l'anneau d'une station orbitale.
 // ==========================================================================
 function portique(a: Assembleur, h: Halos, z: number, anneau: boolean, accent: RGB) {
-  for (const s of [-1, 1]) {
+  // (V4-H7) Le portique en treillis modélisé dans Blender, s'il est chargé.
+  if (decor.portique) {
+    a.pousser().deplacer(0, 0, z).importer(decor.portique).retirer();
+    for (let i = -3; i <= 3; i++) h.ajouter(i * 1.8, 9.2, z + 0.1, 0.8, [0.85, 0.92, 1], 0.4);
+    h.ajouter(0, 10.3, z + 0.9, 2.6, accent, 0.35);
+  }
+  for (const s of decor.portique ? [] : [-1, 1]) {
     pilier(a, s * 6.4, z, -3, 9.6, 1.05, M.metalSombre);
     // Les jambes de force vers la bordure, et le pied posé sur la poutre.
     a.poutre([s * 5.9, 1.6, z], [s * 4.5, -0.6, z], 0.3, M.metalMoyen);
@@ -193,6 +274,10 @@ function portique(a: Assembleur, h: Halos, z: number, anneau: boolean, accent: R
     a.boite(s * 6.4, 4.5, z + 0.56, 0.06, 5.4, 0.02, M.accent);
   }
   // La traverse : caisson, lumières dessous, panneau signalétique.
+  if (!decor.portique) portiqueTraverse(a, h, z);
+  if (anneau) anneauPropulsion(a, h, z, accent);
+}
+function portiqueTraverse(a: Assembleur, h: Halos, z: number) {
   a.boite(0, 9.1, z, 14.4, 1.0, 1.3, M.metalMoyen, 0.25);
   a.boite(0, 9.75, z, 13, 0.3, 0.9, M.metalSombre, 0.1);
   for (let i = -2; i <= 2; i++) {
@@ -201,7 +286,9 @@ function portique(a: Assembleur, h: Halos, z: number, anneau: boolean, accent: R
   }
   a.boite(0, 9.1, z + 0.66, 3.6, 0.6, 0.02, M.verre);
   a.boite(0, 9.1, z + 0.68, 2.8, 0.06, 0.02, M.accent);
-  if (anneau) {
+}
+function anneauPropulsion(a: Assembleur, h: Halos, z: number, accent: RGB) {
+  {
     // L'anneau de propulsion : la piste passe au travers.
     a.pousser().deplacer(0, 2.6, z - 3);
     a.tore(6.1, 0.3, 64, 8, M.metalSombre);
@@ -218,7 +305,7 @@ function portique(a: Assembleur, h: Halos, z: number, anneau: boolean, accent: R
 function tronconLancement(a: Assembleur, h: Halos, v: number) {
   const r = rnd(100 + v);
   const accent: RGB = [0.5, 0.88, 1];
-  piste(a, { plaque: M.plaque, plaque2: M.plaqueClaire, bord: M.metalSombre, graine: v });
+  piste(a, { plaque: mat('#3f4754', 0.72, 0.42), plaque2: mat('#4b5464', 0.7, 0.4), bord: M.metalSombre, graine: v });
   // Les pylônes qui portent le rail, jusqu'aux quais tout en bas.
   for (const z of [-4, -28]) {
     for (const s of [-1, 1]) a.boite(s * 2.7, -15, z, 0.9, 27.5, 0.9, M.metalSombre, 0.16);
@@ -238,22 +325,32 @@ function tronconLancement(a: Assembleur, h: Halos, v: number) {
       h.ajouter(x, -26, z, 1.5, [1, 0.7, 0.35], 0.4);
     }
   }
-  tuyaux(a, -5.05, -0.35);
+  // (V4-H7) La route modélisée est plus large : conduites, passerelle et lampadaires passent au-delà de ses bords.
+  const ex = decor.chaussee ? BORD_EXTERIEUR + 0.6 : 4.4;
+  tuyaux(a, -(ex + 0.65), -0.35);
   // La passerelle de service, à droite, et son garde-corps.
-  a.boite(5.35, -0.42, -TRONCON / 2, 1.2, 0.08, TRONCON, M.metalMoyen);
-  for (let z = 0; z < TRONCON; z += 2) a.boite(5.35, -0.38, -z - 1, 1.1, 0.02, 0.06, M.joint);
-  a.boite(5.92, 0.55, -TRONCON / 2, 0.05, 0.05, TRONCON, M.acier);
-  for (let z = 0; z < TRONCON; z += 3) a.boite(5.92, 0.08, -z, 0.05, 0.95, 0.05, M.acier);
-  // Les lampadaires.
-  for (let z = 6; z < TRONCON; z += 12) lampadaire(a, h, (z / 12) % 2 < 1 ? 4.62 : -4.62, -z, [0.85, 0.92, 1]);
+  a.boite(ex + 0.95, -0.42, -TRONCON / 2, 1.2, 0.08, TRONCON, M.metalMoyen);
+  for (let z = 0; z < TRONCON; z += 2) a.boite(ex + 0.95, -0.38, -z - 1, 1.1, 0.02, 0.06, M.joint);
+  a.boite(ex + 1.52, 0.55, -TRONCON / 2, 0.05, 0.05, TRONCON, M.acier);
+  for (let z = 0; z < TRONCON; z += 3) a.boite(ex + 1.52, 0.08, -z, 0.05, 0.95, 0.05, M.acier);
+  // Les lampadaires (sur le couronnement des bords, quand la route est modélisée).
+  for (let z = 6; z < TRONCON; z += 12) {
+    const sx = (z / 12) % 2 < 1 ? 1 : -1;
+    if (decor.chaussee) {
+      a.pousser().deplacer(0, 1.72, 0);
+      lampadaire(a, h, sx * (BORD_EXTERIEUR - 0.3), -z, [0.85, 0.92, 1]);
+      a.retirer();
+    } else lampadaire(a, h, sx * 4.62, -z, [0.85, 0.92, 1]);
+  }
   portique(a, h, -24, v % 2 === 0, accent);
   // Les côtés : tours, réservoirs, aire de lancement, selon la variante.
   const cote = v % 2 ? 1 : -1;
   tour(a, h, cote * (15 + r() * 4), -10 - r() * 8, 16 + r() * 10, 3.4);
-  a.boite(cote * 9.9, 4.2, -14, 8.6, 0.6, 1.4, M.metalMoyen, 0.15); // la passerelle tour ↔ piste
-  a.boite(cote * 9.9, 4.52, -14, 8.6, 0.04, 0.9, M.accent2);
-  a.boite(cote * 5.5, 1.6, -14, 1.3, 6.4, 1.8, M.metalSombre, 0.12); // la cage d'ascenseur
-  for (let y = -1; y < 4; y += 1.1) a.boite(cote * 4.84, y, -14, 0.02, 0.5, 1.2, M.fenetre);
+  const dx = decor.chaussee ? 2.6 : 0;
+  a.boite(cote * (9.9 + dx), 4.2, -14, 8.6 - dx * 0.5, 0.6, 1.4, M.metalMoyen, 0.15); // la passerelle tour ↔ piste
+  a.boite(cote * (9.9 + dx), 4.52, -14, 8.6 - dx * 0.5, 0.04, 0.9, M.accent2);
+  a.boite(cote * (5.5 + dx), 1.6, -14, 1.3, 6.4, 1.8, M.metalSombre, 0.12); // la cage d'ascenseur
+  for (let y = -1; y < 4; y += 1.1) a.boite(cote * (4.84 + dx), y, -14, 0.02, 0.5, 1.2, M.fenetre);
   // Les réservoirs, de l'autre côté.
   for (let k = 0; k < 2; k++) {
     const x = -cote * (13 + k * 4.2);

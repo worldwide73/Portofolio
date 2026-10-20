@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compile le cœur de gameplay Unity (Scripts/Coeur, sans UnityEngine) en .NET pur et rejoue les parties de
+       référence enregistrées par le moteur TypeScript du jeu web. Aucune dépendance externe.
+       Utilisation : dotnet run -c Release (depuis ce dossier) ; code de sortie 0 si tout concorde. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- La version de C# de Unity 6 : on n'utilise rien de plus récent dans le cœur. -->
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>PortalRush.Coeur.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../unity/PortalRush/Assets/PortalRush/Scripts/Coeur/**/*.cs" LinkBase="Coeur" />
+    <Compile Include="../../../unity/PortalRush/Assets/PortalRush/Tests/Editor/Verification/*.cs" LinkBase="Verification" />
+  </ItemGroup>
+</Project>

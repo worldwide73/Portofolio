@@ -21,25 +21,36 @@
 // coupées. À la fermeture, tout s'arrête : boucle, moteur, touches.
 
 import type { Contenu } from '../../contenu/types';
-import { allerA } from '../defilement';
+import { revenirAccueil } from '../voyage';
 import { mouvementReduit } from '../outils';
 import { regler, reglages as reglagesSite } from '../reglages';
-import { reglerVolumeRush, sonRush } from '../sons';
-import { NIVEAUX, PIECES, graineDuJour, scoreEtoile, type Condition, type Difficulte, type Mode, type Objectif, type Theme } from './donnees';
+import { arreterMoteurRush, couperEffets, moteurRush, moteurRushActif, reglerVolumeRush, sonRush, sonVoyageTemporel } from '../sons';
+import { dreamRadio } from '../audio/dream';
+import { creerRushRadio } from '../audio/rush-radio';
+import { tamponPret } from '../audio/moteur';
+import type { Adaptation } from '../audio/radio';
+import { NIVEAUX, PIECES, VEHICULES, graineDuJour, scoreEtoile, type Condition, type Difficulte, type Mode, type Objectif, type Theme } from './donnees';
 import { ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from './equilibrage';
 import { Partie, type ObjectifAtteint } from './moteur';
 import { creerRendu, dessinerVaisseau } from './rendu';
 import type { RenduJeu } from './scene/scene';
-import { avancement, cauchemarOuvert, charger, enregistrer, etoilesDe, prochainePiece, ranger, totalEtoiles, type Bilan, type Sauvegarde } from './sauvegarde';
+import { avancement, cauchemarOuvert, charger, difficulteJouable, difficulteOuverte, enregistrer, etoilesDe, noterTutoriel, paradoxeOuvert, prochainePiece, ranger, reprise as repriseDe, totalEtoiles, tutorielAFaire, type Bilan, type Sauvegarde } from './sauvegarde';
+import { SON_EVENEMENT, adaptationCourse, adaptationFixe, cleAdaptation as cleDe, finVictorieuse, vitesseRelative } from './sons-course';
+import { voyageTemporel } from './tunnel';
+import { Tutoriel } from './tutoriel';
+import { approcheRushUnity, rushUnityDemandee } from '../rush-unity/drapeau';
 
 type Ecran = 'accueil' | 'campagne' | 'infini' | 'defi' | 'records' | 'garage' | 'pause' | 'fin' | 'victoire' | '';
 type Textes = Contenu['rush'];
-type Ouverture = Ecran | 'reglages' | 'commandes';
+type Ouverture = Ecran | 'reglages' | 'commandes' | 'tutoriel';
 type Confirmation = '' | 'recommencer' | 'menu' | 'quitter';
 
-let api: { ouvrir: (ecran?: Ouverture, origine?: HTMLElement | null) => void; pause: () => boolean } | null = null;
-/** Ouvre le jeu (sur son menu, ou un autre écran ; « commandes » : les réglages, page des commandes). */
-export const ouvrirRush = (ecran: Ouverture = 'accueil') => api?.ouvrir(ecran);
+let api: { ouvrir: (ecran?: Ouverture, origine?: HTMLElement | null, point?: { x: number; y: number } | null) => void; pause: () => boolean } | null = null;
+/**
+ * Ouvre le jeu (sur son menu, ou un autre écran ; « commandes » : les réglages, page des commandes).
+ * « origine » : l'élément qui a lancé le jeu (le bouton Portal Rush du Hub) ; il se fissure et se brise (V4).
+ */
+export const ouvrirRush = (ecran: Ouverture = 'accueil', origine: HTMLElement | null = null, point: { x: number; y: number } | null = null) => api?.ouvrir(ecran, origine, point);
 /** Met la partie en pause si elle est en cours. Renvoie vrai si c'était le cas. */
 export const pauseRush = () => api?.pause() ?? false;
 
@@ -74,6 +85,16 @@ export function initRush(): void {
   const rendu = new Proxy({} as RenduJeu, { get: (_, cle: keyof RenduJeu) => (scene ?? attente)[cle] });
 
   let s: Sauvegarde = charger();
+  // RUSH RADIO : ses préférences (piste, volume, sourdine) vivent dans la sauvegarde du jeu.
+  const rushRadio = creerRushRadio({
+    lire: () => ({ piste: s.reglages.piste, volume: s.reglages.volumeMusique, muet: s.reglages.muet }),
+    ecrire: (p) => {
+      s.reglages.piste = p.piste;
+      s.reglages.volumeMusique = p.volume;
+      s.reglages.muet = p.muet;
+      enregistrer(s);
+    },
+  });
   let partie: Partie | null = null;
   let enPause = false;
   let compte = 0; // le compte à rebours avant le départ, ou avant la reprise (s)
@@ -124,6 +145,61 @@ export function initRush(): void {
     if (!img) return;
     if (img.getAttribute('src') !== url) img.src = url;
     img.hidden = false;
+  };
+
+  // ==========================================================================
+  // RUSH RADIO : le lecteur compact du menu principal, et la musique qui suit la course
+  // ==========================================================================
+  const radioBloc = $('.rush-radio');
+  const radioListe = $('[data-rr-liste]');
+  const radioVolume = $<HTMLInputElement>('[data-rr="volume"]');
+  const majRadio = () => {
+    const e = rushRadio.etat;
+    const p = rushRadio.piste;
+    radioBloc.dataset.lecture = String(e.lecture);
+    const lecture = $('[data-rr="lecture"]');
+    lecture.setAttribute('aria-pressed', String(e.lecture));
+    lecture.setAttribute('aria-label', e.lecture ? textes.radio.pause : textes.radio.lire);
+    lecture.title = lecture.getAttribute('aria-label') ?? '';
+    $('[data-rr-champ="titre"]').textContent = p.titre;
+    $('[data-rr-champ="detail"]').textContent = p.fabriquer ? textes.radio.adaptative : `${p.artiste} · ${p.licence}`;
+    if (document.activeElement !== radioVolume) radioVolume.value = String(Math.round(e.volume * 100));
+    radioVolume.style.setProperty('--v', `${e.muet ? 0 : Math.round(e.volume * 100)}%`);
+    $$('[data-rr-piste]').forEach((b, i) => b.setAttribute('aria-current', String(i === e.index)));
+  };
+  rushRadio.surChangement(majRadio);
+  const listeRadioOuverte = () => !radioListe.hidden;
+  const basculerListeRadio = (ouvrir = radioListe.hidden) => {
+    radioListe.hidden = !ouvrir;
+    $('[data-rr="liste"]').setAttribute('aria-expanded', String(ouvrir));
+    if (ouvrir) $$<HTMLButtonElement>('[data-rr-piste]')[rushRadio.etat.index]?.focus({ preventScroll: true });
+  };
+  /** La lecture choisie dans le lecteur devient la préférence d'entrée (jouer ou non en ouvrant le jeu). */
+  const retenirLecture = () => {
+    s.reglages.musique = rushRadio.enLecture;
+    enregistrer(s);
+  };
+  let cleAdaptation = '';
+  /** Le vaisseau montré au garage (un vaisseau verrouillé peut être regardé, pas choisi). */
+  let vehiculeVu: string | null = null;
+  let dernierSuivi = 0;
+  /** Ce que la course dit à la musique et au moteur, quatre fois par seconde. */
+  const suivreSon = () => {
+    const p = partie;
+    const enCourse = !!p && ecran === '' && !enPause && !p.termine && fenetre.open && transition !== 'sortie';
+    const vitesse = p ? vitesseRelative(p) : 0;
+    let a: Adaptation;
+    if (ecran === 'victoire' || (finCine && fenetre.classList.contains('est-cinematique-victoire'))) a = adaptationFixe('victoire');
+    else if (ecran === 'fin' || (finCine && p?.termine)) a = adaptationFixe('defaite');
+    else if (ecran === 'pause' || (p && enPause)) a = adaptationFixe('pause');
+    else if (p && ecran === '') a = adaptationCourse({ vitesse, avancement: Number.isFinite(p.longueur) ? p.avancement : 0, boucliers: p.boucliers, boss: !!p.boss, overdrive: p.overdrive > 0 });
+    else a = adaptationFixe('menu');
+    const cle = cleDe(a);
+    if (cle !== cleAdaptation) {
+      cleAdaptation = cle;
+      rushRadio.adapter(a);
+    }
+    moteurRush({ actif: enCourse && compte <= 0, vitesse, overdrive: !!p && p.overdrive > 0 });
   };
 
   // ==========================================================================
@@ -181,13 +257,8 @@ export function initRush(): void {
     if (s.defi.meilleur > m.score) m = { score: s.defi.meilleur, origine: textes.defi.titre };
     return m;
   };
-  /** Continuer : le prochain secteur de la campagne ; sans partie jouée, « Commencer » le secteur 01. */
-  const reprise = () => {
-    const premiere = s.totaux.parties === 0 && !Object.keys(s.reussis).length;
-    const niveau = premiere ? 1 : Math.min(s.niveauMax, NIVEAUX.length);
-    const difficulte = s.difficulte === 'cauchemar' && !cauchemarOuvert(s) ? 'expert' : s.difficulte;
-    return { premiere, niveau, difficulte };
-  };
+  /** Continuer : le prochain secteur de la campagne ; sans partie jouée, « Commencer » le secteur 01 (sauvegarde.ts). */
+  const reprise = () => repriseDe(s);
 
   // ==========================================================================
   // LA BARRE DU HAUT : la touche Échap dit ce qu'elle fera ; le module, où l'on est
@@ -294,6 +365,7 @@ export function initRush(): void {
 
   const montrer = (e: Ecran, focus = true) => {
     if (ecran === 'pause' && e !== 'pause') confirmer = '';
+    if (e !== 'garage') vehiculeVu = null;
     ecran = e;
     fenetre.dataset.ecran = e;
     fenetre.dataset.theme = theme();
@@ -352,18 +424,18 @@ export function initRush(): void {
   };
 
   const majDifficultes = () => {
-    const ouvert = cauchemarOuvert(s);
     $$<HTMLInputElement>('input[name="rush-difficulte"], input[name="rush-difficulte-infini"]').forEach((r) => {
-      const verrou = r.value === 'cauchemar' && !ouvert;
+      const verrou = !difficulteOuverte(s, r.value as Difficulte);
       r.disabled = verrou;
       r.closest('.difficulte')?.classList.toggle('est-verrouille', verrou);
       r.checked = r.value === choix.difficulte;
     });
-    $$('[data-verrou-cauchemar]').forEach((el) => (el.hidden = ouvert));
+    $$('[data-verrou-cauchemar]').forEach((el) => (el.hidden = cauchemarOuvert(s)));
+    $$('[data-verrou-paradoxe]').forEach((el) => (el.hidden = paradoxeOuvert(s)));
   };
 
   const majCampagne = () => {
-    if (choix.difficulte === 'cauchemar' && !cauchemarOuvert(s)) choix.difficulte = 'expert';
+    choix.difficulte = difficulteJouable(s, choix.difficulte);
     majDifficultes();
     $$<HTMLButtonElement>('[data-secteur]').forEach((b) => {
       const n = Number(b.dataset.secteur);
@@ -406,6 +478,7 @@ export function initRush(): void {
     if (n.id < NIVEAUX.length && s.niveauMax <= n.id) gains.push(remplir(textes.etoiles.debloque, { n: deux(n.id + 1) }));
     for (const p of PIECES) if (p.condition.type === 'niveau' && p.condition.niveau === n.id && !s.debloques.includes(p.id)) gains.push(remplir(textes.etoiles.piece, { p: `${textes.garage.emplacements[p.emplacement]} · ${textes.garage.pieces[p.id]}` }));
     if (choix.difficulte === 'expert' && !cauchemarOuvert(s)) gains.push(textes.etoiles.cauchemar);
+    if (choix.difficulte === 'cauchemar' && !paradoxeOuvert(s)) gains.push(textes.etoiles.paradoxe);
     $('[data-prep="recompenses"]').replaceChildren(
       ...(gains.length ? gains : [textes.etoiles.aucune]).map((g) => {
         const li = document.createElement('li');
@@ -423,7 +496,7 @@ export function initRush(): void {
   };
 
   const majInfini = () => {
-    if (choix.difficulte === 'cauchemar' && !cauchemarOuvert(s)) choix.difficulte = 'expert';
+    choix.difficulte = difficulteJouable(s, choix.difficulte);
     majDifficultes();
     $$('[data-infini-record]').forEach((el) => {
       const r = s.infini[el.dataset.infiniRecord!];
@@ -496,6 +569,21 @@ export function initRush(): void {
   };
 
   const majGarage = () => {
+    // Les vaisseaux : choisi, gagné, ou verrouillé avec sa condition et sa progression.
+    $$<HTMLButtonElement>('[data-vehicule]').forEach((b) => {
+      const v = VEHICULES.find((x) => x.id === b.dataset.vehicule)!;
+      const gagne = s.vehicules.includes(v.id);
+      const choisi = s.vehicule === v.id;
+      b.setAttribute('aria-pressed', String(choisi));
+      b.classList.toggle('est-verrouille', !gagne);
+      b.classList.toggle('est-vu', vehiculeVu === v.id && !choisi);
+      const a = avancement(s, v.condition);
+      b.querySelector('[data-vehicule-etat]')!.textContent = choisi
+        ? textes.garage.vaisseaux.choisi
+        : gagne
+          ? ''
+          : `${conditionTexte(v.condition)}${a.cible > 1 ? ` · ${remplir(textes.garage.progres, { n: nombre(a.mesure), v: nombre(a.cible) })}` : ''}`;
+    });
     $$<HTMLButtonElement>('[data-piece]').forEach((b) => {
       const piece = PIECES.find((p) => p.id === b.dataset.piece)!;
       const gagnee = s.debloques.includes(piece.id);
@@ -518,14 +606,16 @@ export function initRush(): void {
     v('volume').value = String(Math.round(s.reglages.volume * 100));
     $('[data-sortie="volume"]').textContent = `${Math.round(s.reglages.volume * 100)} %`;
     v('sons').checked = reglagesSite.sons;
-    v('musique').checked = reglagesSite.musique;
-    v('volumeMusique').value = String(Math.round(reglagesSite.volumeMusique * 100));
-    $('[data-sortie="volumeMusique"]').textContent = `${Math.round(reglagesSite.volumeMusique * 100)} %`;
+    v('musique').checked = s.reglages.musique;
+    v('volumeMusique').value = String(Math.round(s.reglages.volumeMusique * 100));
+    $('[data-sortie="volumeMusique"]').textContent = `${Math.round(s.reglages.volumeMusique * 100)} %`;
     $$<HTMLInputElement>('[data-reglage="animations"]').forEach((r) => (r.checked = Number(r.value) === reglagesSite.animations));
     v('effetsReduits').checked = s.reglages.effetsReduits;
     v('secousses').checked = s.reglages.secousses;
     v('aideCommandes').checked = s.reglages.aideCommandes;
     $$<HTMLInputElement>('[data-reglage="tactile"]').forEach((r) => (r.checked = r.value === s.reglages.tactile));
+    $$<HTMLInputElement>('[data-reglage="sequenceFin"]').forEach((r) => (r.checked = r.value === s.reglages.sequenceFin));
+    $$<HTMLInputElement>('[data-reglage="qualite"]').forEach((r) => (r.checked = r.value === s.reglages.qualite));
     $$<HTMLInputElement>('.curseur-jeu input').forEach(peindreCurseur);
   };
   let retourFocus: HTMLElement | null = null;
@@ -581,7 +671,7 @@ export function initRush(): void {
       enregistrer(s);
     }
     fermerPanneau();
-    partie = new Partie(mode, choix.difficulte, niveau);
+    partie = new Partie(mode, choix.difficulte, niveau, undefined, s.vehicule);
     enPause = false;
     confirmer = '';
     reste = 0;
@@ -602,7 +692,7 @@ export function initRush(): void {
         return i;
       }),
     );
-    $('[data-hud="boucliers"]').replaceChildren(...Array.from({ length: partie.profil.boucliers }, () => document.createElement('i')));
+    $('[data-hud="boucliers"]').replaceChildren(...Array.from({ length: partie.bouclierMax }, () => document.createElement('i')));
     $('[data-hud="record"]').textContent = recordCourant() ? nombre(recordCourant()) : '—';
     montrer('');
     majHud();
@@ -625,10 +715,127 @@ export function initRush(): void {
     montrer('');
   };
   const menu = () => {
+    // (Quitter l'entraînement en plein milieu : il reprendra à la même étape la prochaine fois.)
+    if (partie?.scriptee) quitterTutoriel();
     partie = null;
     enPause = false;
     fenetre.classList.remove('en-overdrive', 'od-pret', 'bat-record');
     montrer('accueil');
+  };
+
+  // ==========================================================================
+  // LE TUTORIEL IMMERSIF (V4) : voir tutoriel.ts
+  // ==========================================================================
+  const panneauTuto = $('[data-tuto]');
+  const passerTuto = $<HTMLButtonElement>('[data-rush="passer-tuto"]');
+  const finTuto = $('[data-tuto="fin"]');
+  let minuterieTuto = 0;
+  /** Range l'interface du tutoriel (sans toucher à la partie). */
+  const rangerTutoriel = () => {
+    window.clearTimeout(minuterieTuto);
+    minuterieTuto = 0;
+    fenetre.classList.remove('en-tutoriel', 'tuto-fin');
+    panneauTuto.hidden = true;
+    passerTuto.hidden = true;
+    finTuto.hidden = true;
+  };
+  const tuto = new Tutoriel({
+    partie: (p) => {
+      if (!p) {
+        partie = null;
+        rangerTutoriel();
+        return;
+      }
+      window.clearTimeout(finCine);
+      finCine = 0;
+      fermerPanneau();
+      partie = p;
+      enPause = false;
+      confirmer = '';
+      reste = 0;
+      // Pas de compte à rebours : on arrive du voyage directement dans la course.
+      compte = 0;
+      recordAnnonce = true;
+      fenetre.classList.remove('est-cinematique', 'est-cinematique-victoire', 'en-overdrive', 'od-pret', 'bat-record', 'tuto-fin');
+      fenetre.classList.add('en-tutoriel');
+      fenetre.classList.toggle('sans-aide', false);
+      $('.rush__conseil').hidden = true;
+      $('[data-hud="secteur"]').textContent = textes.tutoriel.titre;
+      $('[data-hud="boss"]').hidden = true;
+      $('[data-hud="reperes"]').replaceChildren();
+      $('[data-hud="boucliers"]').replaceChildren(...Array.from({ length: p.bouclierMax }, () => document.createElement('i')));
+      $('[data-hud="record"]').textContent = '—';
+      panneauTuto.hidden = false;
+      passerTuto.hidden = false;
+      finTuto.hidden = true;
+      montrer('');
+      majHud();
+    },
+    vehicule: () => s.vehicule,
+    textes: () => textes.tutoriel,
+    tactile,
+    afficher: (e) => {
+      panneauTuto.dataset.phase = String(e.phase);
+      $('[data-tuto="etape"]').textContent = remplir(textes.tutoriel.etape, { n: e.phase + 1 });
+      $('[data-tuto="titre"]').textContent = e.titre;
+      $('[data-tuto="consigne"]').textContent = e.consigne;
+      $$('.tuto__touche, .tuto__tactile i').forEach((k) => k.classList.toggle('est-attendue', e.touches.includes(k.dataset.touche as 'gauche' | 'droite')));
+      panneauTuto.classList.toggle('sans-touches', !e.touches.length);
+      $$('.tuto__progres li').forEach((li, k) => {
+        li.classList.toggle('est-fait', k < e.phase || (k === e.phase && e.genre === 'ok' && e.consigne === textes.tutoriel.bravo));
+        li.classList.toggle('est-actif', k === e.phase);
+      });
+      const ok = $('[data-tuto="ok"]');
+      ok.textContent = e.message ?? '';
+      ok.dataset.genre = e.genre ?? '';
+      ok.classList.remove('est-vu');
+      if (e.message) {
+        void ok.offsetWidth;
+        ok.classList.add('est-vu');
+      }
+    },
+    finale: (lignes) => {
+      // La courte finale : un éclair, le texte de fin, puis le menu principal s'ouvre de lui-même.
+      $('.tuto__fin-titre').textContent = lignes[0];
+      $('.tuto__fin-sous').textContent = lignes[1];
+      panneauTuto.hidden = true;
+      passerTuto.hidden = true;
+      finTuto.hidden = false;
+      fenetre.classList.add('tuto-fin');
+      if (!effetsReduits()) rendu.flasher('236, 244, 255', 0.5);
+      minuterieTuto = window.setTimeout(() => {
+        arreterMoteurRush();
+        partie = null;
+        rangerTutoriel();
+        montrer('accueil');
+      }, animationsCoupees() ? 1800 : 3200);
+    },
+    son: (quoi) => sonRush(quoi),
+    noter: (etat, phase) => noterTutoriel(s, etat, phase),
+    menu: () => {
+      arreterMoteurRush();
+      couperEffets();
+      partie = null;
+      enPause = false;
+      rangerTutoriel();
+      montrer('accueil');
+    },
+  });
+  /** Lance l'entraînement (à une étape : celle où l'on s'était arrêté, ou le début). */
+  const lancerTutoriel = (phase = 0) => {
+    rangerTutoriel();
+    tuto.demarrer(phase);
+  };
+  /** Recommencer (pause) : la partie, ou, pendant l'entraînement, l'étape en cours (jamais une vraie partie). */
+  const recommencerPartie = () => {
+    if (partie?.scriptee) lancerTutoriel(Math.floor(tuto.phase));
+    else demarrer(choix.mode, choix.difficulte, choix.niveau);
+  };
+  /** Sortie du jeu ou du menu de pause pendant l'entraînement : l'état reste « commencé » à cette étape. */
+  const quitterTutoriel = () => {
+    tuto.arreter();
+    arreterMoteurRush();
+    rangerTutoriel();
   };
 
   const annoncer = (texte: string, genre = '') => {
@@ -654,12 +861,13 @@ export function initRush(): void {
     if (!partie) return;
     const p = partie;
     $('[data-hud="score"]').textContent = nombre(p.score);
-    $('[data-hud="phase"]').textContent = textes.phases[p.phaseCourante.nom];
-    $('[data-hud="progression"]').style.transform = `scaleX(${p.avancement.toFixed(3)})`;
+    $('[data-hud="phase"]').textContent = p.scriptee ? '' : textes.phases[p.phaseCourante.nom];
+    $('[data-hud="progression"]').style.transform = `scaleX(${(p.scriptee ? Math.min(1, tuto.phase / 5) : p.avancement).toFixed(3)})`;
     const o = p.niveauBase.objectif;
     const mesure = o.type === 'fragments' ? p.fragments : o.type === 'parfaits' ? p.parfaits : o.type === 'portails' ? p.portails : 0;
-    $('[data-hud="objectif"]').textContent =
-      p.mode === 'infini'
+    $('[data-hud="objectif"]').textContent = p.scriptee
+      ? remplir(textes.tutoriel.etape, { n: Math.min(5, Math.floor(tuto.phase) + 1) })
+      : p.mode === 'infini'
         ? `${nombre(p.distance)} m · ${Math.round(p.vitesse * 3.6)} km/h`
         : p.mode === 'defi' || o.type === 'fin'
           ? `${nombre(p.distance)} / ${nombre(p.longueur)} m`
@@ -676,7 +884,16 @@ export function initRush(): void {
     $('[data-hud="jauge"]').style.transform = `scaleY(${Math.min(1, od ? p.overdrive / p.profil.overdrive.duree : p.jauge).toFixed(3)})`;
     fenetre.classList.toggle('en-overdrive', od);
     fenetre.classList.toggle('od-pret', p.jauge >= 1 && !od);
-    $('[data-hud="charges"]').textContent = od ? `×${p.multOverdrive.toLocaleString(locale(), { maximumFractionDigits: 1 })} · ${remplir(textes.hud.charges, { n: p.charges })}` : '';
+    // L'Overdrive rare (V4) : verrouillé au départ, en charge, prêt, actif, puis « utilisé » jusqu'à la fin.
+    const etatOd = p.etatOverdrive;
+    fenetre.dataset.od = etatOd;
+    $('[data-hud="charges"]').textContent = od
+      ? `×${p.multOverdrive.toLocaleString(locale(), { maximumFractionDigits: 1 })} · ${remplir(textes.hud.charges, { n: p.charges })}`
+      : etatOd === 'verrouille'
+        ? remplir(textes.hud.odVerrouille, { n: nombre(p.seuilOverdrive) })
+        : etatOd === 'utilise'
+          ? textes.hud.odUtilise
+          : '';
     $('[data-hud="mult"]').textContent = `×${p.multiplicateur}`;
     $('[data-hud="combo"]').textContent = String(p.combo);
     $('[data-hud="delai"]').style.transform = `scaleX(${p.comboRestant.toFixed(3)})`;
@@ -717,9 +934,9 @@ export function initRush(): void {
     const peu = effetsReduits();
     for (const e of p.evenements) {
       const voie = e.voie ?? p.voieOccupee;
+      if (p.scriptee) tuto.surEvenement(e);
       switch (e.type) {
         case 'deplacement':
-          sonRush('deplacement');
           break;
         case 'fragment':
         case 'dore': {
@@ -730,14 +947,12 @@ export function initRush(): void {
           else rendu.eclater(voie, couleur, peu ? 4 : 10);
           rendu.flotter(voie, `+${nombre(e.valeur ?? 0)}`, couleur);
           gagner(e.valeur);
-          sonRush(e.type === 'dore' ? 'noyau' : 'fragment');
           nourrirJauge(peu ? 0 : 520);
           break;
         }
         case 'noyau':
           rendu.eclater(voie, '255, 190, 140', peu ? 6 : 16);
           gagner(e.valeur);
-          sonRush('noyau');
           break;
         case 'parfait':
           annoncer(textes.annonces.parfait, 'parfait');
@@ -745,20 +960,18 @@ export function initRush(): void {
           rendu.flotter(p.voieOccupee, `+${nombre(e.valeur ?? 0)}`, '236, 244, 255');
           if (!peu) rendu.flasher('170, 225, 255', 0.12);
           gagner(e.valeur);
-          sonRush('parfait');
           break;
         case 'motif':
           annoncer(textes.annonces.motif, 'motif');
           rendu.flotter(p.voieOccupee, `+${nombre(e.valeur ?? 0)}`, '255, 214, 120');
           gagner(e.valeur);
-          sonRush('pret');
           break;
         case 'choc':
-          annoncer((e.valeur ?? 0) === 1 ? textes.annonces.dernier : textes.annonces.choc, 'choc');
+          if (!p.scriptee) annoncer((e.valeur ?? 0) === 1 ? textes.annonces.dernier : textes.annonces.choc, 'choc');
           if (s.reglages.secousses && !peu) rendu.secouer(1);
           rendu.alerter();
           rendu.eclater(voie, '255, 150, 140', peu ? 6 : 20);
-          sonRush('choc');
+          rendu.debris?.(voie);
           break;
         case 'combo-perdu':
           annoncer(textes.annonces.comboPerdu, 'choc');
@@ -766,33 +979,30 @@ export function initRush(): void {
         case 'portail':
           annoncer(textes.annonces.portail, 'portail');
           if (!peu) rendu.flasher('190, 150, 255', 0.25);
-          sonRush('portail');
           break;
         case 'overdrive':
           annoncer(remplir(textes.annonces.overdrive, { n: (e.valeur ?? 2).toLocaleString(locale(), { maximumFractionDigits: 1 }) }), 'overdrive');
           if (!peu) rendu.flasher('210, 190, 255', 0.35);
-          sonRush('overdrive');
           break;
         case 'fin-overdrive':
           break;
+        case 'od-ouvert':
+          annoncer(textes.annonces.odOuvert, 'pret');
+          break;
         case 'pret':
           annoncer(textes.annonces.pret, 'pret');
-          sonRush('pret');
           break;
         case 'detruit':
           rendu.eclater(voie, '236, 244, 255', peu ? 6 : 18);
           rendu.flotter(voie, `+${nombre(e.valeur ?? 0)}`, '210, 190, 255');
           gagner(e.valeur);
-          sonRush('detruit');
           break;
         case 'boss-touche':
           rendu.toucherBoss();
-          sonRush('boss');
           break;
         case 'phase-boss':
           annoncer(remplir(textes.annonces.phase, { n: e.valeur ?? 1 }), 'phase');
           if (s.reglages.secousses && !peu) rendu.secouer(0.6);
-          sonRush('phase');
           break;
         case 'phase':
           if ((e.valeur ?? 0) > 0) annoncer(textes.phases[p.niveauBase.phases[e.valeur ?? 0]?.nom ?? p.phaseCourante.nom], 'phase');
@@ -804,6 +1014,9 @@ export function initRush(): void {
           finDePartie();
           break;
       }
+      // (Le son de l'évènement, le même que dans la version Unity : sons-course.ts.)
+      const son = SON_EVENEMENT[e.type];
+      if (son) sonRush(son);
     }
     p.evenements.length = 0;
   };
@@ -841,9 +1054,17 @@ export function initRush(): void {
   const finDePartie = () => {
     const r = partie?.termine;
     if (!r || finCine) return;
-    const victoire = (choix.mode === 'campagne' && r.reussi) || (choix.mode === 'defi' && r.arrive);
+    const victoire = finVictorieuse(choix.mode, r);
     if (animationsCoupees() || !rendu.cinematique) {
       finCine = window.setTimeout(passerCinematique, 900);
+      return;
+    }
+    // (V4) Séquence courte, au choix du joueur : un éclair de victoire, puis les résultats.
+    if (victoire && s.reglages.sequenceFin === 'courte') {
+      rendu.flasher('236, 244, 255', 0.6);
+      sonRush('ouverture');
+      finCine = window.setTimeout(passerCinematique, 1000);
+      majBarre();
       return;
     }
     $('[data-cine-titre]').textContent = victoire ? textes.victoire.titre : '';
@@ -870,7 +1091,7 @@ export function initRush(): void {
     const r = p.termine;
     const bilan: Bilan = ranger(s, choix.mode, choix.difficulte, choix.niveau, r, p.graine);
     const victoire = choix.mode === 'campagne' && r.reussi;
-    sonRush(victoire || (choix.mode === 'defi' && r.arrive) ? 'victoire' : 'defaite');
+    sonRush(finVictorieuse(choix.mode, r) ? 'victoire' : 'defaite');
     fermerPanneau();
     const f = textes.fin;
     if (victoire) {
@@ -897,6 +1118,7 @@ export function initRush(): void {
       const gains = [
         ...(bilan.niveauDebloque ? [`${remplir(textes.victoire.secteurDebloque, { n: deux(bilan.niveauDebloque) })} · ${textes.niveaux[bilan.niveauDebloque - 1].nom}`] : []),
         ...(bilan.cauchemarDebloque ? [textes.victoire.cauchemar] : []),
+        ...(bilan.paradoxeDebloque ? [textes.victoire.paradoxe] : []),
         ...bilan.pieces.map((id) => {
           const piece = PIECES.find((x) => x.id === id)!;
           return `${textes.garage.emplacements[piece.emplacement]} · ${textes.garage.pieces[id]}`;
@@ -976,6 +1198,8 @@ export function initRush(): void {
     return b;
   };
 
+  /** (Développement) Une qualité imposée par une recette : window.__rushQualite. */
+  const qualiteForcee = (): 'auto' | 'elevee' | 'equilibree' | 'economie' | undefined => (import.meta.env.DEV ? (window as unknown as { __rushQualite?: 'auto' | 'elevee' | 'equilibree' | 'economie' }).__rushQualite : undefined);
   const PAS = 1 / 120;
   const image = (maintenant: number) => {
     boucle = requestAnimationFrame(image);
@@ -996,18 +1220,24 @@ export function initRush(): void {
           reste -= PAS;
         }
         evenements();
+        if (partie?.scriptee) tuto.tic();
       }
     } else if (partie?.termine && partie.evenements.length) evenements();
     temps += actif ? dt : dt * 0.35;
     // (La scène 3D dessine ces images dans sa propre toile, puis l'image du jeu la recouvre entièrement.)
     if (!actif && aRendre.length && !transition) aRendre.shift()!();
+    const modele = partie ? partie.vehicule.modele : (VEHICULES.find((v) => v.id === (vehiculeVu ?? s.vehicule))?.modele ?? 0);
     if (ecran === 'garage' && rendu.garage) {
       const b = dimensionnerApercu();
-      if (b && ctxApercu) rendu.garage(ctxApercu, b.width, b.height, s.equipement, temps);
+      if (b && ctxApercu) rendu.garage(ctxApercu, b.width, b.height, s.equipement, temps, modele);
     }
-    const vue = { l, h, reduit: effetsReduits(), secousses: s.reglages.secousses, equipement: s.equipement, theme: theme(), brume: partie?.niveauBase.brume ?? 0, avance: actif && compte <= 0 ? reste : 0 };
+    const vue = { l, h, reduit: effetsReduits(), secousses: s.reglages.secousses, equipement: s.equipement, theme: theme(), brume: partie?.niveauBase.brume ?? 0, avance: actif && compte <= 0 ? reste : 0, modele, qualite: qualiteForcee() ?? s.reglages.qualite };
     rendu.dessiner(partie, vue, temps, actif ? dt : partie ? 0 : dt * 0.35);
     if (++images % 3 === 0) majHud();
+    if (maintenant - dernierSuivi > 250) {
+      dernierSuivi = maintenant;
+      suivreSon();
+    }
     // L'aperçu du garage, sans la 3D : le vaisseau dessiné à plat.
     if (ecran === 'garage') {
       const b = dimensionnerApercu();
@@ -1022,82 +1252,6 @@ export function initRush(): void {
   // ==========================================================================
   // L'OUVERTURE ET LA FERMETURE
   // ==========================================================================
-  /** Le passage côté portfolio : une onde depuis l'Orbital Hub, des particules qui convergent, l'aspiration du tunnel. */
-  const passage = (origine: { x: number; y: number }, duree: number, particules: boolean) => {
-    const voile = document.createElement('div');
-    voile.className = 'passage-rush';
-    voile.setAttribute('aria-hidden', 'true');
-    const toilePassage = document.createElement('canvas');
-    voile.append(toilePassage);
-    document.body.append(voile);
-    const L = (toilePassage.width = window.innerWidth);
-    const H = (toilePassage.height = window.innerHeight);
-    const c = toilePassage.getContext('2d')!;
-    const cx = L / 2,
-      cy = H / 2;
-    const grains = Array.from({ length: particules ? 150 : 0 }, () => {
-      const a = Math.random() * Math.PI * 2;
-      const d = Math.hypot(L, H) * (0.35 + Math.random() * 0.4);
-      return { x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, v: 0.5 + Math.random() * 0.8, retard: Math.random() * 0.25 };
-    });
-    const t0 = performance.now();
-    const pas = (maintenant: number) => {
-      // (L'horodatage de la première image peut précéder t0 : on borne à 0, sinon l'onde aurait un rayon négatif.)
-      const t = Math.min(1, Math.max(0, (maintenant - t0) / duree));
-      c.clearRect(0, 0, L, H);
-      // L'aspiration : le portfolio s'assombrit depuis les bords vers le centre.
-      const fond = Math.min(1, Math.max(0, (t - 0.18) / 0.55));
-      const rayon = Math.hypot(L, H) * (0.75 - fond * 0.62);
-      const g = c.createRadialGradient(cx, cy, Math.max(1, rayon * 0.15), cx, cy, rayon);
-      g.addColorStop(0, 'rgba(3, 6, 12, 0)');
-      g.addColorStop(1, `rgba(3, 6, 12, ${(0.25 + fond * 0.75).toFixed(3)})`);
-      c.fillStyle = g;
-      c.fillRect(0, 0, L, H);
-      if (fond > 0.92) {
-        c.fillStyle = `rgba(3, 6, 12, ${((fond - 0.92) / 0.08).toFixed(3)})`;
-        c.fillRect(0, 0, L, H);
-      }
-      // L'onde : un anneau de lumière qui part de l'icône de l'Orbital Hub.
-      const onde = Math.min(1, t / 0.5);
-      if (onde < 1) {
-        c.strokeStyle = `rgba(168, 236, 255, ${(0.9 * (1 - onde)).toFixed(3)})`;
-        c.lineWidth = 2 + 6 * (1 - onde);
-        c.beginPath();
-        c.arc(origine.x, origine.y, 10 + onde * Math.hypot(L, H), 0, Math.PI * 2);
-        c.stroke();
-      }
-      // Les particules : elles convergent vers le centre en laissant une traînée.
-      for (const p of grains) {
-        const k = Math.min(1, Math.max(0, (t - p.retard) / (0.75 - p.retard)));
-        const e = k * k * k * p.v + k * (1 - p.v) * 0.6;
-        const x = p.x + (cx - p.x) * Math.min(1, e);
-        const y = p.y + (cy - p.y) * Math.min(1, e);
-        const x0 = p.x + (cx - p.x) * Math.max(0, Math.min(1, e - 0.08));
-        const y0 = p.y + (cy - p.y) * Math.max(0, Math.min(1, e - 0.08));
-        c.strokeStyle = `rgba(190, 240, 255, ${(0.85 * k * (1 - k * 0.3)).toFixed(3)})`;
-        c.lineWidth = 1.4;
-        c.beginPath();
-        c.moveTo(x0, y0);
-        c.lineTo(x, y);
-        c.stroke();
-      }
-      // Le cœur du portail, au centre, qui s'embrase juste avant l'ouverture.
-      const coeur = Math.max(0, (t - 0.35) / 0.4);
-      if (coeur > 0) {
-        const r = 6 + coeur * 46;
-        const gc = c.createRadialGradient(cx, cy, 0, cx, cy, r * 3);
-        gc.addColorStop(0, `rgba(235, 250, 255, ${Math.min(1, coeur).toFixed(3)})`);
-        gc.addColorStop(0.3, `rgba(120, 220, 255, ${(0.6 * Math.min(1, coeur)).toFixed(3)})`);
-        gc.addColorStop(1, 'rgba(98, 217, 255, 0)');
-        c.fillStyle = gc;
-        c.fillRect(cx - r * 3, cy - r * 3, r * 6, r * 6);
-      }
-      if (t < 1) requestAnimationFrame(pas);
-      else window.setTimeout(() => voile.remove(), 260);
-    };
-    requestAnimationFrame(pas);
-  };
-
   const demarrerFenetre = (e: Ouverture) => {
     s = charger();
     textes = lire();
@@ -1108,53 +1262,113 @@ export function initRush(): void {
     dimensionner();
     avant = performance.now();
     if (!boucle) boucle = requestAnimationFrame(image);
-    if (e === 'reglages' || e === 'commandes') {
+    if (e === 'tutoriel') {
+      // Le premier lancement : directement dans la course, à l'étape où l'on s'était arrêté (ou au début).
+      montrer('accueil', false);
+      lancerTutoriel(s.tutoriel.etat === 'commence' ? s.tutoriel.phase : 0);
+    } else if (e === 'reglages' || e === 'commandes') {
       montrer('accueil', false);
       ouvrirPanneau(e === 'commandes' ? 'commandes' : 'audio');
     } else montrer(e);
   };
 
-  const ouvrir = (e: Ouverture = 'accueil', depuis: HTMLElement | null = null) => {
-    if (transition) return;
-    if (fenetre.open) {
+  /** Le voyage temporel en cours (entrée dans le jeu), et son son : de quoi les passer. */
+  let voyage: ReturnType<typeof voyageTemporel> = null;
+  let sonVoyage: ReturnType<typeof sonVoyageTemporel> = null;
+  /** Passer le voyage (Échap, Entrée, Espace, un clic) : on arrive tout de suite. */
+  const passerVoyage = () => {
+    if (!voyage) return;
+    sonVoyage?.arreter(true);
+    sonVoyage = null;
+    voyage.passer();
+  };
+  // (Pendant le voyage, la fenêtre du jeu n'est pas encore ouverte : ces touches sont prises ici, en premier.)
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (!voyage) return;
+      if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!e.repeat) passerVoyage();
+      } else if (!e.ctrlKey && !e.metaKey) e.preventDefault();
+    },
+    true,
+  );
+
+  /**
+   * « mode » (version Unity, 18 octobre 2026) : « auto », la version Unity si son drapeau est levé (?rush=unity), sinon
+   * ce jeu ; « ancien », ce jeu, sans essayer Unity (repli) ; « direct », ce jeu tout de suite, sans voyage (repli de
+   * la version Unity quand son chargement échoue : son voyage à elle a déjà eu lieu, la fenêtre est peut-être ouverte).
+   */
+  const ouvrir = (e: Ouverture = 'accueil', depuis: HTMLElement | null = null, point: { x: number; y: number } | null = null, mode: 'auto' | 'ancien' | 'direct' = 'auto') => {
+    if (transition || voyage || fenetre.dataset.moteur === 'unity') return;
+    if (mode === 'auto' && !fenetre.open && rushUnityDemandee()) {
+      void import('../rush-unity')
+        .then((m) => m.ouvrirRushUnity({ ecran: e, depuis, point, repli: (direct) => ouvrir(e, depuis, point, direct ? 'direct' : 'ancien') }))
+        .catch(() => ouvrir(e, depuis, point, 'ancien'));
+      return;
+    }
+    if (fenetre.open && mode !== 'direct') {
       if (e === 'reglages' || e === 'commandes') ouvrirPanneau(e === 'commandes' ? 'commandes' : 'audio');
+      else if (e === 'tutoriel') lancerTutoriel(0);
       else if (!partie) montrer(e);
       return;
     }
     void chargerScene();
-    const icone = document.querySelector<HTMLElement>('.jeu-bouton');
-    icone?.classList.add('est-lance');
-    window.setTimeout(() => icone?.classList.remove('est-lance'), 700);
-    sonRush('ouverture');
-    if (animationsCoupees()) {
-      fenetre.classList.add('est-entree-douce');
-      demarrerFenetre(e);
-      window.setTimeout(() => fenetre.classList.remove('est-entree-douce'), 260);
+    // La musique : DREAM RADIO s'efface (sa position est gardée), RUSH RADIO prend le relais si le joueur la veut.
+    dreamRadio.suspendre();
+    s = charger();
+    rushRadio.relirePreferences();
+    tamponPret('/audio/effets/moteur.mp3');
+    tamponPret('/audio/effets/bris.mp3');
+    majRadio();
+    // Le premier lancement (une fois par profil) mène droit au tutoriel ; sinon, le menu (ou l'écran demandé).
+    const arrivee: Ouverture = e === 'accueil' && tutorielAFaire(s) ? 'tutoriel' : e;
+    const court = animationsCoupees();
+    const allege = reglagesSite.animations < 1;
+    const duree = allege ? 2.6 : 4.6;
+    const CHARGE = 0.5,
+      BRIS = 0.85;
+    // Le Hub se range ; le jeu s'ouvre sous l'éclair, qui repasse par-dessus pour finir.
+    const entrer = () => {
+      document.querySelectorAll<HTMLElement>('#hub:popover-open').forEach((h) => h.hidePopover());
+      fenetre.style.setProperty('--ox', '50%');
+      fenetre.style.setProperty('--oy', '50%');
+      fenetre.classList.add(court ? 'est-entree-douce' : 'est-entree');
+      demarrerFenetre(arrivee);
+      voyage?.remonter();
+      rendu.cinematique?.('entree');
+      if (s.reglages.musique) window.setTimeout(() => fenetre.open && rushRadio.jouer(), court ? 100 : 400);
+    };
+    if (mode === 'direct') {
+      entrer();
+      window.setTimeout(() => fenetre.classList.remove('est-entree', 'est-entree-douce'), 650);
       return;
     }
-    // Onde, particules et aspiration côté portfolio ; puis le portail s'ouvre au centre et le monde apparaît.
     transition = 'entree';
-    const b = (depuis ?? icone)?.getBoundingClientRect();
-    const origine = b && b.width ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    const allege = reglagesSite.animations < 1;
-    passage(origine, allege ? 520 : 720, !allege);
-    window.setTimeout(
-      () => {
-        fenetre.style.setProperty('--ox', '50%');
-        fenetre.style.setProperty('--oy', '50%');
-        fenetre.classList.add('est-entree');
-        demarrerFenetre(e);
-        rendu.cinematique?.('entree');
-      },
-      allege ? 240 : 380,
-    );
-    window.setTimeout(
-      () => {
-        fenetre.classList.remove('est-entree');
+    sonVoyage = court ? null : sonVoyageTemporel(CHARGE, BRIS, duree);
+    if (court) sonRush('ouverture');
+    // Le bouton qui lance le jeu (le Hub, ou un bouton « Jouer » du portfolio) se fissure et se brise.
+    const source = depuis ?? null;
+    voyage = voyageTemporel({
+      source,
+      point,
+      duree,
+      court,
+      // (Aux lancements suivants, « Passer » paraît tout de suite ; la première fois, après une seconde.)
+      passerVisibleTout: s.tutoriel.etat !== 'nouveau' || s.totaux.parties > 0,
+      texte: { passer: textes.voyage.passer },
+      // (En développement, les recettes lisent les temps forts du voyage : charge, bris, tunnel, arrivée.)
+      moment: import.meta.env.DEV ? (m) => ((window as unknown as { __voyage: [string, number][] }).__voyage ??= []).push([m, performance.now()]) : undefined,
+      arrivee: () => entrer(),
+      fin: () => {
+        voyage = null;
+        sonVoyage = null;
         transition = null;
+        window.setTimeout(() => fenetre.classList.remove('est-entree', 'est-entree-douce'), 400);
       },
-      allege ? 1150 : 1500,
-    );
+    });
   };
 
   /**
@@ -1175,7 +1389,8 @@ export function initRush(): void {
       return;
     }
     if (window.location.hash) history.replaceState(history.state, '', window.location.pathname + window.location.search);
-    allerA(0, true);
+    // (Depuis le 16 octobre 2026, l'accueil est une destination : on y revient, en haut, sous le jeu.)
+    revenirAccueil();
     const finir = () => {
       fenetre.classList.remove('est-sortie', 'est-sortie-douce', 'est-entree');
       transition = null;
@@ -1200,6 +1415,11 @@ export function initRush(): void {
   const echap = () => {
     if (finCine) return passerCinematique();
     if (transition) return;
+    if (listeRadioOuverte()) {
+      basculerListeRadio(false);
+      $('[data-rr="liste"]').focus({ preventScroll: true });
+      return;
+    }
     if (languesOuvertes()) fermerLangues(true);
     else if (panneau) fermerPanneau();
     else if (partie && ecran === '') pause();
@@ -1209,13 +1429,16 @@ export function initRush(): void {
     else montrer('accueil');
   };
   api = { ouvrir, pause };
+  // (Version Unity, derrière son drapeau : son préchargement discret quand on approche du jeu.)
+  approcheRushUnity();
   // Les boutons « Jouer à Portal Rush » du portfolio (vitrine de l'accueil, carte et fiche du projet).
   document.addEventListener('click', (e) => {
     const bouton = (e.target as Element).closest<HTMLElement>('[data-jouer-rush]');
     if (!bouton || e.defaultPrevented) return;
     e.preventDefault();
     void chargerScene();
-    ouvrir('accueil', bouton);
+    const souris = e instanceof MouseEvent && e.detail > 0;
+    ouvrir('accueil', bouton, souris ? { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null);
   });
   document.addEventListener('pointerover', (e) => (e.target as Element).closest?.('[data-jouer-rush]') && void chargerScene(), { passive: true });
 
@@ -1227,7 +1450,8 @@ export function initRush(): void {
   document.addEventListener(
     'keydown',
     (e) => {
-    if (!fenetre.open || e.ctrlKey || e.metaKey || e.altKey) return;
+    // (La version Unity reçoit elle-même ses touches : rush-unity/index.ts.)
+    if (!fenetre.open || fenetre.dataset.moteur === 'unity' || e.ctrlKey || e.metaKey || e.altKey) return;
     const actif = document.activeElement;
     if (actif instanceof Element && actif.closest('#hub')) return;
     // Échap : traité ici (le navigateur ne ferme jamais la fenêtre de lui-même).
@@ -1258,6 +1482,11 @@ export function initRush(): void {
         return;
       }
       if (ecran === '' && partie) {
+        if (actif === passerTuto && !e.repeat) {
+          e.preventDefault();
+          tuto.passer();
+          return;
+        }
         if (e.key === 'Enter') e.preventDefault();
       } else {
         const commande = actif instanceof HTMLElement && actif !== toile && fenetre.contains(actif) && actif.matches('button, a, input, select, textarea');
@@ -1298,7 +1527,7 @@ export function initRush(): void {
     if (e.code === 'KeyR' && partie && !panneau && (ecran === 'fin' || ecran === 'victoire' || ecran === 'pause')) {
       e.preventDefault();
       if (ecran === 'pause') {
-        confirmerPuis('recommencer', () => demarrer(choix.mode, choix.difficulte, choix.niveau));
+        confirmerPuis('recommencer', recommencerPartie);
         $('[data-rush="recommencer"]').focus();
       } else demarrer(choix.mode, choix.difficulte, choix.niveau);
       return;
@@ -1324,9 +1553,18 @@ export function initRush(): void {
   // Les autres demandes de fermeture (bouton « retour » d'un téléphone…) suivent la même règle qu'Échap.
   fenetre.addEventListener('cancel', (e) => {
     e.preventDefault();
-    echap();
+    if (fenetre.dataset.moteur !== 'unity') echap();
   });
   fenetre.addEventListener('close', () => {
+    // Le son du jeu s'arrête ; DREAM RADIO reprend seulement si elle jouait avant l'entrée.
+    if (partie?.scriptee) quitterTutoriel();
+    rangerTutoriel();
+    rushRadio.arreter();
+    rushRadio.adapter(null);
+    cleAdaptation = '';
+    arreterMoteurRush();
+    basculerListeRadio(false);
+    dreamRadio.reprendreSiSuspendue();
     cancelAnimationFrame(boucle);
     boucle = 0;
     partie = null;
@@ -1372,19 +1610,51 @@ export function initRush(): void {
       return;
     }
     if (languesOuvertes() && !el.closest('.langue-jeu')) fermerLangues();
+    // RUSH RADIO.
+    const rr = el.closest<HTMLElement>('[data-rr], [data-rr-piste]');
+    if (!rr && listeRadioOuverte() && !el.closest('.rush-radio')) basculerListeRadio(false);
+    if (rr) {
+      if (rr.dataset.rrPiste) {
+        rushRadio.choisir(Number(rr.dataset.rrPiste), true);
+        retenirLecture();
+        basculerListeRadio(false);
+        $('[data-rr="liste"]').focus({ preventScroll: true });
+      } else if (rr.dataset.rr === 'lecture') {
+        rushRadio.basculer();
+        retenirLecture();
+      } else if (rr.dataset.rr === 'liste') basculerListeRadio();
+      else if (rr.dataset.rr === 'precedente') rushRadio.precedente();
+      else if (rr.dataset.rr === 'suivante') rushRadio.suivante();
+      return;
+    }
     const onglet = el.closest<HTMLElement>('[data-onglet-records], [data-onglet-reglages]');
     if (onglet) {
       if (onglet.dataset.ongletRecords) choisirOnglet('records', onglet.dataset.ongletRecords);
       else choisirOnglet('reglages', onglet.dataset.ongletReglages!);
       return;
     }
-    const cible = el.closest<HTMLElement>('[data-rush], [data-secteur], [data-piece]');
+    const cible = el.closest<HTMLElement>('[data-rush], [data-secteur], [data-piece], [data-vehicule]');
     if (!cible || (cible as HTMLButtonElement).disabled) return;
     masquerInfo();
     if (cible.dataset.secteur) {
       secteur = Number(cible.dataset.secteur);
       majCampagne();
       sonRush('deplacement');
+      return;
+    }
+    if (cible.dataset.vehicule) {
+      // Un vaisseau gagné se choisit ; un vaisseau verrouillé se regarde seulement (aperçu 3D).
+      const id = cible.dataset.vehicule as (typeof VEHICULES)[number]['id'];
+      if (s.vehicules.includes(id)) {
+        s.vehicule = id;
+        vehiculeVu = null;
+        enregistrer(s);
+        sonRush('pret');
+      } else {
+        vehiculeVu = vehiculeVu === id ? null : id;
+        sonRush('deplacement');
+      }
+      majGarage();
       return;
     }
     if (cible.dataset.piece) {
@@ -1453,7 +1723,8 @@ export function initRush(): void {
         demarrer('defi', 'as');
         break;
       case 'menu':
-        if (ecran === 'pause') confirmerPuis('menu', menu);
+        // (Pendant l'entraînement, rien ne se perd : l'étape est sauvegardée, pas besoin de confirmer.)
+        if (ecran === 'pause' && !partie?.scriptee) confirmerPuis('menu', menu);
         else menu();
         break;
       case 'quitter':
@@ -1463,6 +1734,12 @@ export function initRush(): void {
       case 'pause':
         pause();
         break;
+      case 'passer-tuto':
+        tuto.passer();
+        break;
+      case 'tutoriel':
+        lancerTutoriel(0);
+        break;
       case 'overdrive':
         if (partie && compte <= 0) partie.declencher();
         toile.focus({ preventScroll: true });
@@ -1471,7 +1748,7 @@ export function initRush(): void {
         reprendre();
         break;
       case 'recommencer':
-        confirmerPuis('recommencer', () => demarrer(choix.mode, choix.difficulte, choix.niveau));
+        confirmerPuis('recommencer', recommencerPartie);
         break;
       case 'rejouer':
         demarrer(choix.mode, choix.difficulte, choix.niveau);
@@ -1500,10 +1777,16 @@ export function initRush(): void {
     }
     const cle = champ.dataset.reglage;
     if (!cle) return;
-    if (cle === 'musique') regler('musique', champ.checked);
-    else if (cle === 'sons') regler('sons', champ.checked);
+    if (cle === 'musique') {
+      // RUSH RADIO : la coupe ou la relance tout de suite, et s'en souvient pour les prochaines entrées.
+      s.reglages.musique = champ.checked;
+      if (champ.checked) rushRadio.jouer();
+      else rushRadio.pauser();
+    } else if (cle === 'sons') regler('sons', champ.checked);
     else if (cle === 'animations') regler('animations', Number(champ.value));
     else if (cle === 'tactile') s.reglages.tactile = champ.value as 'toucher' | 'glisser';
+    else if (cle === 'sequenceFin') s.reglages.sequenceFin = champ.value === 'courte' ? 'courte' : 'complete';
+    else if (cle === 'qualite') s.reglages.qualite = (['elevee', 'equilibree', 'economie'].includes(champ.value) ? champ.value : 'auto') as 'auto' | 'elevee' | 'equilibree' | 'economie';
     else if (cle === 'effetsReduits' || cle === 'secousses' || cle === 'aideCommandes') s.reglages[cle] = champ.checked;
     enregistrer(s);
     fenetre.classList.toggle('sans-aide', !s.reglages.aideCommandes);
@@ -1512,6 +1795,10 @@ export function initRush(): void {
   });
   fenetre.addEventListener('input', (e) => {
     const champ = e.target as HTMLInputElement;
+    if (champ.dataset.rr === 'volume') {
+      rushRadio.reglerVolume(Number(champ.value) / 100);
+      return;
+    }
     if (champ.dataset.reglage === 'volume') {
       s.reglages.volume = Number(champ.value) / 100;
       reglerVolumeRush(s.reglages.volume);
@@ -1520,10 +1807,18 @@ export function initRush(): void {
       peindreCurseur(champ);
       sonRush('fragment');
     } else if (champ.dataset.reglage === 'volumeMusique') {
-      regler('volumeMusique', Number(champ.value) / 100);
+      rushRadio.reglerVolume(Number(champ.value) / 100);
       $('[data-sortie="volumeMusique"]').textContent = `${champ.value} %`;
       peindreCurseur(champ);
     }
+  });
+
+  // Un autre onglet a enregistré : hors partie, on relit la sauvegarde (rien n'est écrasé : voir sauvegarde.ts).
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'portal-rush-3' || partie) return;
+    s = charger();
+    rushRadio.relirePreferences();
+    rafraichir();
   });
 
   // Onglet masqué, fenêtre quittée : pause.
@@ -1545,8 +1840,10 @@ export function initRush(): void {
       PROFILS,
       REGLES_VERSION,
       partie: () => partie,
+      radio: rushRadio,
       demarrer,
       terminer,
+      tutoriel: () => ({ actif: tuto.actif, phase: tuto.phase, scriptee: !!partie?.scriptee, voyage: !!voyage, moteur: moteurRushActif(), sonVoyage: !!sonVoyage }),
       etat: () => ({ ecran, panneau, transition, enPause, compte, sauvegarde: s, choix, secteur, confirmer, troisD: rendu.troisD, distanceAffichee: partie ? partie.distance + (partie && !enPause && ecran === '' && compte <= 0 ? reste * partie.vitesse : 0) : 0 }),
     };
   }

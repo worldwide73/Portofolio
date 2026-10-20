@@ -1,0 +1,18 @@
+<!-- PORTAL RUSH (Unity) — LES DIFFICULTÉS, dont Paradoxe, la difficulté ultime (Scripts/Interface/EcranDifficultes.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="difficultes" class="ecran ecran--difficultes" picking-mode="Ignore">
+        <ui:VisualElement class="ecran__tete" picking-mode="Ignore">
+            <ui:Label name="diff-module" class="etiquette ecran__module" />
+            <ui:Label name="diff-titre" class="ecran__titre" />
+            <ui:Label name="diff-sous" class="ecran__sous" />
+        </ui:VisualElement>
+        <ui:VisualElement name="diff-cartes" class="difficultes" picking-mode="Ignore" />
+        <ui:VisualElement class="ecran__pied" picking-mode="Ignore">
+            <ui:Label name="diff-verrou" class="difficultes__verrou" />
+            <ui:Button name="diff-lancer" class="lancer plaque">
+                <ui:Label name="diff-lancer-texte" class="lancer__texte" picking-mode="Ignore" />
+                <ui:VisualElement class="icone icone--chevron lancer__icone" picking-mode="Ignore" />
+            </ui:Button>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

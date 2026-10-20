@@ -1,7 +1,7 @@
 // LA PALETTE DE COMMANDES, en forme de terminal.
-// Elle s'ouvre avec Ctrl + K (Cmd + K sur Mac), avec la touche ² (celle des
-// consoles de jeu, en haut à gauche du clavier français), ou en tapant le mot
-// « trace » n'importe où sur la page.
+// Elle s'ouvre avec la touche ² (celle des consoles de jeu, en haut à gauche du
+// clavier français), ou en tapant le mot « trace » n'importe où sur la page.
+// (Ctrl + K, son ancien raccourci, ouvre la recherche depuis le 16 octobre 2026.)
 //
 // On tape une commande, ou seulement son début : la liste du dessous se
 // filtre à mesure. Les flèches haut et bas choisissent une ligne, Entrée
@@ -10,7 +10,7 @@
 // Les mots des commandes et leurs réponses viennent du contenu (fr.ts, en.ts) :
 // le HTML les transmet dans des attributs data-, lus ici.
 
-import { ouvrirCarte } from './explorateur';
+import { ouvrirPortail } from './portail';
 import { changerLangue } from './langue';
 import { voyager } from './voyage';
 
@@ -120,7 +120,7 @@ export function initTerminal(): void {
     contact: () => allerSection('contact'),
     carte: () => {
       fermer();
-      if (!ouvrirCarte()) window.location.href = liens.accueil;
+      ouvrirPortail();
     },
     cv: () => window.open(liens.cv, '_blank', 'noopener'),
     projets: () => projets.forEach((p, i) => ecrire(`  ${i + 1}  ${p.nom}`)),
@@ -204,11 +204,9 @@ export function initTerminal(): void {
   boite.querySelector('.terminal__fermer')?.addEventListener('click', fermer);
 
   document.addEventListener('keydown', (e) => {
-    // Ctrl + K (ou Cmd + K) : ouvre ou referme, où que l'on soit sur la page.
+    // Ctrl + K (ou Cmd + K) ouvre désormais la recherche (recherche.ts, 16 octobre 2026) : le terminal s'efface devant elle.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
-      e.preventDefault();
       if (ouvert) fermer();
-      else ouvrir();
       return;
     }
     if (ouvert) {

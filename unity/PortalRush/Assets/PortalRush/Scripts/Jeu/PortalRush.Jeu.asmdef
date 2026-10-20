@@ -1,0 +1,21 @@
+{
+    "name": "PortalRush.Jeu",
+    "rootNamespace": "PortalRush.Jeu",
+    "references": [
+        "PortalRush.Coeur",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "PORTALRUSH_PAQUETS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

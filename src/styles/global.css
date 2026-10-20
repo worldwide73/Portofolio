@@ -11,10 +11,13 @@
 @import './contact.css';
 @import './fiche.css';
 @import './reglages.css';
+@import './radio.css';
 @import './initialisation.css';
 @import './jeu.css';
 @import './constellation.css';
 @import './explorateur.css';
 @import './langue.css';
+@import './destinations.css';
+@import './densites.css';
 @import './hub.css';
 @import './rush.css';

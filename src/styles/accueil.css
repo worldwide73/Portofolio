@@ -492,7 +492,7 @@ html.intro [data-titre-hero] {
   position: relative;
   z-index: 1;
   margin: 0 var(--marge-cadre);
-  padding: clamp(26px, 4vw, 60px);
+  padding: calc(clamp(26px, 4vw, 60px) * var(--k-panneau, 1));
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   column-gap: var(--colonne);

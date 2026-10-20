@@ -17,9 +17,11 @@ interface Props {
   description?: string;
   /** Faux pour les pages que les moteurs de recherche ne doivent pas lister (la page 404). */
   indexable?: boolean;
+  /** Ce que la barre écrit comme lieu, hors de l'accueil (par défaut : les réalisations, pour une fiche). */
+  ici?: string;
 }
 
-const { contenu, page, cheminAutreLangue, titre, description, indexable = true } = Astro.props;
+const { contenu, page, cheminAutreLangue, titre, description, indexable = true, ici } = Astro.props;
 const langue = contenu.langue;
 const autre = langue === 'fr' ? 'en' : 'fr';
 const leTitre = titre ?? contenu.meta.titre;
@@ -106,7 +108,7 @@ const personne = {
   <body>
     <a class="evitement etiquette" href="#contenu">{contenu.interface.evitement}</a>
 
-    <Chrome contenu={contenu} page={page} cheminAutreLangue={cheminAutreLangue} />
+    <Chrome contenu={contenu} page={page} cheminAutreLangue={cheminAutreLangue} ici={ici} />
 
     <main id="contenu">
       <slot />

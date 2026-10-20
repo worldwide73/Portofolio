@@ -6,7 +6,10 @@
 //   - refermer le panneau après une action qui mène ailleurs (lien, CV, e-mail) ;
 //   - copier l'adresse du site ou l'e-mail, avec une confirmation, et un secours si le
 //     presse-papiers est indisponible (le texte s'affiche, sélectionné, pour une copie à la main) ;
-//   - ouvrir la fenêtre des raccourcis (aussi avec la touche « ? »).
+//   - ouvrir la fenêtre des commandes clavier (aussi avec la touche « ? »), d'où l'on peut revoir
+//     le mini-guidage de la première visite.
+
+import { revoirGuidage } from './guidage';
 
 /** Copie un texte. Renvoie false si ni le presse-papiers ni l'ancienne commande « copier » ne marchent. */
 async function copier(texte: string): Promise<boolean> {
@@ -46,7 +49,8 @@ export function initAcces(): void {
 
   menu.addEventListener('toggle', (e) => {
     const ouvert = (e as ToggleEvent).newState === 'open';
-    commande.setAttribute('aria-expanded', String(ouvert));
+    // (Le nom et le chevron ouvrent tous deux le menu : ils disent tous deux s'il est ouvert.)
+    document.querySelectorAll('.identite [popovertarget="acces"]').forEach((b) => b.setAttribute('aria-expanded', String(ouvert)));
     if (!ouvert) {
       // À la prochaine ouverture, tout est comme neuf.
       window.clearTimeout(fermeture);
@@ -89,7 +93,8 @@ export function initAcces(): void {
     const cible = (e.target as Element).closest<HTMLElement>('a, button');
     if (!cible) return;
     const action = cible.dataset.action;
-    if (action === 'partager') void confirmer(cible, menu.dataset.adresse ?? window.location.origin);
+    // Partager : l'adresse publique du portfolio, à l'endroit où l'on se trouve (page et destination).
+    if (action === 'partager') void confirmer(cible, new URL(window.location.pathname + window.location.hash, menu.dataset.adresse ?? window.location.origin).href);
     else if (action === 'email') void confirmer(cible, cible.dataset.email ?? '');
     else if (action === 'raccourcis') ouvrirRaccourcis();
     // Un lien (LinkedIn, GitHub, CV, e-mail) : le panneau se referme.
@@ -102,7 +107,17 @@ export function initAcces(): void {
   fenetre.addEventListener('click', (e) => {
     if (e.target === fenetre) fenetre.close();
   });
-  fenetre.addEventListener('close', () => commande.focus({ preventScroll: true }));
+  // « Revoir les indications de navigation » : l'aide se ferme, le mini-guidage reparaît (guidage.ts).
+  let guider = false;
+  fenetre.querySelector('[data-revoir-guidage]')?.addEventListener('click', () => {
+    guider = true;
+    fenetre.close();
+  });
+  fenetre.addEventListener('close', () => {
+    commande.focus({ preventScroll: true });
+    if (guider) revoirGuidage();
+    guider = false;
+  });
   // « ? » ouvre les raccourcis, sauf pendant une saisie ou quand une autre fenêtre est ouverte.
   window.addEventListener('keydown', (e) => {
     if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey) return;

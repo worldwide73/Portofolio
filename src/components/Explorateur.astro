@@ -1,15 +1,17 @@
 ---
 // LA CARTE DU PORTAIL : le cube se brise, et ses éclats forment une carte du site.
-// Elle occupe tout l'écran : un noyau au centre, des orbites, et les six
-// destinations (les cinq sections et le CV) posées en rond autour de lui.
+// Elle occupe tout l'écran : un noyau au centre, des orbites, et les cinq
+// destinations posées en rond autour de lui, à intervalles réguliers. (Le CV n'y
+// est plus depuis le 16 octobre 2026 : il se télécharge depuis la barre du haut,
+// le menu d'identité et la visite rapide.)
 //
 // Ce fichier ne contient que ce qui se lit et se clique : le titre, le bouton
-// de fermeture, le noyau et les six liens. Tout le reste (les éclats de verre,
+// de fermeture, le noyau et les cinq liens. Tout le reste (les éclats de verre,
 // les orbites, la poussière d'étoiles) est dessiné sur la toile par
 // src/scripts/explorateur.ts, qui place aussi chaque lien à sa position.
 //
-// C'est un second menu, pas un passage obligé : le menu du haut, le fil du bas
-// et le défilement mènent aux mêmes endroits.
+// C'est le seul moyen de changer de destination (avec la recherche, et les liens
+// directs de l'accueil) : on la rejoint par le passage en bas de chaque destination.
 import { SECTIONS } from '../contenu';
 import type { Contenu } from '../contenu/types';
 import Symbole from './Symbole.astro';
@@ -22,7 +24,7 @@ const { contenu: c } = Astro.props;
 
 // De quel côté de son point s'écrit le nom de chaque destination. Elles sont
 // posées en rond, dans le sens des aiguilles d'une montre, la première en haut.
-const COTES = ['haut', 'droite', 'droite', 'bas', 'gauche', 'gauche'];
+const COTES = ['haut', 'droite', 'bas', 'bas', 'gauche'];
 // Les nombres cités dans les descriptions viennent du contenu réel.
 const nombres: Record<string, number> = { competences: c.competences.domaines.length, realisations: c.realisations.projets.length };
 const decrire = (id: keyof Contenu['explorateur']['destinations']) => c.explorateur.destinations[id].replace('{n}', String(nombres[id] ?? ''));
@@ -50,17 +52,11 @@ const decrire = (id: keyof Contenu['explorateur']['destinations']) => c.explorat
             <b>{c.sections[id]}</b>
             <small>{decrire(id)}</small>
             <em class="etiquette">{c.explorateur.ici}</em>
+            <span class="sr astre__vue">{c.explorateur.visitee}</span>
           </span>
         </a>
       ))
     }
-    <a class="astre astre--annexe" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener" data-destination="cv" data-cote={COTES[5]} style="--i: 5">
-      <i aria-hidden="true"></i>
-      <span class="astre__texte">
-        <b>{c.explorateur.cv} <span aria-hidden="true">↗</span></b>
-        <small>{decrire('cv')}</small>
-      </span>
-    </a>
   </nav>
 
   <p class="explorateur__aide etiquette">{c.explorateur.aide}</p>

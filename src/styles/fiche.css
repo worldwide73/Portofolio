@@ -173,7 +173,7 @@
 }
 
 .fiche__nav .nom {
-  font-size: clamp(1.4rem, 2.7vw, 2.7rem);
+  font-size: calc(clamp(1.4rem, 2.7vw, 2.7rem) * var(--k-sous, 1));
   line-height: 1.06;
   letter-spacing: -0.04em;
 }

@@ -10,7 +10,9 @@
 //
 // Les textes qui dépendent de la progression (records, états, objectifs du
 // secteur choisi) sont écrits par rush.ts, à partir des vraies données.
-import { EMPLACEMENTS, NIVEAUX, PIECES, ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION } from '../scripts/rush/donnees';
+import { EMPLACEMENTS, NIVEAUX, PIECES, ORDRE_DIFFICULTES, PROFILS, REGLES_VERSION, VEHICULES } from '../scripts/rush/donnees';
+import { DEPLACEMENT } from '../scripts/rush/equilibrage';
+import { CATALOGUE_RUSH, minutes } from '../scripts/audio/catalogue';
 import type { Contenu } from '../contenu/types';
 import Drapeau from './Drapeau.astro';
 
@@ -118,6 +120,23 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
   </div>
   <p class="rush__annonce" aria-live="polite"></p>
   <p class="rush__conseil etiquette" aria-live="polite" hidden></p>
+  <!-- Le tutoriel immersif (V4, src/scripts/rush/tutoriel.ts) : la consigne, les touches animées, l'avancée. -->
+  <div class="tuto" data-tuto hidden>
+    <p class="tuto__etape etiquette"><span data-tuto="etape"></span> · <span data-tuto="titre"></span></p>
+    <p class="tuto__consigne" data-tuto="consigne" aria-live="polite"></p>
+    <div class="tuto__touches" aria-hidden="true">
+      <kbd class="tuto__touche" data-touche="gauche"><span>←</span><small>A</small></kbd>
+      <kbd class="tuto__touche" data-touche="droite"><span>→</span><small>D</small></kbd>
+    </div>
+    <div class="tuto__tactile" aria-hidden="true"><i data-touche="gauche"></i><i data-touche="droite"></i></div>
+    <span class="tuto__ok" data-tuto="ok" aria-hidden="true"></span>
+    <ol class="tuto__progres" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
+  </div>
+  <button class="tuto__passer" type="button" data-rush="passer-tuto" hidden>{r.tutoriel.passer}</button>
+  <div class="tuto__fin" data-tuto="fin" aria-live="polite" hidden>
+    <p class="tuto__fin-titre">{r.tutoriel.fin[0]}</p>
+    <p class="tuto__fin-sous">{r.tutoriel.fin[1]}</p>
+  </div>
   <!-- La séquence de fin d'un niveau : bandes de cinéma et titre (voir finDePartie dans rush.ts). -->
   <div class="rush__cine" aria-hidden="true">
     <p class="rush__cine-titre" data-cine-titre></p>
@@ -142,6 +161,7 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <span class="action-principale__chevrons" aria-hidden="true"><i></i><i></i><i></i></span>
       </button>
       <p class="accueil__bienvenue etiquette" data-stat="bienvenue">{r.stats.bienvenue}</p>
+      <button class="accueil__refaire etiquette" type="button" data-rush="tutoriel"><b>{r.tutoriel.refaire}</b><small>{r.tutoriel.refaireTexte}</small></button>
       <nav class="modes" aria-label={r.titre}>
         {
           modes.map(([id, index, icone]) => (
@@ -171,6 +191,42 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <b data-stat="meilleur">—</b>
         <small class="etiquette" data-stat="meilleurOrigine"></small>
       </p>
+      <!-- RUSH RADIO : le lecteur compact, en bas à droite du menu principal (src/scripts/audio/rush-radio.ts). -->
+      <div class="rush-radio" data-lecture="false" role="group" aria-label={r.radio.titre}>
+        <button class="rush-radio__lecture" type="button" data-rr="lecture" aria-pressed="false" aria-label={r.radio.lire} title={r.radio.lire}>
+          <svg class="rush-radio__lire" viewBox="0 0 18 18" aria-hidden="true"><path d="M5.5 3.2v11.6L15 9z" fill="currentColor"></path></svg>
+          <svg class="rush-radio__pause" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3.5h2.6v11H5zM10.4 3.5H13v11h-2.6z" fill="currentColor"></path></svg>
+        </button>
+        <button class="rush-radio__titres" type="button" data-rr="liste" aria-expanded="false" aria-controls="rush-radio-liste" aria-label={r.radio.liste} title={r.radio.liste}>
+          <span class="rush-radio__marque">{r.radio.titre}<i class="rush-radio__ondes" aria-hidden="true"><i></i><i></i><i></i></i></span>
+          <b data-rr-champ="titre">{CATALOGUE_RUSH[0].titre}</b>
+          <small data-rr-champ="detail">{r.radio.original}</small>
+        </button>
+        <button class="rush-radio__saut" type="button" data-rr="precedente" aria-label={r.radio.precedente} title={r.radio.precedente}>
+          <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M14.5 3.8v10.4L6.4 9z" fill="currentColor"></path></svg>
+        </button>
+        <button class="rush-radio__saut" type="button" data-rr="suivante" aria-label={r.radio.suivante} title={r.radio.suivante}>
+          <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M14 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M3.5 3.8v10.4L11.6 9z" fill="currentColor"></path></svg>
+        </button>
+        <input class="rush-radio__volume" type="range" min="0" max="100" step="1" data-rr="volume" aria-label={r.radio.volume} title={r.radio.volume} />
+        <ol class="rush-radio__liste" id="rush-radio-liste" data-rr-liste hidden>
+          {
+            CATALOGUE_RUSH.map((p, i) => (
+              <li>
+                <button type="button" data-rr-piste={i}>
+                  <span class="rush-radio__numero">{deux(i + 1)}</span>
+                  <span>
+                    <b>{p.titre}</b>
+                    <small>{p.licence === 'original' ? r.radio.original : `${p.artiste} · CC BY-SA 3.0`}</small>
+                    <small class="rush-radio__genre">{p.adaptative ? r.radio.adaptative : r.radio.fixe}</small>
+                  </span>
+                  <span class="rush-radio__duree">{minutes(p.duree)}</span>
+                </button>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
     </div>
   </section>
 
@@ -196,6 +252,7 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
               <span class="difficulte__role etiquette">{r.difficultes[d].role}</span>
               <small>{r.difficultes[d].texte}</small>
               {d === 'cauchemar' && <small class="difficulte__verrou" data-verrou-cauchemar>{r.verrouCauchemar}</small>}
+              {d === 'paradoxe' && <small class="difficulte__verrou" data-verrou-paradoxe>{r.verrouParadoxe}</small>}
             </label>
           ))
         }
@@ -396,6 +453,30 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <span class="garage__repere etiquette" aria-hidden="true">PR-07 · {r.garage.titre}</span>
       </div>
       <div class="garage__emplacements">
+        <!-- Les vaisseaux (V4) : de vraies différences de pilotage, toujours équilibrées. -->
+        <div class="garage__vaisseaux" role="group" aria-label={r.garage.vaisseaux.titre}>
+          <p class="etiquette"><span class="garage__index">00</span>{r.garage.vaisseaux.titre}</p>
+          <div class="garage__flotte">
+            {
+              VEHICULES.map((v) => (
+                <button type="button" class="vaisseau-carte" data-vehicule={v.id} aria-pressed="false">
+                  <span class="vaisseau-carte__tete">
+                    <b>{r.garage.vaisseaux.noms[v.id]}</b>
+                    <small class="etiquette" data-vehicule-etat />
+                  </span>
+                  <span class="vaisseau-carte__role">{r.garage.vaisseaux.roles[v.id]}</span>
+                  <dl class="vaisseau-carte__stats">
+                    <div style={`--n: ${Math.round((1.25 - v.deplacement) * 200)}%`}><dt>{r.garage.vaisseaux.stats.deplacement}</dt><dd>{(DEPLACEMENT * v.deplacement).toLocaleString(locale, { maximumFractionDigits: 3 })} s</dd></div>
+                    <div style={`--n: ${(v.boucliers + 1) * 50}%`}><dt>{r.garage.vaisseaux.stats.boucliers}</dt><dd>{v.boucliers > 0 ? `+${v.boucliers}` : v.boucliers < 0 ? `−${-v.boucliers}` : '±0'}</dd></div>
+                    <div style={`--n: ${Math.round((v.parfait - 0.7) * 125)}%`}><dt>{r.garage.vaisseaux.stats.parfait}</dt><dd>×{v.parfait.toLocaleString(locale)}</dd></div>
+                    <div style={`--n: ${Math.round((v.jauge - 0.6) * 200)}%`}><dt>{r.garage.vaisseaux.stats.jauge}</dt><dd>×{v.jauge.toLocaleString(locale)}</dd></div>
+                  </dl>
+                </button>
+              ))
+            }
+          </div>
+          <p class="garage__note etiquette">{r.garage.vaisseaux.defi}</p>
+        </div>
         {
           EMPLACEMENTS.map((e, k) => (
             <div class="garage__emplacement" role="group" aria-label={r.garage.emplacements[e]}>
@@ -522,6 +603,24 @@ const teinte = (couleur: string) => (couleur === 'prisme' ? 'conic-gradient(from
         <span class="option__texte"><b>{r.reglages.secousses}</b></span>
         <input class="interrupteur" type="checkbox" role="switch" data-reglage="secousses" />
       </label>
+      <!-- La qualité graphique (V4-H) : automatique, ou fixée. -->
+      <fieldset class="option option--choix">
+        <legend class="option__texte"><b>{r.reglages.qualite}</b><small>{r.reglages.qualiteTexte}</small></legend>
+        <span class="segments segments--quatre">
+          <label><input type="radio" name="rush-qualite" value="auto" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.auto}</span></label>
+          <label><input type="radio" name="rush-qualite" value="elevee" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.elevee}</span></label>
+          <label><input type="radio" name="rush-qualite" value="equilibree" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.equilibree}</span></label>
+          <label><input type="radio" name="rush-qualite" value="economie" data-reglage="qualite" /><span>{r.reglages.qualiteChoix.economie}</span></label>
+        </span>
+      </fieldset>
+      <!-- La séquence de fin de secteur (V4) : complète, ou courte pour enchaîner les essais. -->
+      <fieldset class="option option--choix">
+        <legend class="option__texte"><b>{r.reglages.sequenceFin}</b><small>{r.reglages.sequenceFinTexte}</small></legend>
+        <span class="segments">
+          <label><input type="radio" name="rush-sequence-fin" value="complete" data-reglage="sequenceFin" /><span>{r.reglages.sequenceChoix.complete}</span></label>
+          <label><input type="radio" name="rush-sequence-fin" value="courte" data-reglage="sequenceFin" /><span>{r.reglages.sequenceChoix.courte}</span></label>
+        </span>
+      </fieldset>
     </div>
     <div class="panneau__page" id="set-page-commandes" role="tabpanel" aria-labelledby="set-commandes" data-page-reglages="commandes" hidden>
       <label class="option">

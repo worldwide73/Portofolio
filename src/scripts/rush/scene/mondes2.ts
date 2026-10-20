@@ -13,14 +13,22 @@
 
 import { Assembleur, Halos, mat, type Matiere, type RGB } from './geometrie';
 import { M } from './modeles';
-import { TRONCON, lampadaire, pilier, piste, rnd, type Kit, type Lointain, type Palette } from './mondes';
+import { TRONCON, lampadaire, pilier, piste, poserModule, rnd, type Kit, type Lointain, type Palette } from './mondes';
+import { decor } from './assets';
 
 const L = TRONCON;
 
 /** Un rocher (astéroïde, fragment) à facettes : roche claire au soleil, sombre dessous, parfois glacée. */
-function rocher(a: Assembleur, x: number, y: number, z: number, r: number, graine: number, q: Matiere = M.roche, q2: Matiere = M.rocheSombre) {
+function rocher(a: Assembleur, x: number, y: number, z: number, r: number, graine: number, q: Matiere = M.roche, q2: Matiere = M.rocheSombre, loin = false) {
   a.pousser().deplacer(x, y, z).tourner(graine * 2.1, graine * 3.7, graine * 1.3);
-  a.sphere(r, r > 3 ? 2 : 1, q, (v) => 0.72 + 0.4 * Math.abs(Math.sin(v[0] * 3.1 + graine * 5) * Math.cos(v[1] * 2.7 + graine) * Math.sin(v[2] * 3.9 + graine * 2)), true, (v) => (v[1] > -0.1 ? q : q2));
+  // (V4-H7) Une roche fracturée modélisée dans Blender (decor.prm), recolorée pour le monde ; pas au lointain
+  // (des centaines de roches : la sphère à relief, plus légère, y suffit).
+  const modele = loin ? undefined : decor[`roche-${Math.abs(graine) % 4}`];
+  if (modele) {
+    a.echelle(r * 1.15).importer(modele, (n) => (n[1] > -0.1 ? q : q2)).retirer();
+    return;
+  }
+  a.sphere(r, r > 3 ? 3 : 2, q, (v) => 0.72 + 0.4 * Math.abs(Math.sin(v[0] * 3.1 + graine * 5) * Math.cos(v[1] * 2.7 + graine) * Math.sin(v[2] * 3.9 + graine * 2)), false, (v) => (v[1] > -0.1 ? q : q2));
   a.retirer();
 }
 
@@ -99,6 +107,8 @@ function tronconNeon(a: Assembleur, h: Halos, v: number) {
     const z = -r() * L;
     const hh = 20 + r() * 60;
     const base = -40;
+    // (V4-H7) Les trois premières : des tours modélisées dans Blender (façade tournée vers la piste).
+    if (k < 3 && poserModule(a, h, (k + v) % 2 ? 'tour-neon-a' : 'tour-neon-b', x, base + (k === 1 ? -8 : 0), z, s)) continue;
     a.boite(x, base + hh / 2, z, 6 + r() * 8, hh, 6 + r() * 8, mat('#1d1a2a', 0.7, 0.45), 0.6);
     for (let y = base + 4; y < base + hh - 2; y += 2.2 + r() * 2) a.boite(x - s * 4.2, y, z, 0.05, 0.18, 4 + r() * 3, r() > 0.5 ? M.fenetre : r() > 0.5 ? M.accent2 : M.accent);
     h.ajouter(x, base + hh + 1, z, 2.2, r() > 0.5 ? cyan : rose, 0.6);
@@ -176,7 +186,7 @@ const lointainDebris: Lointain = {
     for (let k = 0; k < 260; k++) {
       const ang = r() * Math.PI * 2;
       const d = 600 + r() * 900;
-      rocher(a, Math.cos(ang) * d, -60 + Math.sin(ang * 3) * 80 + (r() - 0.5) * 60, -Math.abs(Math.sin(ang)) * d - 200, 6 + r() * 26, k);
+      rocher(a, Math.cos(ang) * d, -60 + Math.sin(ang * 3) * 80 + (r() - 0.5) * 60, -Math.abs(Math.sin(ang)) * d - 200, 6 + r() * 26, k, M.roche, M.rocheSombre, true);
     }
   },
 };
@@ -189,13 +199,16 @@ function tronconLaser(a: Assembleur, h: Halos, v: number) {
   piste(a, { plaque: mat('#3c4a55', 0.8, 0.34), plaque2: mat('#2f3b45', 0.8, 0.36), bord: M.metalSombre, graine: 40 + v, dessous: false });
   const rouge: RGB = [1, 0.25, 0.25],
     cyan: RGB = [0.4, 0.95, 1];
-  // La tranchée : murs latéraux, panneaux, feux d'alerte.
+  // La tranchée : murs latéraux, panneaux, feux d'alerte. (V4-H7) Le mur modélisé dans Blender s'il est chargé.
   for (const s of [-1, 1]) {
-    a.boite(s * 5.4, 0.7, -L / 2, 0.6, 3.2, L, mat('#26313a', 0.75, 0.45));
-    for (let z = 3; z < L; z += 6) {
-      a.boite(s * 5.09, 1.0, -z, 0.02, 1.8, 4.6, M.metalMoyen);
-      a.boite(s * 5.08, 1.9, -z, 0.02, 0.08, 4.2, M.accent);
-      a.boite(s * 5.08, 0.25, -z - 2.6, 0.03, 0.2, 0.2, M.danger);
+    if (decor['mur-tranchee']) for (let z = 3; z < L; z += 6) poserModule(a, h, 'mur-tranchee', 0, 0, -z, s);
+    else {
+      a.boite(s * 5.4, 0.7, -L / 2, 0.6, 3.2, L, mat('#26313a', 0.75, 0.45));
+      for (let z = 3; z < L; z += 6) {
+        a.boite(s * 5.09, 1.0, -z, 0.02, 1.8, 4.6, M.metalMoyen);
+        a.boite(s * 5.08, 1.9, -z, 0.02, 0.08, 4.2, M.accent);
+        a.boite(s * 5.08, 0.25, -z - 2.6, 0.03, 0.2, 0.2, M.danger);
+      }
     }
     // Au-delà : les plateformes en grille et les clôtures laser.
     a.boite(s * 12, -0.9, -L / 2, 12, 0.15, L, M.metalSombre);
@@ -208,6 +221,10 @@ function tronconLaser(a: Assembleur, h: Halos, v: number) {
   }
   // Le portique scanner, tous les 24 m : cadre carré, barre de balayage, projecteurs rouges.
   for (const z of [-6, -30]) {
+    if (poserModule(a, h, 'scanner', 0, 0, z)) {
+      h.ajouter(0, 6.7, z + 0.2, 1.4, cyan, 0.3, 5);
+      continue;
+    }
     for (const s of [-1, 1]) {
       a.boite(s * 5.9, 3.5, z, 0.8, 7.5, 1.0, M.metalMoyen, 0.15);
       a.boite(s * 5.48, 3.5, z, 0.03, 6.4, 0.5, M.accent);
@@ -268,13 +285,33 @@ function tronconRift(a: Assembleur, h: Halos, v: number) {
   const violet: RGB = [0.7, 0.55, 1],
     cyan: RGB = [0.37, 0.9, 1];
   const cristal = mat('#3b2c66', 0.6, 0.15);
-  // Les arches de cristal : deux par tronçon, la seconde décalée.
-  arc(a, h, -10, 6.6, -0.6, 9, cristal, M.accent, 0, violet);
-  arc(a, h, -34, 7.4, -1.2, 11, cristal, M.accent2, 0.15, cyan);
-  // Une arche renversée, en miroir, au-dessus (le passage dimensionnel).
-  a.pousser().deplacer(0, 26, -22).tourner(0, 0, Math.PI);
-  arc(a, new Halos(), 0, 8, 0, 10, cristal, M.accent, 0, violet);
-  a.retirer();
+  // Les arches de cristal : deux par tronçon, la seconde décalée. (V4-H7) Faites d'éclats modélisés dans
+  // Blender (prismes à pointe lumineuse sur une âme de métal) si le monde est chargé.
+  const arche = decor['arche-cristal'];
+  const archeCristal = (z: number, rayon: number, cy: number, renverse = false) => {
+    a.pousser().deplacer(0, cy, z);
+    if (renverse) a.tourner(0, 0, Math.PI);
+    a.echelle(rayon / 7, rayon / 7, 1).importer(arche!).retirer();
+  };
+  if (arche) {
+    archeCristal(-10, 6.6, -0.6);
+    archeCristal(-34, 7.4, -1.2);
+    archeCristal(-22, 8, 26, true);
+    for (const [x, y, z] of [[0, 6.0, -10], [0, 6.2, -34]] as const) h.ajouter(x, y, z + 0.3, 2.2, violet, 0.3, 4);
+  } else {
+    arc(a, h, -10, 6.6, -0.6, 9, cristal, M.accent, 0, violet);
+    arc(a, h, -34, 7.4, -1.2, 11, cristal, M.accent2, 0.15, cyan);
+    // Une arche renversée, en miroir, au-dessus (le passage dimensionnel).
+    a.pousser().deplacer(0, 26, -22).tourner(0, 0, Math.PI);
+    arc(a, new Halos(), 0, 8, 0, 10, cristal, M.accent, 0, violet);
+    a.retirer();
+  }
+  // Des grappes de cristaux au bord de la piste, hors des voies.
+  if (decor['grappe-cristaux'])
+    for (let k = 0; k < 3; k++) {
+      const s = (k + v) % 2 ? 1 : -1;
+      a.pousser().deplacer(s * (6.5 + k * 2.2), -0.4, -8 - k * 14).tourner(0, k * 1.7, s * 0.15).echelle(0.8 + (k % 2) * 0.5).importer(decor['grappe-cristaux']).retirer();
+    }
   h.ajouter(0, 18.5, -21.4, 2.4, violet, 0.35, 4);
   // Des plateformes fracturées qui flottent : roche dessous, plaque de métal dessus.
   for (let k = 0; k < 6; k++) {
@@ -288,6 +325,7 @@ function tronconRift(a: Assembleur, h: Halos, v: number) {
     a.retirer();
     a.boite(0, 0.2, 0, 3.4 + r() * 2, 0.3, 3 + r() * 2, mat('#4a4466', 0.8, 0.3), 0.2);
     a.boite(0, 0.37, 0, 2.4, 0.03, 0.06, M.accent);
+    if (k % 2 === 0 && decor['grappe-cristaux']) a.pousser().deplacer(0.6, 0.6, 0.4).echelle(0.7).importer(decor['grappe-cristaux']).retirer();
     a.retirer();
   }
   // Des anneaux suspendus, inclinés, dont l'intérieur luit.
@@ -331,6 +369,18 @@ function tronconTempete(a: Assembleur, h: Halos, v: number) {
   for (let i = 0; i < L / 8; i++) {
     const z = -i * 8 - 2;
     const casse = r();
+    // (V4-H7) Les cadres en poutres en I modélisés dans Blender, intacts ou brisés (tantôt d'un côté, tantôt de
+    // l'autre), avec leurs câbles pendants ; les panneaux tordus restent.
+    if (decor['cadre-station']) {
+      poserModule(a, h, casse > 0.6 ? 'cadre-brise' : 'cadre-station', 0, 0, z, casse > 0.6 && i % 2 ? -1 : 1);
+      for (const s of [-1, 1])
+        if (r() > 0.35) {
+          a.pousser().deplacer(s * 6.6, 2 + r() * 3, z - 4).tourner((r() - 0.5) * 0.5, s * (0.2 + r() * 0.4), (r() - 0.5) * 0.6);
+          a.boite(0, 0, 0, 0.12, 2.4 + r() * 2, 3 + r() * 3, mat('#3a3f48', 0.75, 0.5), 0.05);
+          a.retirer();
+        }
+      continue;
+    }
     for (const s of [-1, 1]) {
       const hh = casse > 0.6 && s > 0 ? 2 + r() * 3 : 8;
       a.boite(s * 6.2, hh / 2 - 1, z, 0.6, hh, 0.6, M.metalSombre, 0.1);
@@ -359,6 +409,8 @@ function tronconTempete(a: Assembleur, h: Halos, v: number) {
     a.poutre([x, -6 + r() * 20, -r() * L], [x + (r() - 0.5) * 10, -6 + r() * 20, -r() * L], 0.3 + r() * 0.4, M.metalMoyen);
   }
   for (let k = 0; k < 8; k++) rocher(a, (r() > 0.5 ? 1 : -1) * (10 + r() * 50), -8 + r() * 30, -r() * L, 0.8 + r() * 3, k + v * 7, mat('#3a3d44', 0.4, 0.7), mat('#202227', 0.4, 0.8));
+  // (V4-H7) Un paratonnerre monumental par tronçon, d'un côté puis de l'autre : la tempête frappe dessus.
+  if (decor.paratonnerre) poserModule(a, h, 'paratonnerre', (v % 2 ? 1 : -1) * (17 + r() * 8), -9, -10 - r() * 28);
   // Des feux de secours, orange, sur ce qui tient encore.
   for (let z = 4; z < L; z += 12) {
     a.boite(4.5, 0.6, -z, 0.15, 0.15, 0.15, M.accent2);
@@ -401,6 +453,9 @@ function tronconSentinelle(a: Assembleur, h: Halos, v: number) {
   for (const z of [-12, -36]) {
     for (const s of [-1, 1]) {
       const x = s * 17;
+      // (V4-H7) La colonne de forteresse modélisée dans Blender (fût octogonal à bandes blindées, contreforts,
+      // canal d'énergie tourné vers la piste, chapiteau crénelé), s'il est chargé.
+      if (poserModule(a, h, 'colonne-forteresse', x, 0, z, s)) continue;
       pilier(a, x, z, -1, 44, 3.4, pierre);
       a.boite(x - s * 1.72, 21, z, 0.06, 40, 0.5, M.accent2);
       a.poutre([x + s * 1.5, 6, z], [x + s * 9, -1, z], 1.4, pierre);
@@ -408,6 +463,8 @@ function tronconSentinelle(a: Assembleur, h: Halos, v: number) {
       h.ajouter(x - s * 1.9, 20, z + 0.4, 2.4, braise, 0.35, 0.5);
     }
   }
+  // Les tourelles de défense, braquées sur la piste, sous l'arche.
+  if (decor.tourelle) for (const s of [-1, 1]) poserModule(a, h, 'tourelle', s * (8.8 + (v % 2) * 1.5), -0.2, -24 + s * 3, s);
   // L'arche colossale, une fois par tronçon.
   a.boite(0, 42, -24, 40, 4, 5, pierre, 0.8);
   a.boite(0, 39.9, -24, 34, 0.1, 1.2, M.accent2);
@@ -463,12 +520,22 @@ function tronconSingularite(a: Assembleur, h: Halos, v: number) {
       y = 4 + Math.sin(t) * d * 0.6,
       z = -(k / 26) * L;
     if (k % 3 === 0) rocher(a, x, y, z, 0.6 + r() * 1.8, k + v * 3, mat('#3a3548', 0.4, 0.6), mat('#1a1724', 0.4, 0.8));
-    else {
+    else if (k % 3 === 1 && decor['fragment-coque']) {
+      // (V4-H7) Un fragment de coque arraché (modélisé dans Blender), qui tournoie vers le trou noir.
+      a.pousser().deplacer(x, y, z).tourner(t, t * 1.3, t * 0.7).echelle(0.35 + r() * 0.4).importer(decor['fragment-coque']).retirer();
+    } else {
       a.pousser().deplacer(x, y, z).tourner(t, t * 1.3, t * 0.7);
       a.boite(0, 0, 0, 1 + r() * 2, 0.1, 0.8 + r(), metal);
       a.retirer();
     }
     if (k % 4 === 0) h.ajouter(x, y, z, 0.8, violet, 0.4, 3);
+  }
+  // (V4-H7) Un tiers d'anneau d'habitat éventré, incliné au-dessus de la piste, d'un côté puis de l'autre.
+  if (decor['anneau-brise']) {
+    const s = v % 2 ? 1 : -1;
+    a.pousser().deplacer(s * 9, 2, -24).tourner(0.5, s * 0.6, s * 0.4);
+    poserModule(a, h, 'anneau-brise', 0, 0, 0, s);
+    a.retirer();
   }
   // Des structures étirées, comme happées.
   for (let k = 0; k < 2; k++) {

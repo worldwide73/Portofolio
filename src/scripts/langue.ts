@@ -174,6 +174,7 @@ export function ancrer(): () => void {
   }
   // Une section est calée sous la barre (on vient d'y naviguer) : elle le restera.
   for (const section of document.querySelectorAll<HTMLElement>('[data-section]')) {
+    if (!section.getClientRects().length) continue; // une destination masquée ne sert pas de point d'appui
     if (Math.abs(section.getBoundingClientRect().top - retrait(section)) < 8) return () => allerA(section, true, retrait(section));
   }
   // Ailleurs : le premier bloc de texte visible sous la barre. (La scène de l'accueil

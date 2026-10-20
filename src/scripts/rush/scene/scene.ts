@@ -14,17 +14,21 @@
 // Elle sert aussi à l'interface : la scène d'attente des menus, les aperçus des
 // mondes de la carte de campagne, et le vaisseau qui tourne dans le garage.
 
-import { Camera, Geometry, Mat4, Mesh, Renderer, Transform, Triangle, Vec3 } from 'ogl';
+import { Camera, Geometry, Mat4, Mesh, Renderer, Texture, Transform, Triangle, Vec3 } from 'ogl';
 import type { Equipement, Theme } from '../donnees';
 import { apparition } from '../equilibrage';
 import { estObstacle, type Objet, type Partie } from '../moteur';
 import { couleurPiece, type Vue } from '../rendu';
 import { Assembleur, Halos, hex, lineaire, type RGB } from './geometrie';
-import { anneau, ciel, energie, halo, planete, points, surface, traits, uniformesMonde } from './materiaux';
+import { anneau, ciel, energie, halo, planete, points, surface, traits, uniformesMonde, varianteSurface } from './materiaux';
 import * as Mo from './modeles';
 import { kitDe } from './kits';
 import { TRONCON, type Palette } from './mondes';
 import { creerPli, majPli, plier, type Pli } from './parcours';
+import { Ombres } from './ombres';
+import { Post } from './post';
+import { creerTextures } from './textures';
+import { chargerDecor, chargerModeles, decor, FICHIERS_VAISSEAUX, geometrieImportee, type MaillageImporte } from './assets';
 
 export interface RenduJeu {
   troisD: boolean;
@@ -39,7 +43,7 @@ export interface RenduJeu {
   /** Une image fixe d'un monde (JPEG en data URL), pour la carte de campagne. */
   apercu?(theme: Theme, l: number, h: number): string | null;
   /** Le vaisseau du garage, dessiné dans une autre toile. */
-  garage?(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number): void;
+  garage?(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number, modele?: number): void;
   /**
    * Un mouvement de caméra : ouverture (on recule depuis le vaisseau), fermeture (tout converge vers son noyau),
    * victoire (tour du vaisseau, Overdrive, traversée de la porte d'arrivée), défaite (le monde ralentit).
@@ -47,6 +51,8 @@ export interface RenduJeu {
   cinematique?(type: 'entree' | 'sortie' | 'victoire' | 'defaite'): void;
   /** La position du noyau du vaisseau à l'écran (px). */
   centreVaisseau?(): { x: number; y: number };
+  /** (V4-H) Un choc : des débris arrachés, un éclair orange qui éclaire alentour. */
+  debris?(voie: number): void;
   /** La collecte d'un fragment : il est aspiré par le vaisseau ; une onde, des étincelles, un trait d'énergie vers la jauge (cible, en px). */
   capter?(voie: number, couleur: string, cible?: { x: number; y: number }): void;
 }
@@ -79,13 +85,13 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   // LES PROGRAMMES
   // ==========================================================================
   const monde = uniformesMonde();
-  const pMonde = surface(gl, { ...monde, uDecoupe: { value: 1 } });
+  const pMonde = surface(gl, { ...monde, uDecoupe: { value: 1 } }, { echelle: 0.34 });
   const trous = [monde.uTrou0, monde.uTrou1, monde.uTrou2, monde.uTrou3, monde.uTrou4, monde.uTrou5];
-  const pLoin = surface(gl, { ...monde, uBrume: { value: [2200, 12000] }, uPlie: { value: 0 } });
+  const pLoin = surface(gl, { ...monde, uBrume: { value: [2200, 12000] }, uPlie: { value: 0 } }, { echelle: 0.014, detail: 0.7 });
   // (Les objets ont leur propre brouillard : ils émergent de la brume au loin, au lieu d'apparaître d'un coup.)
-  const pObjet = surface(gl, { ...monde, uCoeur: { value: [1, 1, 1] }, uBrume: { value: [60, 120] } });
+  const pObjet = surface(gl, { ...monde, uCoeur: { value: [1, 1, 1] }, uBrume: { value: [60, 120] } }, { echelle: 0.55 });
   const uVaisseau = { uPeinture: { value: [0.85, 0.88, 0.92] }, uAccent: { value: [0.3, 0.55, 1] }, uAccent2: { value: [0.9, 0.9, 1] }, uCoeur: { value: [1, 1, 1] } };
-  const pVaisseau = surface(gl, { ...monde, ...uVaisseau });
+  const pVaisseau = surface(gl, { ...monde, ...uVaisseau }, { echelle: 0.78, degats: true });
   const pHalo = halo(gl, monde);
   const pHaloLoin = halo(gl, { ...monde, uBrume: { value: [3000, 14000] } });
   pHaloLoin.uniforms.uPlie.value = 0;
@@ -100,20 +106,73 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const pAnneau = anneau(gl, monde);
   const pPoints = points(gl, monde);
 
+  // ==========================================================================
+  // V4-H : TEXTURES, OMBRES, LUMIÈRES, POST-TRAITEMENT, QUALITÉ
+  // ==========================================================================
+  // (Une texture blanche 1 × 1 tient la place des textures et de la carte d'ombres tant qu'elles n'existent pas.)
+  const vide = new Texture(gl, { image: new Uint8Array([255, 255, 255, 255]), width: 1, height: 1, generateMipmaps: false, minFilter: gl.NEAREST, magFilter: gl.NEAREST, flipY: false });
+  monde.tPlaques.value = vide;
+  monde.tBrut.value = vide;
+  monde.tNormales.value = vide;
+  monde.tOmbre.value = vide;
+  /**
+   * La qualité graphique. « auto » commence en Élevée (Équilibrée au doigt) et descend d'un cran si les images
+   * sont trop lentes pendant la course (moyenne > 21 ms sur 3 s) ; elle ne remonte jamais seule (pas de va-et-vient).
+   *   Élevée : textures, ombres 2048², 8 lumières, halo, flou de vitesse, grain ; Équilibrée : ombres 1024²,
+   *   4 lumières, halo ; Économie : rien de tout cela (le rendu d'avant, avec une ombre de contact).
+   */
+  type Niveau = 'elevee' | 'equilibree' | 'economie';
+  const NIVEAUX: Niveau[] = ['elevee', 'equilibree', 'economie'];
+  // (Sans carte graphique — rendu logiciel « SwiftShader », « llvmpipe »… — l'automatique part en Économie.)
+  const logiciel = (() => {
+    try {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      const nom = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+      return /swiftshader|llvmpipe|software|basic render/i.test(nom);
+    } catch {
+      return false;
+    }
+  })();
+  const qualite = { voulue: 'auto' as Niveau | 'auto', auto: (logiciel ? 'economie' : fin ? 'equilibree' : 'elevee') as Niveau, mesures: [] as number[], derniere: 0 };
+  const niveau = (): Niveau => (qualite.voulue === 'auto' ? qualite.auto : qualite.voulue);
+  let varianteCourante: Niveau | '' = 'elevee';
+  let textures: ReturnType<typeof creerTextures> | 'attente' | null = null;
+  let post: Post | null = null;
+  try {
+    post = new Post(gl);
+  } catch {
+    post = null;
+  }
+  const ombres: { carte: Ombres | null; taille: number } = { carte: null, taille: 0 };
+  const lumieres = { pos: monde.uLumPos.value as number[], coul: monde.uLumCoul.value as number[] };
+
   const scene = new Transform();
   const camera = new Camera(gl, { fov: 55, near: 0.3, far: 9000 });
 
   // ---- Le cache des géométries ----
   const geos = new Map<string, Geometry | null>();
+  // (V4-H7) Un modèle importé du même nom (outils/assets → public/rush/modeles) remplace le modèle procédural ;
+  // ses halos viennent de ses points « halos » ([x, y, z, rayon, r, v, b, intensité]) s'il en a.
+  const halosImportes = (pts: number[][]) => {
+    const h = new Halos();
+    for (const [x, y, z, r, cr, cv, cb, i] of pts) h.ajouter(x, y, z, r, [cr, cv, cb], i ?? 1);
+    return h.geometrie(gl);
+  };
   const geo = (cle: string, f: () => Assembleur | Halos): Geometry | null => {
-    if (!geos.has(cle)) geos.set(cle, f().geometrie(gl));
+    if (!geos.has(cle)) geos.set(cle, decor[cle] ? geometrieImportee(gl, decor[cle]) : f().geometrie(gl));
     return geos.get(cle) ?? null;
   };
   const double = (cle: string, f: () => { solide: Assembleur; halos: Halos }) => {
     if (!geos.has(cle + ':s')) {
-      const r = f();
-      geos.set(cle + ':s', r.solide.geometrie(gl));
-      geos.set(cle + ':h', r.halos.geometrie(gl));
+      const im = decor[cle];
+      if (im) {
+        geos.set(cle + ':s', geometrieImportee(gl, im));
+        geos.set(cle + ':h', im.points.halos ? halosImportes(im.points.halos) : f().halos.geometrie(gl));
+      } else {
+        const r = f();
+        geos.set(cle + ':s', r.solide.geometrie(gl));
+        geos.set(cle + ':h', r.halos.geometrie(gl));
+      }
     }
     return { solide: geos.get(cle + ':s') ?? null, halos: geos.get(cle + ':h') ?? null };
   };
@@ -294,14 +353,121 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     theme: Theme;
     variante: number;
     racine: Transform;
+    /** (V4-H) Les parties mobiles de ses mécanismes de bord de piste. */
+    mobiles: { t: Transform; genre: Meca; phase: number }[];
   }
+  // ---- (V4-H) Les mécanismes du bord de piste : turbines, radars, presses, balises, qui bougent vraiment ----
+  type Meca = 'turbine' | 'radar' | 'presse' | 'balise';
+  const MECAS: Record<Theme, Meca[]> = {
+    lancement: ['turbine', 'radar', 'balise'],
+    neon: ['balise', 'turbine', 'presse'],
+    debris: ['radar', 'presse'],
+    laser: ['presse', 'balise', 'turbine'],
+    rift: ['balise', 'radar'],
+    tempete: ['radar', 'turbine', 'balise'],
+    sentinelle: ['presse', 'radar'],
+    singularite: ['balise'],
+    infini: ['turbine', 'radar', 'balise'],
+    defi: ['turbine', 'radar', 'balise'],
+  };
+  /** Hauteur de chaque mécanisme au-dessus de son repère : sa base posée sur la plateforme (y = −0,5). */
+  const BASE_MECA: Record<Meca, number> = { turbine: 3.1, radar: 3.0, presse: 1.15, balise: 0.4 };
+  const hacher = (i: number, k: number) => (((i * 2654435761) ^ (k * 2246822519)) >>> 0) / 4294967296;
+  /** Pose, sur un tronçon, 0 ou 1 mécanisme (le même à chaque passage : il ne dépend que du numéro). */
+  const poserMecanismes = (racine: Transform, i: number, theme: Theme): Troncon['mobiles'] => {
+    const mobiles: Troncon['mobiles'] = [];
+    if (hacher(i, 1) > 0.55) return mobiles;
+    if (import.meta.env.DEV && (window as unknown as { __rushSans?: Record<string, boolean> }).__rushSans?.mecanismes) return mobiles;
+    const liste = MECAS[theme] ?? MECAS.lancement;
+    const genre = liste[Math.floor(hacher(i, 2) * liste.length)];
+    const cote = hacher(i, 3) < 0.5 ? -1 : 1;
+    const support = new Transform();
+    support.setParent(racine);
+    support.position.set(cote * 11, 0, -(10 + hacher(i, 4) * 28));
+    support.rotation.y = cote > 0 ? 0 : Math.PI;
+    const pf = double('plateforme-meca', Mo.plateformeMeca);
+    maillage(pf.solide, pMonde, support);
+    maillage(pf.halos, pHalo, support);
+    const corps = new Transform();
+    corps.setParent(support);
+    corps.position.y = BASE_MECA[genre];
+    const mobile = new Transform();
+    mobile.setParent(corps);
+    if (genre === 'turbine') {
+      const c = double('turbine-cadre', Mo.turbineCadre);
+      maillage(c.solide, pMonde, corps);
+      maillage(c.halos, pHalo, corps);
+      mobile.position.set(0, 2.6, 0.1);
+      maillage(geo('turbine-rotor', Mo.turbineRotor), pMonde, mobile);
+      // (La turbine regarde la piste en biais : on voit tourner ses pales.)
+      corps.rotation.y = -0.9;
+    } else if (genre === 'radar') {
+      const c = double('radar-tour', Mo.radarTour);
+      maillage(c.solide, pMonde, corps);
+      maillage(c.halos, pHalo, corps);
+      mobile.position.set(0, 3.9, 0);
+      maillage(geo('radar-antenne', Mo.radarAntenne), pMonde, mobile);
+    } else if (genre === 'presse') {
+      const c = double('presse-cadre', Mo.presseCadre);
+      maillage(c.solide, pMonde, corps);
+      maillage(c.halos, pHalo, corps);
+      maillage(geo('presse-tete', Mo.presseTete), pMonde, mobile);
+      corps.rotation.y = Math.PI / 2;
+    } else {
+      maillage(geo('balise-mat', Mo.baliseMat), pMonde, corps);
+      mobile.position.set(0, 2.5, 0);
+      maillage(geo('balise-tete', Mo.baliseTete), pMonde, mobile);
+    }
+    mobiles.push({ t: mobile, genre, phase: hacher(i, 5) });
+    return mobiles;
+  };
+  /** Les mécanismes bougent : pales, antennes, marteaux, gyrophares. */
+  const animerMecanismes = (temps: number) => {
+    for (const [, t] of troncons)
+      for (const m of t.mobiles) {
+        if (m.genre === 'turbine') m.t.rotation.z = temps * 4.2 + m.phase * 6;
+        else if (m.genre === 'radar') m.t.rotation.y = temps * 0.9 + m.phase * 6;
+        else if (m.genre === 'balise') m.t.rotation.y = temps * 5.5 + m.phase * 6;
+        else {
+          // La presse : elle frappe vite, reste un instant en bas, remonte lentement.
+          const ph = (temps * 0.42 + m.phase) % 1;
+          const haut = 3.55,
+            bas = 0.15;
+          m.t.position.y = ph < 0.12 ? haut + (bas - haut) * (ph / 0.12) ** 2 : ph < 0.26 ? bas : bas + (haut - bas) * ((ph - 0.26) / 0.74);
+        }
+      }
+  };
   const troncons = new Map<number, Troncon>();
-  const geoTroncon = (theme: Theme, v: number) => double(`troncon-${theme}-${v}`, () => {
+  // (V4-H7) Les modules d'architecture propres à un monde (public/rush/modeles/monde-<thème>.prm) : demandés à la
+  // première construction d'un de ses tronçons ; à leur arrivée, les tronçons de ce monde sont refaits.
+  const MONDES_IMPORTES = new Set<Theme>(['laser', 'neon', 'rift', 'tempete', 'sentinelle', 'singularite']);
+  const mondesDemandes = new Set<Theme>();
+  const demanderMonde = (theme: Theme) => {
+    if (!MONDES_IMPORTES.has(theme) || mondesDemandes.has(theme)) return;
+    mondesDemandes.add(theme);
+    void chargerDecor(`monde-${theme}.prm`).then((noms) => {
+      if (!noms.length) {
+        mondesDemandes.delete(theme);
+        return;
+      }
+      for (const [i, t] of troncons)
+        if (t.theme === theme) {
+          t.racine.setParent(null);
+          troncons.delete(i);
+        }
+      for (const [cle, g] of geos)
+        if (cle.startsWith(`troncon-${theme}-`)) {
+          g?.remove();
+          geos.delete(cle);
+        }
+    });
+  };
+  const geoTroncon = (theme: Theme, v: number) => (demanderMonde(theme), double(`troncon-${theme}-${v}`, () => {
     const a = new Assembleur();
     const h = new Halos();
     kitDe(theme).troncon(a, h, v);
     return { solide: a, halos: h };
-  });
+  }));
   const varianteDe = (i: number, theme: Theme) => {
     const n = kitDe(theme).variantes;
     return ((i * 2654435761) >>> 0) % 7 % n;
@@ -327,13 +493,26 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
         const g = geoTroncon(theme, v);
         maillage(g.solide, pMonde, racine);
         maillage(g.halos, pHalo, racine);
-        t = { theme, variante: v, racine };
+        t = { theme, variante: v, racine, mobiles: poserMecanismes(racine, i, theme) };
         troncons.set(i, t);
       }
       t.racine.setParent(scene);
       t.racine.position.set(0, 0, distance - i * TRONCON);
     }
   };
+  // (V4-H7) Les modules du décor (bordures, portiques…) arrivent après coup : les tronçons déjà construits sans
+  // eux sont refaits (une fois, en général pendant les menus).
+  void Promise.all([chargerDecor(), chargerDecor('piste.prm')]).then(([a, b]) => {
+    const noms = [...a, ...b];
+    if (!noms.length) return;
+    for (const [, t] of troncons) t.racine.setParent(null);
+    troncons.clear();
+    for (const [cle, g] of geos)
+      if (cle.startsWith('troncon-')) {
+        g?.remove();
+        geos.delete(cle);
+      }
+  });
   /** Libère les géométries des mondes qui ne servent plus (la mémoire du téléphone compte). */
   const libererMondes = (garder: Set<Theme>) => {
     for (const [cle, g] of geos)
@@ -349,27 +528,96 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   // ==========================================================================
   // LE VAISSEAU
   // ==========================================================================
+  // (V4-H7) Les vaisseaux modélisés dans Blender (public/rush/modeles/*.prm) : chargés à la demande, partagés par
+  // le jeu et le garage. En attendant (ou si le chargement échoue), la silhouette procédurale d'origine.
+  const importes: (MaillageImporte | null)[] = [null, null, null, null];
+  const geosImportees: (Geometry | null)[] = [null, null, null, null];
+  const abonnes: ((m: number) => void)[] = [];
+  const demander = (m: number) => {
+    const f = FICHIERS_VAISSEAUX[m];
+    if (!f || importes[m]) return;
+    chargerModeles(f)
+      .then((ms) => {
+        if (importes[m] || !ms[0]) return;
+        importes[m] = ms[0];
+        geosImportees[m] = geometrieImportee(gl, ms[0]);
+        abonnes.forEach((a) => a(m));
+      })
+      .catch(() => undefined);
+  };
+  /** Les tuyères de la silhouette procédurale : [x, y, z (arrière), rayon]. */
+  const TUYERES_PROC = [
+    [0.27, -0.04, 1.47, 0.12],
+    [-0.27, -0.04, 1.47, 0.12],
+  ];
+  const MAX_FLAMMES = 4;
   const creerVaisseau = (parent: Transform) => {
     const racine = new Transform();
     racine.setParent(parent);
     const corps = new Transform();
     corps.setParent(racine);
-    maillage(geo('vaisseau', Mo.vaisseau), pVaisseau, corps);
+    // (V4) Les quatre silhouettes : une seule est attachée à la fois (« modele »), les autres attendent.
+    const silhouettes: (Mesh | null)[] = [0, 1, 2, 3].map((m) => {
+      const ms = maillage(geo(`vaisseau-${m}`, () => Mo.vaisseau(m)), pVaisseau, corps);
+      ms?.setParent(null);
+      return ms;
+    });
+    let modele = -1;
     const emetteurs = Mo.EMETTEURS.map((p) => {
       const m = maillage(geo('emetteur', Mo.emetteur), pVaisseau, corps)!;
       m.position.set(...p);
       return m;
     });
-    const flammes = [1, -1].map((s) => {
+    const flammes = Array.from({ length: MAX_FLAMMES }, () => {
       const f = { force: 1, couleur: [1, 1, 1] };
       const m = maillage(geo('flamme', Mo.flamme), pFlamme, corps, () => {
         pFlamme.uniforms.uCouleur.value = f.couleur;
         pFlamme.uniforms.uForce.value = f.force;
         pFlamme.uniforms.uLongueur.value = 1;
       })!;
-      m.position.set(0.27 * s, -0.04, 1.47);
-      return { m, f };
+      return { m, f, base: 1 };
     });
+    const ancres = { tuyeres: TUYERES_PROC };
+    /** Place les flammes et les émetteurs sur les points d'ancrage du modèle affiché. */
+    const ancrer = (tuyeres: number[][], points?: number[][]) => {
+      ancres.tuyeres = tuyeres;
+      flammes.forEach((fl, k) => {
+        const t = tuyeres[k];
+        fl.m.visible = !!t;
+        if (!t) return;
+        fl.m.position.set(t[0], t[1], t[2]);
+        fl.base = (t[3] ?? 0.12) / 0.12;
+      });
+      emetteurs.forEach((e, k) => {
+        const p = points?.[k] ?? Mo.EMETTEURS[k];
+        e.position.set(p[0], p[1], p[2]);
+      });
+    };
+    let actuelle: Mesh | null = null;
+    const afficher = () => {
+      const g = geosImportees[modele];
+      let mesh: Mesh | null;
+      if (g) {
+        silhouettesImportees[modele] ??= maillage(g, pVaisseau, corps);
+        mesh = silhouettesImportees[modele];
+      } else mesh = silhouettes[modele];
+      if (mesh !== actuelle) {
+        actuelle?.setParent(null);
+        mesh?.setParent(corps);
+        actuelle = mesh;
+      }
+      const im = importes[modele];
+      ancrer(im?.points.tuyeres ?? TUYERES_PROC, im?.points.emetteurs);
+    };
+    const silhouettesImportees: (Mesh | null)[] = [null, null, null, null];
+    abonnes.push((m) => m === modele && afficher());
+    const choisirModele = (m: number) => {
+      if (m === modele || !silhouettes[m]) return;
+      modele = m;
+      demander(m);
+      afficher();
+    };
+    choisirModele(0);
     const bulleEtat = { force: 0, couleur: [1, 1, 1] };
     const bulle = maillage(geo('bulle', Mo.bulle), pBulle, racine, () => {
       pBulle.uniforms.uCouleur.value = bulleEtat.couleur;
@@ -377,15 +625,15 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     })!;
     bulle.scale.set(1.55, 0.75, 2.1);
     bulle.position.set(0, 0.05, 0);
-    return { racine, corps, emetteurs, flammes, bulle, bulleEtat };
+    return { racine, corps, emetteurs, flammes, bulle, bulleEtat, choisirModele, ancres };
   };
   const vaisseau = creerVaisseau(scene);
 
-  // La traînée : deux rubans, un par moteur, qui gardent la trace des changements de voie.
+  // La traînée : un ruban par tuyère, qui garde la trace des changements de voie.
   const POINTS_TRAINEE = 34;
   const traces: number[] = Array(POINTS_TRAINEE).fill(0);
   let accTrainee = 0;
-  const rubans = [1, -1].map((s) => {
+  const rubans = Array.from({ length: MAX_FLAMMES }, (_, s) => {
     const n = POINTS_TRAINEE;
     const position = new Float32Array(n * 2 * 3);
     const uv = new Float32Array(n * 2 * 2);
@@ -467,6 +715,47 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     }
   };
 
+  // (V4-H) Les débris d'un choc : des morceaux de tôle qui tournoient, rebondissent sur la piste et restent en
+  // arrière (le monde défile). Encore chauds au début (lueur orange). Une réserve de seize, réutilisée.
+  const N_DEBRIS = 16;
+  const debris = Array.from({ length: N_DEBRIS }, (_, k) => {
+    const racine = new Transform();
+    const e = { vie: 0, pos: [0, 0, 0], vit: [0, 0, 0], axe: [0, 1, 0], tour: 0 };
+    maillage(geo(`eclat-${k % 3}`, () => Mo.eclat(k % 3)), pObjet, racine, () => {
+      const u = pObjet.uniforms;
+      u.uImpact.value = Math.max(0, e.vie - 0.6) * 1.4;
+      u.uImpactCouleur.value = [1, 0.4, 0.12];
+      u.uEmission.value = 1;
+      u.uCoeur.value = [1, 1, 1];
+    });
+    racine.visible = false;
+    racine.setParent(scene);
+    return { racine, e };
+  });
+  const lancerDebris = (x: number, y: number, z: number, n: number) => {
+    for (let k = 0; k < n; k++) {
+      const d = debris.find((b) => b.e.vie <= 0) ?? debris[k % N_DEBRIS];
+      const a = Math.random() * Math.PI * 2;
+      const v = 2.5 + Math.random() * 4;
+      d.e.vie = 1.3 + Math.random() * 0.6;
+      d.e.pos = [x + (Math.random() - 0.5) * 0.6, y + Math.random() * 0.3, z];
+      d.e.vit = [Math.cos(a) * v, 2 + Math.random() * 4, Math.sin(a) * v * 0.4 - 1];
+      const ax = [Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5];
+      const l = Math.hypot(ax[0], ax[1], ax[2]) || 1;
+      d.e.axe = ax.map((c) => c / l);
+      d.e.tour = (Math.random() < 0.5 ? -1 : 1) * (6 + Math.random() * 10);
+      d.racine.visible = true;
+      d.racine.scale.set(0.8 + Math.random() * 0.7);
+    }
+  };
+  /** Les éclairs de lumière : un choc (orange), une collecte (la couleur du fragment) ; ils éclairent alentour. */
+  const eclairs: { x: number; y: number; z: number; c: number[]; r: number; vie: number; duree: number }[] = [];
+  const eclairer = (x: number, y: number, z: number, c: number[], r: number, duree: number) => {
+    if (eclairs.length > 4) eclairs.shift();
+    eclairs.push({ x, y, z, c, r, vie: duree, duree });
+  };
+  let degats = 0;
+
   // La collecte : le fragment touché est aspiré par le noyau du vaisseau (il rétrécit en s'y précipitant),
   // puis un trait d'énergie file jusqu'à la jauge d'Overdrive. Une réserve de six, réutilisée.
   const captures = Array.from({ length: 6 }, () => {
@@ -517,6 +806,9 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     x: number | null;
     etat: { couleur: number[]; force: number; impact: number; emission: number; coeur: number[] };
     extra?: Mesh | null;
+    /** Les pièces qui bougent (battants d'une porte, pales d'un rotor), et l'état lissé de leur mouvement. */
+    pieces?: Transform[];
+    lisse?: number;
   }
   const visuels = new Map<string, Visuel>();
   const reserve = new Map<string, Visuel[]>();
@@ -578,6 +870,40 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       case 'cible':
         maillage(geo('cible', Mo.cible), pFaisceau, racine, avantEnergie(pFaisceau));
         break;
+      // ---- Les obstacles mobiles de la V4 ----
+      case 'drone':
+        ajouter(double('drone', Mo.drone));
+        break;
+      case 'chute':
+        ajouter(double('bloc-chute', Mo.bloc));
+        break;
+      case 'eclaireur':
+        ajouter(double('eclaireur', Mo.eclaireur));
+        break;
+      case 'porte': {
+        ajouter(double('porte-cadre', Mo.porteCadre));
+        const battants = [-1, 1].map((sens) => {
+          const t = new Transform();
+          t.setParent(racine);
+          maillage(geo('porte-battant', Mo.porteBattant), pObjet, t, avantObjet);
+          t.rotation.y = sens < 0 ? 0 : Math.PI;
+          return t;
+        });
+        return { type, racine, etat, extra, x: null, pieces: battants, lisse: 0 };
+      }
+      case 'rotor': {
+        ajouter(double('rotor-moyeu', Mo.rotorMoyeu));
+        const tete = new Transform();
+        tete.setParent(racine);
+        tete.position.set(0, 1.0, 0);
+        for (let k = 0; k < 3; k++) {
+          const pale = new Transform();
+          pale.setParent(tete);
+          pale.rotation.y = (k * Math.PI * 2) / 3;
+          maillage(geo('rotor-pale', Mo.rotorPale), pObjet, pale, avantObjet);
+        }
+        return { type, racine, etat, extra, x: null, pieces: [tete], lisse: 0 };
+      }
       case 'chevrons':
         maillage(geo('trait', () => new Assembleur().quad([-0.5, 0, 0], [0.5, 0, 0], [0.5, 0, -1], [-0.5, 0, -1], Mo.M.blanc)), pChevron, racine, avantEnergie(pChevron));
         break;
@@ -608,11 +934,31 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     reserve.get(v.type)!.push(v);
   };
   const vus = new Set<string>();
+  // (V4-H7) Les obstacles modélisés dans Blender : à leur arrivée, les géométries procédurales du même nom sont
+  // oubliées et les visuels refaits (les objets à l'écran sont recréés à l'image suivante).
+  // (Un fichier par famille d'objets ; un fichier absent est simplement ignoré.)
+  for (const fichier of ['objets.prm', 'objets-mobiles.prm', 'objets-mecanismes.prm', 'objets-collecte.prm'])
+    void chargerDecor(fichier).then((noms) => {
+      if (!noms.length) return;
+      for (const n of noms)
+        for (const suf of ['', ':s', ':h']) {
+          geos.get(n + suf)?.remove();
+          geos.delete(n + suf);
+        }
+      for (const [cle, v] of visuels) {
+        v.racine.setParent(null);
+        visuels.delete(cle);
+      }
+      reserve.clear();
+      // (Les mécanismes du bord de piste sont posés avec les tronçons : ceux-ci sont reposés, sans être refaits.)
+      for (const [, t] of troncons) t.racine.setParent(null);
+      troncons.clear();
+    });
   const xVoie = (v: number) => (v - 1) * Mo.VOIE;
 
   /** La voie affichée d'un obstacle mobile : il glisse d'une configuration à la suivante (comme la version 2D). */
   function voiesAffichees(p: Partie, o: Objet, z: number): number[] {
-    if (o.type !== 'mobile' || !o.avant || z <= (o.fige ?? 0)) return p.voiesA(o, z);
+    if ((o.type !== 'mobile' && o.type !== 'drone') || !o.avant || z <= (o.fige ?? 0)) return p.voiesA(o, z);
     const etats = [...o.avant, { des: o.fige ?? 0, voies: o.voies }];
     let depuis = { des: apparition(p.vitesse), voies: etats[0].voies };
     for (const etat of etats) {
@@ -671,6 +1017,65 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
           });
           break;
         }
+        case 'porte': {
+          // Une porte par voie qu'elle fermera : ses battants se rejoignent quand la voie se ferme vraiment.
+          const fermees = p.voiesA(o, z);
+          o.voies.forEach((voie, k) => {
+            const v = prendre(`${o.id}:${k}`, 'porte');
+            v.racine.position.set(xVoie(voie), 0, -z);
+            v.racine.scale.set(taille);
+            const cible = fermees.includes(voie) ? 1 : 0;
+            v.lisse = (v.lisse ?? 0) + (cible - (v.lisse ?? 0)) * borne(dt * 9);
+            const ouvert = 1 - (v.lisse ?? 0);
+            v.pieces?.forEach((b, i) => b.position.set((i === 0 ? -1 : 1) * (0.56 + ouvert * 1.05), 0, 0));
+            v.etat.impact = fermees.includes(voie) ? 0 : 0.08 + 0.06 * Math.sin(temps * 8);
+          });
+          break;
+        }
+        case 'rotor': {
+          // Les pales tournent tant que l'ouverture change, ralentissent et se figent sur leur place finale.
+          const fige = z <= (o.fige ?? 0);
+          p.voiesA(o, z).forEach((voie, k) => {
+            const v = prendre(`${o.id}:${k}`, 'rotor');
+            const cibleX = xVoie(voie);
+            v.x = v.x === null ? cibleX : v.x + (cibleX - v.x) * borne(dt * 16);
+            v.racine.position.set(v.x, 0, -z);
+            v.racine.scale.set(taille);
+            v.lisse = (v.lisse ?? 0) + (fige ? -dt * 2.5 : dt * 3);
+            v.lisse = borne(v.lisse, 0.15, 1);
+            const tete = v.pieces?.[0];
+            if (tete) tete.rotation.y += dt * 9 * (v.lisse ?? 0);
+            v.etat.emission = fige ? 1.4 : 1;
+          });
+          break;
+        }
+        case 'chute': {
+          // Le bloc tombe du ciel sur sa voie (connue dès son apparition) et se pose bien avant d'arriver au joueur.
+          const pose = borne((loin - z) / (loin * 0.45));
+          const h = (1 - pose * pose) * 26;
+          const v = prendre(`${o.id}`, 'chute');
+          v.racine.position.set(xVoie(o.voies[0]), h, -z);
+          v.racine.rotation.set((1 - pose) * 0.5 * Math.sin(g * 9), (1 - pose) * 1.5 + g * 6, 0);
+          v.racine.scale.set(taille);
+          v.etat.emission = pose < 1 ? 1.8 : 1;
+          if (o.voies[1] !== undefined) {
+            const w = prendre(`${o.id}:b`, 'chute');
+            w.racine.position.set(xVoie(o.voies[1]), h * 1.1, -z);
+            w.racine.scale.set(taille);
+          }
+          break;
+        }
+        case 'eclaireur': {
+          // L'éclaireur fonce : de loin, il est plus loin encore et se rapproche plus vite que la piste ; il arrive à l'heure exacte.
+          const zv = z + 0.55 * z * borne(z / loin);
+          const v = prendre(`${o.id}`, 'eclaireur');
+          v.racine.position.set(xVoie(o.voies[0]) + Math.sin(temps * 3 + g * 9) * 0.12 * borne(z / 30), 0.15 + Math.sin(temps * 5 + g) * 0.08, -zv);
+          v.racine.rotation.set(0, 0, Math.sin(temps * 2 + g * 5) * 0.12);
+          v.racine.scale.set(taille);
+          v.etat.emission = 1.5;
+          v.etat.impact = 0.12 + 0.08 * Math.sin(temps * 14);
+          break;
+        }
         default: {
           const voies = o.type === 'laser' || o.type === 'debris' ? p.voiesA(o, z) : voiesAffichees(p, o, z);
           const fige = z <= (o.fige ?? 0);
@@ -680,7 +1085,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
             const cibleX = xVoie(voie);
             v.x = v.x === null ? cibleX : v.x + (cibleX - v.x) * borne(dt * 22);
             v.racine.position.set(v.x, o.type === 'debris' ? Math.sin(temps * 1.5 + g * 9) * 0.06 : 0, -z);
-            v.racine.scale.set(o.type === 'mobile' && !fige ? 0.94 : 1);
+            v.racine.scale.set((o.type === 'mobile' || o.type === 'drone') && !fige ? 0.94 : 1);
+            if (o.type === 'drone') {
+              v.racine.position.y = 0.25 + Math.sin(temps * 3.2 + g * 7 + k) * 0.12;
+              v.racine.rotation.set(0, Math.sin(temps * 1.4 + g) * 0.4, (v.x - cibleX) * 0.25);
+            }
             v.racine.scale.multiply(taille);
             if (o.type === 'debris') v.racine.rotation.set(Math.sin(temps * 0.7 + g) * 0.2, temps * 0.8 + g * 6, 0);
             v.etat.impact = o.chaud ? 0.15 + 0.1 * Math.sin(temps * 10) : 0;
@@ -691,7 +1100,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
             }
           });
           // Le cargo : des cercles au sol montrent où il va s'arrêter.
-          if (o.type === 'mobile' && o.fige && z > o.fige)
+          if ((o.type === 'mobile' || o.type === 'drone') && o.fige && z > o.fige)
             o.voies.forEach((voie, k) => {
               const c = prendre(`${o.id}:cible:${k}`, 'cible');
               c.racine.position.set(xVoie(voie), 0.03, -o.fige!);
@@ -830,14 +1239,16 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   };
   const cadrer = (l: number, h: number, boost: number, vitesse: number, dt: number) => {
     const aspect = l / h;
-    let fov = 54 + boost * 6 + borne((vitesse - 30) / 50) * 4;
-    let recul = 7.4,
-      hauteur = 3.25;
+    // (V4-H7) Une caméra plus basse et plus proche, un champ plus large : le vaisseau occupe le bas de l'image,
+    // la route paraît large et les murs défilent tout près (les obstacles restent visibles par-dessus le vaisseau).
+    let fov = 60 + boost * 7 + borne((vitesse - 30) / 50) * 5;
+    let recul = 6.3,
+      hauteur = 2.45;
     if (aspect < 1) {
       // En portrait : on garde les trois voies, en prenant plus de recul.
-      fov = Math.min(80, (2 * Math.atan(Math.tan((31 * Math.PI) / 180) / aspect) * 180) / Math.PI) + boost * 4;
-      recul = 9.6;
-      hauteur = 4.4;
+      fov = Math.min(84, (2 * Math.atan(Math.tan((34 * Math.PI) / 180) / aspect) * 180) / Math.PI) + boost * 4;
+      recul = 8.8;
+      hauteur = 3.7;
     }
     cam.fov += (fov - cam.fov) * borne(dt * 4);
     camera.perspective({ fov: cam.fov, aspect });
@@ -851,7 +1262,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   let themeAffiche: Theme = 'lancement';
   let lointainAffiche: Transform | null = null;
   let distanceMenu = 0;
-  const flammesLongueur = [1, 1];
+  const flammesLongueur = [1, 1, 1, 1];
 
   const dimensionner = (l: number, h: number) => {
     if (l === taille.l && h === taille.h) return;
@@ -859,6 +1270,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     renderer.setSize(l, h);
     toile.style.width = '100%';
     toile.style.height = '100%';
+    post?.dimensionner(gl.drawingBufferWidth, gl.drawingBufferHeight);
   };
 
   const equiper = (eq: Equipement, temps: number) => {
@@ -894,6 +1306,85 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       if (n.s > n.course) n.s -= n.course * 2;
       n.t.position.set(n.depart[0] + n.dir[0] * n.s, n.depart[1], n.depart[2] + n.dir[2] * n.s);
     }
+  };
+
+  /** Les maillages qui projettent une ombre : la piste et ses structures, les objets, le vaisseau. */
+  const projeteurs = new Set([pMonde, pObjet, pVaisseau]);
+  const derniereImage = { ms: 0 };
+  // (En développement : ce que coûte une image côté JavaScript, et la qualité en cours ; lu par les recettes.)
+  if (import.meta.env.DEV)
+    (window as unknown as Record<string, unknown>).__rushTriangles = () => {
+      // Les triangles des maillages visibles de la scène (passage principal, sans l'ombre ni le post-traitement).
+      let n = 0,
+        maillages = 0;
+      scene.traverse((o: Transform) => {
+        if (!o.visible) return true;
+        const g = (o as Mesh).geometry;
+        if (g && (o as Mesh).mode === gl.TRIANGLES) {
+          const a = g.attributes.index ?? g.attributes.position;
+          n += (a?.count ?? 0) / 3;
+          maillages++;
+        }
+      });
+      return { triangles: Math.round(n), maillages };
+    };
+  if (import.meta.env.DEV)
+    (window as unknown as Record<string, unknown>).__rushImage = () => ({ ms: Math.round(derniereImage.ms * 10) / 10, qualite: niveau(), auto: qualite.auto, logiciel, textures: monde.uTextures.value, ombres: monde.uOmbre.value, lumieres: monde.uNbLum.value });
+  /** Les couleurs des lumières des objets (linéaires). */
+  const LUMIERE_OBJET: Record<string, [number[], number, number]> = {
+    fragment: [[0.35, 0.85, 1.6], 4.5, 1],
+    dore: [[1.6, 1.05, 0.35], 5, 1],
+    noyau: [[1.2, 0.9, 1.8], 6, 1],
+    portail: [[0.6, 1.0, 1.8], 9, 1.2],
+    laser: [[2.0, 0.25, 0.25], 7, 1],
+    bloc: [[1.6, 0.35, 0.15], 4.5, 0.9],
+    drone: [[1.8, 0.3, 0.25], 4.5, 1],
+    eclaireur: [[1.8, 0.35, 0.2], 5, 1],
+  };
+  const candidats: { x: number; y: number; z: number; c: number[]; r: number; d: number }[] = [];
+  /** Remplit les lumières ponctuelles du shader : deux réacteurs, puis les objets lumineux les plus proches. */
+  const poserLumieres = (p: Partie | null, xv: number, nombre: number, boost: number) => {
+    if (!nombre) {
+      monde.uNbLum.value = 0;
+      return;
+    }
+    candidats.length = 0;
+    const acc = uVaisseau.uAccent.value as number[];
+    const f = 1.4 + boost * 1.4;
+    // (Une lumière par côté : la tuyère la plus extérieure de chaque côté.)
+    for (const s of [1, -1]) {
+      const t = vaisseau.ancres.tuyeres.reduce((a, b) => (b[0] * s > a[0] * s ? b : a));
+      candidats.push({ x: xv + t[0], y: Mo.HAUTEUR_VOL + t[1] - 0.06, z: t[2] + 0.5, c: acc.map((v) => v * f), r: 5.5 + boost * 2, d: -1 });
+    }
+    // La lueur anti-gravité, sous la coque : elle éclaire la piste juste sous le vaisseau.
+    candidats.push({ x: xv, y: 0.32, z: -0.2, c: acc.map((v) => v * (0.9 + boost * 0.6)), r: 3.4, d: -1 });
+    for (const e of eclairs) {
+      const k = e.vie / e.duree;
+      candidats.push({ x: e.x, y: e.y, z: e.z, c: e.c.map((v) => v * k * k), r: e.r, d: -2 });
+    }
+    if (p)
+      for (const [, v] of visuels) {
+        const genre = v.type.split(':')[0];
+        const l = LUMIERE_OBJET[genre];
+        if (!l) continue;
+        const z = v.racine.position.z;
+        if (z < -70 || z > 6) continue;
+        candidats.push({ x: v.racine.position.x, y: v.racine.position.y + l[2], z, c: l[0], r: l[1], d: Math.abs(z) });
+      }
+    candidats.sort((a, b) => a.d - b.d);
+    const n = Math.min(nombre, candidats.length);
+    for (let i = 0; i < n; i++) {
+      const c = candidats[i];
+      const q = plier(pli, c.x, c.y, c.z);
+      lumieres.pos[i * 4] = q[0];
+      lumieres.pos[i * 4 + 1] = q[1];
+      lumieres.pos[i * 4 + 2] = q[2];
+      lumieres.pos[i * 4 + 3] = c.r;
+      lumieres.coul[i * 3] = c.c[0];
+      lumieres.coul[i * 3 + 1] = c.c[1];
+      lumieres.coul[i * 3 + 2] = c.c[2];
+    }
+    monde.uNbLum.value = n;
   };
 
   function dessiner(p: Partie | null, vue: Vue, temps: number, dt: number) {
@@ -949,8 +1440,10 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     exposition.eclat = Math.max(0, exposition.eclat - dt * 2.5);
     monde.uExposition.value = exposition.base * (1 + exposition.eclat * 0.35 + monde.uBoost.value * 0.08);
     equiper(vue.equipement, temps);
+    vaisseau.choisirModele(vue.modele ?? 0);
 
     poserTroncons(distance, themePour, vue.brume ? Math.min(VUE, vue.brume * 2.2) : VUE);
+    animerMecanismes(temps);
 
     // ---- Le vaisseau ----
     const xv = p ? xVoie(p.x) : 0;
@@ -966,7 +1459,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     vaisseau.flammes.forEach((f, k) => {
       flammesLongueur[k] += (voulue - flammesLongueur[k]) * borne(dt * 6);
       const len = flammesLongueur[k] * (0.92 + 0.08 * Math.sin(temps * 40 + k * 2));
-      f.m.scale.set(1 + boost * 0.3, 1 + boost * 0.3, len);
+      f.m.scale.set(f.base * (1 + boost * 0.3), f.base * (1 + boost * 0.3), len * (0.75 + f.base * 0.25));
       f.f.couleur = (uVaisseau.uAccent.value as number[]).map((v, i) => v * (1.4 + boost) + (boost ? (uVaisseau.uAccent2.value as number[])[i] * 0.8 : 0));
       f.f.force = 1.1 + boost * 0.7;
     });
@@ -995,18 +1488,59 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     traces.length = POINTS_TRAINEE;
     const coulTrainee = uVaisseau.uAccent.value as number[];
     for (const r of rubans) {
+      const tu = vaisseau.ancres.tuyeres[r.s];
+      r.m.visible = !!tu;
+      if (!tu) continue;
+      const largeur = Math.sqrt(tu[3] / 0.12);
       for (let i = 0; i < POINTS_TRAINEE; i++) {
         const t = i / (POINTS_TRAINEE - 1);
-        const z = 1.5 + i * (0.32 + vitesse * 0.006);
-        const x = (traces[i] ?? xv) + 0.27 * r.s;
-        const w = 0.11 * (1 - t) + 0.02;
-        const y = Mo.HAUTEUR_VOL - 0.04;
+        const z = tu[2] + 0.05 + i * (0.32 + vitesse * 0.006);
+        const x = (traces[i] ?? xv) + tu[0];
+        const w = (0.11 * (1 - t) + 0.02) * largeur;
+        const y = Mo.HAUTEUR_VOL + tu[1];
         r.position.set([x - w, y, z, x + w, y, z], i * 6);
         const a = (1 - t) ** 1.6 * (0.55 + boost * 0.6);
         r.couleur.set([coulTrainee[0] * a, coulTrainee[1] * a, coulTrainee[2] * a, coulTrainee[0] * a, coulTrainee[1] * a, coulTrainee[2] * a], i * 6);
       }
       r.geom.attributes.position.needsUpdate = true;
       r.geom.attributes.couleur.needsUpdate = true;
+    }
+
+    // ---- (V4-H) Les dégâts, les débris, les éclairs ----
+    const degatsVoulus = p && p.bouclierMax > 1 ? 1 - p.boucliers / p.bouclierMax : 0;
+    degats += (degatsVoulus - degats) * borne(dt * 2.5);
+    pVaisseau.uniforms.uDegats.value = degats;
+    // Au dernier bouclier, la coque crache des étincelles.
+    if (p && !p.termine && p.bouclierMax > 1 && p.boucliers <= 1 && !vue.reduit && Math.random() < dt * 10)
+      lancerParticules(xv + (Math.random() - 0.5) * 0.9, Mo.HAUTEUR_VOL + 0.1, 0.4 + Math.random() * 0.8, [1, 0.55, 0.22], 2, 2.5);
+    for (const d of debris) {
+      const e = d.e;
+      if (e.vie <= 0) continue;
+      e.vie -= dt;
+      e.vit[1] -= 9.8 * dt;
+      e.pos[0] += e.vit[0] * dt;
+      e.pos[1] += e.vit[1] * dt;
+      // (Arrachés au vaisseau, ils gardent d'abord son élan, puis décrochent : on les voit tournoyer autour de lui.)
+      e.pos[2] += (e.vit[2] + vitesse * Math.min(1, (1.9 - e.vie) * 0.6)) * dt;
+      if (e.pos[1] < 0.06 && Math.abs(e.pos[0]) < 4.1) {
+        e.pos[1] = 0.06;
+        e.vit[1] = Math.abs(e.vit[1]) * 0.35;
+        e.vit[0] *= 0.7;
+        e.vit[2] *= 0.7;
+      }
+      d.racine.position.set(e.pos[0], e.pos[1], e.pos[2]);
+      d.racine.rotation.x += e.axe[0] * e.tour * dt;
+      d.racine.rotation.y += e.axe[1] * e.tour * dt;
+      d.racine.rotation.z += e.axe[2] * e.tour * dt;
+      if (e.vie <= 0 || e.pos[2] > 14) {
+        e.vie = 0;
+        d.racine.visible = false;
+      }
+    }
+    for (let i = eclairs.length - 1; i >= 0; i--) {
+      eclairs[i].vie -= dt;
+      eclairs[i].z += vitesse * dt * 0.5;
+      if (eclairs[i].vie <= 0) eclairs.splice(i, 1);
     }
 
     // ---- La caméra ----
@@ -1018,7 +1552,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       cam.x += (xv * 0.5 - cam.x) * borne(dt * 5);
       cam.roulis += (-ecart * 0.045 - cam.roulis) * borne(dt * 6);
       pos = [cam.x, c.hauteur, c.recul];
-      cible = [cam.x * 0.6 + xv * 0.25, 0.95, -16];
+      cible = [cam.x * 0.6 + xv * 0.25, 1.05, -18];
       roulis = cam.roulis;
     } else {
       // Les menus : la caméra tourne lentement autour du vaisseau, qui avance au ralenti
@@ -1258,7 +1792,89 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     inverse.multiply(camera.projectionMatrix, vueSansTranslation).inverse();
     pCiel.uniforms.uInverse.value = inverse;
 
-    renderer.render({ scene, camera });
+    // ---- V4-H : qualité, textures, lumières, ombres, puis le rendu et son post-traitement ----
+    const t0Image = performance.now();
+    qualite.voulue = vue.qualite ?? 'auto';
+    const n = niveau();
+    const actifQ = !!p && !p.termine;
+    // La variante des shaders suit la qualité (Économie : le shader léger ; les autres : le complet).
+    if (n !== varianteCourante) {
+      varianteCourante = n;
+      const v = { textures: n !== 'economie', ombres: n !== 'economie', lumieres: n !== 'economie' };
+      for (const prog of [pMonde, pLoin, pObjet, pVaisseau]) varianteSurface(prog, v);
+    }
+    // (Développement) Couper un effet pour le comparer : window.__rushSans = { ombres, textures, halo, lumieres }.
+    const sans = (import.meta.env.DEV ? (window as unknown as { __rushSans?: Record<string, boolean> }).__rushSans : undefined) ?? {};
+    // Les textures : calculées une fois, au premier moment calme (pas pendant l'ouverture).
+    if (n !== 'economie' && textures === null && !cine) {
+      textures = 'attente';
+      window.setTimeout(() => {
+        const t = creerTextures(gl, fin ? 512 : 1024);
+        textures = t;
+        if (t) {
+          monde.tPlaques.value = t.plaques;
+          monde.tBrut.value = t.brut;
+          monde.tNormales.value = t.normales;
+        }
+      }, 60);
+    }
+    monde.uTextures.value = n !== 'economie' && !sans.textures && textures && textures !== 'attente' ? 1 : 0;
+    // Les lumières ponctuelles : les réacteurs, puis les objets lumineux les plus proches.
+    poserLumieres(p, xv, sans.lumieres ? 0 : n === 'elevee' ? 8 : n === 'equilibree' ? 4 : 0, monde.uBoost.value);
+    // Les ombres du soleil.
+    const tailleOmbres = sans.ombres ? 0 : n === 'elevee' ? 2048 : n === 'equilibree' ? 1024 : 0;
+    if (tailleOmbres && ombres.taille !== tailleOmbres) {
+      try {
+        ombres.carte = new Ombres(gl, monde, tailleOmbres);
+        ombres.taille = tailleOmbres;
+      } catch {
+        ombres.carte = null;
+        ombres.taille = -1;
+      }
+    }
+    if (tailleOmbres && ombres.carte) {
+      ombres.carte.dessiner(scene, projeteurs, monde.uSoleilDir.value as number[]);
+      monde.tOmbre.value = ombres.carte.cible.depthTexture;
+      monde.uMatOmbre.value = ombres.carte.matrice;
+      monde.uOmbre.value = 1;
+      monde.uTexelOmbre.value = 1 / ombres.carte.taille;
+      monde.uContact.value = [0, 0, 0, 0];
+    } else {
+      monde.uOmbre.value = 0;
+      monde.tOmbre.value = vide;
+      const pc = plier(pli, xv, 0, 0);
+      monde.uContact.value = [pc[0], pc[2], 1.25, p ? 0.55 : 0.4];
+    }
+    const avecPost = !!post && n !== 'economie';
+    monde.uHdr.value = avecPost && post!.hdr ? 1 : 0;
+    if (post && avecPost) {
+      renderer.render({ scene, camera, target: post.cible as never });
+      const reduit = vue.reduit;
+      const fuite = projeter(cam.x * 0.6 + xv * 0.25, 1.0, -60, 1, 1);
+      post.composer({
+        halo: sans.halo ? 0 : (n === 'elevee' ? 0.95 : 0.8) + monde.uBoost.value * 0.35 + exposition.eclat * 0.3,
+        flou: reduit || n !== 'elevee' ? 0 : borne((vitesse - 38) / 70) * 0.03 + monde.uBoost.value * 0.025,
+        aberration: reduit ? 0 : monde.uBoost.value * 0.004 + alerte * 0.01,
+        vignette: 0.34,
+        grain: n === 'elevee' ? 0.035 : 0.025,
+        temps,
+        centre: [borne(fuite.x, 0.2, 0.8), borne(1 - fuite.y, 0.2, 0.8)],
+      });
+    } else renderer.render({ scene, camera });
+    // La qualité automatique : mesurée pendant la course seulement.
+    if (actifQ && qualite.voulue === 'auto') {
+      const maintenant = performance.now();
+      // (Un intervalle de plus de 250 ms n'est pas une image lente : l'onglet était caché, ou une pause.)
+      if (qualite.derniere && maintenant - qualite.derniere < 250) qualite.mesures.push(maintenant - qualite.derniere);
+      qualite.derniere = maintenant;
+      if (qualite.mesures.length >= 180) {
+        const moyenne = qualite.mesures.reduce((a, b) => a + b, 0) / qualite.mesures.length;
+        qualite.mesures.length = 0;
+        const i = NIVEAUX.indexOf(qualite.auto);
+        if (moyenne > 21 && i < NIVEAUX.length - 1) qualite.auto = NIVEAUX[i + 1];
+      }
+    } else qualite.derniere = 0;
+    derniereImage.ms = performance.now() - t0Image;
 
     // ---- Par-dessus : les gains, l'alerte, le vignettage ----
     ctx.clearRect(0, 0, vue.l, vue.h);
@@ -1397,6 +2013,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     pCiel.uniforms.uInverse.value = inverse;
     const lp = Math.min(l, toile.width),
       hp = Math.min(h, toile.height);
+    // (Ni la carte d'ombres ni les lumières de la course ne valent pour cette vue ; elle va droit à l'écran.)
+    monde.uHdr.value = 0;
+    monde.uOmbre.value = 0;
+    monde.uNbLum.value = 0;
+    monde.uContact.value = [0, 0, 0, 0];
     renderer.render({ scene, camera, target: { buffer: null, width: lp, height: hp, depth: true } as never });
     sortieApercu.width = lp;
     sortieApercu.height = hp;
@@ -1427,8 +2048,9 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   const cielGarage = new Mesh(gl, { geometry: new Triangle(gl), program: pCiel, frustumCulled: false, renderOrder: -10 });
   cielGarage.setParent(sceneGarage);
   const cameraGarage = new Camera(gl, { fov: 32, near: 0.1, far: 9000 });
-  function garage(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number) {
+  function garage(cible: CanvasRenderingContext2D, l: number, h: number, eq: Equipement, temps: number, modele = 0) {
     if (!taille.l || !l || !h) return;
+    vaisseauGarage.choisirModele(modele);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const lp = Math.min(Math.round(l * dpr), toile.width),
       hp = Math.min(Math.round(h * dpr), toile.height);
@@ -1437,7 +2059,7 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     vaisseauGarage.racine.rotation.y = temps * 0.5;
     vaisseauGarage.corps.rotation.set(0, 0, Math.sin(temps * 0.9) * 0.08);
     vaisseauGarage.flammes.forEach((f) => {
-      f.m.scale.set(1, 1, 0.9 + 0.1 * Math.sin(temps * 30));
+      f.m.scale.set(f.base, f.base, (0.9 + 0.1 * Math.sin(temps * 30)) * (0.75 + f.base * 0.25));
       f.f.couleur = (uVaisseau.uAccent.value as number[]).map((v) => v * 1.5);
       f.f.force = 1;
     });
@@ -1450,6 +2072,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
     inverse.multiply(cameraGarage.projectionMatrix, vueSansTranslation).inverse();
     pCiel.uniforms.uInverse.value = inverse;
     poserPli(pliDroit);
+    // (Ni la carte d'ombres ni les lumières de la course ne valent pour cette vue ; elle va droit à l'écran.)
+    monde.uHdr.value = 0;
+    monde.uOmbre.value = 0;
+    monde.uNbLum.value = 0;
+    monde.uContact.value = [0, 0, 0, 0];
     renderer.render({ scene: sceneGarage, camera: cameraGarage, target: { buffer: null, width: lp, height: hp, depth: true } as never });
     poserPli(pli);
     cible.clearRect(0, 0, l, h);
@@ -1459,6 +2086,11 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
   return {
     troisD: true,
     eclater: (voie, couleur, nombre = 12) => lancerParticules(xVoie(voie), Mo.HAUTEUR_VOL, -0.6, rgb(couleur), nombre),
+    debris: (voie) => {
+      const x = xVoie(voie);
+      if (!reduitCourant) lancerDebris(x, Mo.HAUTEUR_VOL + 0.1, -0.5, 7);
+      eclairer(x, Mo.HAUTEUR_VOL + 0.4, -1.2, [3.2, 1.2, 0.35], 9, 0.45);
+    },
     flotter: (voie, texte, couleur = '236, 244, 255') => textes.push({ texte, x: xVoie(voie), y: 1.9, z: -0.8, vie: 1, couleur, dy: 0 }),
     anneau: (voie, couleur = '170, 225, 255') => {
       const o = ondes.find((x) => x.e.vie <= 0) ?? ondes[0];
@@ -1495,6 +2127,8 @@ export function creerScene3D(toile: HTMLCanvasElement, ctx: CanvasRenderingConte
       cap.racine.visible = true;
       cap.racine.position.set(x, 1.0, -0.9);
       cap.racine.scale.set(1);
+      // Un éclair de la couleur du fragment, qui éclaire la piste et la coque un instant.
+      eclairer(x, 1.0, -0.9, lin(c).map((v) => v * 2.6), 6, 0.35);
       // L'onde de collecte.
       const o = ondes.find((k) => k.e.vie <= 0) ?? ondes[0];
       o.e.vie = 1;

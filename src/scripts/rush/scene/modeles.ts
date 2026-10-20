@@ -11,7 +11,9 @@
 
 import { Assembleur, CANAL, Halos, mat, type Matiere, type V3 } from './geometrie';
 
-export const VOIE = 2.6;
+// (V4-H7) 3 m au lieu de 2,6 : la nouvelle route est plus large et plus monumentale ; toutes les positions
+// des objets passent par cette valeur (les collisions, elles, se font par voie dans le moteur).
+export const VOIE = 3.0;
 const HACHURE = mat('#f0b52a', 0.3, 0.5, 0.22);
 export const HAUTEUR_VOL = 0.78;
 
@@ -121,14 +123,35 @@ function ligneTravers(a: Assembleur, z: number, demi: number, q: Matiere = M.joi
   }
 }
 
+/**
+ * La forme des ailes de chaque vaisseau (V4) : les quatre coins (x, z) — emplanture avant, saumon avant,
+ * saumon arrière, emplanture arrière — et ce qui s'y accroche. Les moteurs, eux, ne bougent pas : la
+ * flamme et la collision restent les mêmes pour tous.
+ */
+interface FormeAile {
+  rf: [number, number];
+  tf: [number, number];
+  tb: [number, number];
+  rb: [number, number];
+  nacelle: boolean;
+  derive: boolean;
+}
+const AILES: FormeAile[] = [
+  // Aube : l'aile d'origine, équilibrée.
+  { rf: [0.3, -0.42], tf: [1.18, 0.5], tb: [1.26, 0.82], rb: [0.36, 0.98], nacelle: true, derive: true },
+  // Faucon : une flèche très reculée, fine, pour la vivacité.
+  { rf: [0.28, -0.12], tf: [1.02, 0.86], tb: [1.08, 1.06], rb: [0.34, 1.02], nacelle: false, derive: true },
+  // Bastion : une aile large et épaisse, presque droite.
+  { rf: [0.32, -0.55], tf: [1.36, 0.12], tb: [1.42, 0.62], rb: [0.4, 0.98], nacelle: true, derive: false },
+  // Spectre : un delta tendu, du nez à la poupe.
+  { rf: [0.22, -0.98], tf: [1.32, 0.9], tb: [1.34, 1.06], rb: [0.3, 1.08], nacelle: false, derive: false },
+];
+
 /** Une aile (côté s = 1 à droite, -1 à gauche) : dessus peint, ailerons, liseré lumineux, nacelle, feux. */
-function aile(a: Assembleur, s: 1 | -1) {
+function aile(a: Assembleur, s: 1 | -1, forme: FormeAile = AILES[0]) {
   const X = (x: number) => x * s;
   // Les quatre coins de l'aile (x, z), son épaisseur à l'emplanture et au saumon.
-  const rf: [number, number] = [0.3, -0.42],
-    tf: [number, number] = [1.18, 0.5],
-    tb: [number, number] = [1.26, 0.82],
-    rb: [number, number] = [0.36, 0.98];
+  const { rf, tf, tb, rb } = forme;
   const e0 = 0.07,
     e1 = 0.025,
     y = -0.04;
@@ -165,7 +188,17 @@ function aile(a: Assembleur, s: 1 | -1) {
     a.quad([X(p0[0]), yc(p0[0]) - 0.001, p0[1]], [X(p1[0]), yc(p1[0]) - 0.001, p1[1]], [X(p1[0]), yc(p1[0]) - 0.001, p1[1] + 0.01], [X(p0[0]), yc(p0[0]) - 0.001, p0[1] + 0.01], M.joint);
   }
   // Les petits propulseurs de manœuvre au saumon.
-  a.boite(X(1.22), y + 0.005, 0.66, 0.05, 0.03, 0.07, M.carbone);
+  const saumon = lerp(tf, tb, 0.5);
+  a.boite(X(saumon[0] - 0.04), y + 0.005, saumon[1], 0.05, 0.03, 0.07, M.carbone);
+  if (!forme.nacelle) {
+    // Sans nacelle : une rangée de trois ouïes lumineuses sur le dessus de l'aile.
+    for (let i = 0; i < 3; i++) {
+      const q = lerp(lerp(rf, rb, 0.5), saumon, 0.25 + i * 0.22);
+      a.boite(X(q[0]), y + ep(q) + 0.006, q[1], 0.06, 0.006, 0.12, M.accentDoux);
+    }
+  }
+  if (forme.derive) aileDerive(a, s, saumon, y);
+  if (!forme.nacelle) return;
   // La nacelle sous l'aile : un conteneur profilé, sa pointe lumineuse.
   a.pousser().deplacer(X(0.82), y - 0.075, 0.42).tourner(Math.PI / 2);
   a.cylindre(0.045, 0.05, -0.32, 0.26, 10, M.metalSombre, true, true);
@@ -174,8 +207,11 @@ function aile(a: Assembleur, s: 1 | -1) {
   a.cylindre(0.03, 0.03, 0.26, 0.29, 10, M.accentDoux, true, true);
   a.retirer();
   a.boite(X(0.82), y - 0.035, 0.4, 0.012, 0.04, 0.34, M.metalSombre);
-  // La dérive au saumon, inclinée vers l'extérieur ; son feu de navigation fixe et son feu à éclats.
-  a.pousser().deplacer(X(1.2), y, 0.62).tourner(0, 0, -0.32 * s);
+}
+
+/** La dérive au saumon, inclinée vers l'extérieur ; son feu de navigation fixe et son feu à éclats. */
+function aileDerive(a: Assembleur, s: 1 | -1, saumon: [number, number], y: number) {
+  a.pousser().deplacer(s * (saumon[0] - 0.02), y, saumon[1] - 0.04).tourner(0, 0, -0.32 * s);
   a.prisme([[-0.02, 0], [0.02, 0], [0.015, 0.34], [-0.015, 0.34]], -0.1, 0.24, M.metalSombre);
   a.quad([-0.022, 0.05, 0.25], [0.022, 0.05, 0.25], [0.017, 0.3, 0.12], [-0.017, 0.3, 0.12], M.alliage);
   a.boite(0, 0.36, 0.0, 0.05, 0.05, 0.12, s > 0 ? M.navVert : M.navRouge);
@@ -216,9 +252,14 @@ function moteur(a: Assembleur, s: 1 | -1) {
   for (let i = 0; i < 5; i++) a.boite(0.27 * s, 0.128, 0.72 + i * 0.07, 0.11, 0.008, 0.025, M.joint);
 }
 
-/** Le vaisseau complet. Les couleurs viennent du garage : coque (peinture), traînée (accent), Overdrive (accent 2 et peinture 2), noyau (coeur). */
-export function vaisseau(): Assembleur {
+/**
+ * Le vaisseau complet. Les couleurs viennent du garage : coque (peinture), traînée (accent), Overdrive (accent 2
+ * et peinture 2), noyau (coeur). « modele » (V4) : 0 Aube, 1 Faucon, 2 Bastion, 3 Spectre — même fuselage et
+ * mêmes moteurs, ailes et équipements propres à chacun.
+ */
+export function vaisseau(modele = 0): Assembleur {
   const a = new Assembleur();
+  const forme = AILES[modele] ?? AILES[0];
   // Le fuselage, du nez (-z) à la poupe.
   const sections = FUSELAGE.map(([z, w, h, y]) => ({ z, pts: section(w, h, y) }));
   a.coque(sections, M.coqueSombre, true, (i, j) => {
@@ -293,8 +334,9 @@ export function vaisseau(): Assembleur {
     a.retirer();
     for (let i = 0; i < 4; i++) a.boite(0.43 * s, 0.07 - i * 0.035, 0.28, 0.012, 0.012, 0.16, M.joint);
   }
-  aile(a, 1);
-  aile(a, -1);
+  aile(a, 1, forme);
+  aile(a, -1, forme);
+  equipementPropre(a, modele);
   // Les deux dérives, sur la poupe, inclinées vers l'extérieur : gouvernail, liseré, feu à éclats.
   for (const s of [1, -1]) {
     a.pousser().deplacer(0.2 * s, 0.24, 1.0).tourner(0, 0, -0.38 * s);
@@ -316,7 +358,158 @@ export function vaisseau(): Assembleur {
   a.boite(0, -0.18, -0.95, 0.06, 0.004, 0.2, M.joint);
   for (const s of [1, -1]) a.boite(0.05 * s, -0.12, -1.0, 0.025, 0.02, 0.02, M.fenetre);
   a.boite(0, -0.235, 0.5, 0.025, 0.02, 0.025, M.eclatRouge);
+  // (V4-H) Les émetteurs anti-gravité, sous le ventre : quatre patins lumineux, de la couleur de la traînée
+  // (leur lumière éclaire la piste sous le vaisseau, voir scene.ts).
+  for (const [x, z] of [[0.15, -0.5], [-0.15, -0.5], [0.21, 0.78], [-0.21, 0.78]] as const) {
+    a.boite(x, -0.212, z, 0.11, 0.03, 0.2, M.metalSombre, 0.01);
+    a.boite(x, -0.229, z, 0.075, 0.006, 0.15, M.accent);
+  }
   return a;
+}
+
+/** Ce qui distingue chaque vaisseau, au-delà de ses ailes. */
+function equipementPropre(a: Assembleur, modele: number) {
+  if (modele === 1) {
+    // Faucon : deux plans canard près du nez, et un liseré lumineux le long des flancs.
+    for (const s of [1, -1]) {
+      a.pousser().deplacer(0.16 * s, 0.05, -0.98);
+      a.quad([0, 0.02, -0.08], [0.32 * s, 0.0, 0.08], [0.3 * s, 0.0, 0.16], [0, 0.02, 0.12], M.coque);
+      a.quad([0, 0.025, -0.06], [0.3 * s, 0.006, 0.09], [0.29 * s, 0.006, 0.11], [0, 0.025, -0.03], M.accent);
+      a.retirer();
+      a.boite(0.3 * s, 0.0, -0.3, 0.012, 0.012, 1.2, M.accent);
+    }
+  } else if (modele === 2) {
+    // Bastion : des plaques de blindage sur les flancs et le dos, un bouclier ventral.
+    for (const s of [1, -1]) {
+      a.boite(0.43 * s, 0.03, 0.1, 0.06, 0.2, 0.9, M.plaque, 0.03);
+      a.boite(0.465 * s, 0.03, 0.1, 0.012, 0.12, 0.7, M.dangerDoux);
+      a.boite(0.2 * s, 0.33, -0.05, 0.12, 0.03, 0.5, M.plaqueClaire, 0.01);
+    }
+    a.boite(0, -0.27, 0.2, 0.42, 0.05, 1.1, M.plaque, 0.02);
+    a.boite(0, 0.36, 0.95, 0.18, 0.06, 0.3, M.metalMoyen, 0.02);
+  } else if (modele === 3) {
+    // Spectre : des lames lumineuses le long du delta, une coque sombre et deux poutres arrière.
+    for (const s of [1, -1]) {
+      a.quad([0.24 * s, 0.07, -0.9], [1.25 * s, 0.025, 0.86], [1.23 * s, 0.025, 0.9], [0.22 * s, 0.07, -0.86], M.accent2);
+      a.pousser().deplacer(0.62 * s, 0.0, 1.05).tourner(Math.PI / 2);
+      a.cylindre(0.035, 0.03, -0.5, 0.35, 8, M.carbone, true, true);
+      a.cylindre(0.026, 0.026, 0.35, 0.39, 8, M.accent, true, true);
+      a.retirer();
+    }
+  }
+}
+
+// ==========================================================================
+// LES OBSTACLES MOBILES DE LA V4 : drone, porte, rotor, bloc qui tombe, éclaireur ennemi
+// ==========================================================================
+/** Un drone de patrouille : un corps sphérique, quatre bras et leurs rotors, un œil rouge vers le joueur. */
+export function drone(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.pousser().deplacer(0, 1.15, 0);
+  a.sphere(0.42, 2, M.metalSombre);
+  a.cylindre(0.44, 0.44, -0.04, 0.04, 18, M.alliage, false);
+  a.pousser().deplacer(0, 0, 0.36).tourner(Math.PI / 2);
+  a.cylindre(0.16, 0.13, -0.04, 0.08, 14, M.carbone, true, true);
+  a.cylindre(0.1, 0.1, 0.08, 0.09, 14, M.danger, true, true);
+  a.retirer();
+  for (let i = 0; i < 4; i++) {
+    const ang = Math.PI / 4 + (i * Math.PI) / 2;
+    const x = Math.cos(ang) * 0.82,
+      z = Math.sin(ang) * 0.82;
+    a.poutre([Math.cos(ang) * 0.36, 0, Math.sin(ang) * 0.36], [x, 0.05, z], 0.05, M.acier);
+    a.pousser().deplacer(x, 0.06, z);
+    a.cylindre(0.3, 0.3, 0, 0.03, 16, M.joint, true, true);
+    a.cylindre(0.06, 0.06, 0.02, 0.07, 8, M.alliage, true, true);
+    a.retirer();
+    h.ajouter(x, 1.18, z, 0.3, [1, 0.3, 0.25], 0.45);
+  }
+  a.retirer();
+  h.ajouter(0, 1.15, 0.5, 0.6, [1, 0.25, 0.2], 0.9);
+  return { solide: a, halos: h };
+}
+
+/** Une porte mécanique (une voie) : un cadre et deux battants qui se rejoignent ; « ferme » de 0 à 1. */
+export function porteCadre(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  for (const s of [-1, 1]) {
+    a.boite(s * 1.22, 1.0, 0, 0.2, 2.0, 0.5, M.metalMoyen, 0.03);
+    a.boite(s * 1.22, 1.0, 0.26, 0.06, 1.7, 0.02, M.dangerDoux);
+    h.ajouter(s * 1.22, 1.9, 0.3, 0.35, [1, 0.6, 0.2], 0.6);
+  }
+  a.boite(0, 2.08, 0, 2.64, 0.22, 0.5, M.metalSombre, 0.04);
+  for (let i = -3; i <= 3; i++) a.boite(i * 0.36, 2.08, 0.252, 0.18, 0.12, 0.01, i % 2 ? HACHURE : M.noir);
+  return { solide: a, halos: h };
+}
+/** Un battant de porte (il glisse depuis le côté). */
+export function porteBattant(): Assembleur {
+  const a = new Assembleur();
+  a.boite(0, 1.0, 0, 1.12, 1.9, 0.18, mat('#3c4553', 0.8, 0.38), 0.03);
+  for (let i = 0; i < 4; i++) a.boite(0, 0.35 + i * 0.45, 0.095, 1.0, 0.04, 0.01, M.joint);
+  a.boite(0.5, 1.0, 0.1, 0.06, 1.6, 0.02, M.danger);
+  return a;
+}
+
+/** Un rotor : un moyeu et trois pales qui balaient la piste ; il tourne puis s'arrête (sa voie libre est figée). */
+export function rotorMoyeu(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.boite(0, 0.15, 0, 0.9, 0.3, 0.9, M.metalMoyen, 0.05);
+  a.cylindre(0.28, 0.32, 0.3, 1.5, 14, M.metalSombre);
+  a.cylindre(0.34, 0.34, 1.5, 1.62, 14, M.danger, true, true);
+  h.ajouter(0, 1.56, 0.2, 0.7, [1, 0.25, 0.2], 0.8);
+  return { solide: a, halos: h };
+}
+export function rotorPale(): Assembleur {
+  const a = new Assembleur();
+  a.boite(1.4, 0, 0, 2.6, 0.16, 0.3, M.acier, 0.03);
+  a.boite(1.4, 0, 0.16, 2.4, 0.06, 0.02, M.danger);
+  a.boite(2.7, 0, 0, 0.1, 0.4, 0.4, M.metalSombre);
+  return a;
+}
+
+/** Un bloc qui tombe : un conteneur blindé, ses ailerons de chute et son feu ; il laisse une traînée de feu. */
+export function bloc(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.boite(0, 0.85, 0, 1.7, 1.5, 1.5, mat('#4a4f58', 0.7, 0.5), 0.1);
+  for (const s of [-1, 1]) for (const t of [-1, 1]) a.boite(s * 0.86, 1.62, t * 0.76, 0.14, 0.14, 0.14, M.acier);
+  for (let i = -2; i <= 2; i++) a.boite(i * 0.32, 0.85, 0.755, 0.08, 1.3, 0.01, M.joint);
+  a.boite(0, 1.62, 0, 0.5, 0.06, 0.5, M.braise);
+  a.boite(0, 0.1, 0, 1.6, 0.08, 1.4, M.braise);
+  h.ajouter(0, 0.2, 0.3, 1.2, [1, 0.45, 0.15], 0.8);
+  return { solide: a, halos: h };
+}
+
+/** Un éclaireur ennemi : une fléchette sombre à griffes rouges, qui fonce vers le joueur. */
+export function eclaireur(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.pousser().deplacer(0, 0.95, 0);
+  // Le corps : un prisme effilé, la pointe vers le joueur (+z).
+  a.coque(
+    [
+      { z: -1.2, pts: [[0, 0.18], [0.3, 0], [0, -0.16], [-0.3, 0]] },
+      { z: -0.2, pts: [[0, 0.32], [0.5, 0.02], [0, -0.26], [-0.5, 0.02]] },
+      { z: 0.9, pts: [[0, 0.04], [0.06, 0], [0, -0.04], [-0.06, 0]] },
+    ],
+    mat('#20232b', 0.85, 0.32),
+  );
+  for (const s of [1, -1]) {
+    // Les griffes : deux ailes en avant, bord rouge.
+    a.quad([0.3 * s, 0, -0.5], [1.15 * s, -0.05, 0.55], [1.05 * s, -0.04, 0.65], [0.25 * s, 0, -0.1], M.metalSombre);
+    a.quad([1.15 * s, -0.05, 0.55], [1.18 * s, -0.04, 0.6], [1.08 * s, -0.035, 0.68], [1.05 * s, -0.04, 0.65], M.danger);
+    a.pousser().deplacer(0.32 * s, 0, -1.1).tourner(Math.PI / 2);
+    a.cylindre(0.1, 0.12, -0.2, 0.15, 10, M.carbone, true, true);
+    a.cylindre(0.08, 0.08, -0.22, -0.2, 10, M.danger, true, true);
+    a.retirer();
+    h.ajouter(0.32 * s, 0.95, -1.35, 0.5, [1, 0.3, 0.2], 0.9, 2.2);
+  }
+  a.boite(0, 0.2, -0.1, 0.12, 0.05, 0.5, M.danger);
+  a.retirer();
+  h.ajouter(0, 1.15, -0.1, 0.4, [1, 0.25, 0.2], 0.7);
+  return { solide: a, halos: h };
 }
 
 // ==========================================================================
@@ -494,10 +687,10 @@ export function rochers(graine: number): Assembleur {
     a.pousser().deplacer(x, y, z).tourner(r(k) * 3, r(k + 4) * 3, r(k + 8) * 3);
     a.sphere(
       taille,
-      1,
+      2,
       M.roche,
       (v) => 0.78 + 0.32 * Math.abs(Math.sin(v[0] * 4.1 + graine) * Math.cos(v[1] * 3.3 + k) * Math.sin(v[2] * 5.2)),
-      true,
+      false,
       (v) => (Math.sin(v[0] * 9 + v[1] * 7 + graine * 3) > 0.82 ? M.braise : v[1] > 0.2 ? M.roche : M.rocheSombre),
     );
     a.retirer();
@@ -695,6 +888,23 @@ export function bulle(): Assembleur {
 export function onde(): Assembleur {
   return new Assembleur().tore(1, 0.05, 48, 6, M.blanc);
 }
+/** (V4-H) Un débris arraché au vaisseau ou à l'obstacle lors d'un choc : tôle pliée, coin d'aile, boîtier. */
+export function eclat(k: number): Assembleur {
+  const a = new Assembleur();
+  if (k === 0) {
+    a.prisme([[-0.17, -0.09], [0.14, -0.12], [0.2, 0.05], [-0.03, 0.13], [-0.19, 0.03]], -0.012, 0.012, M.coque);
+    a.boite(0.02, -0.02, 0.014, 0.24, 0.016, 0.006, M.accentDoux);
+    a.pousser().deplacer(0.17, 0.0, 0).tourner(0, 0.6).prisme([[0, -0.08], [0.09, -0.05], [0.09, 0.05], [0, 0.08]], -0.01, 0.01, M.alliage).retirer();
+  } else if (k === 1) {
+    a.prisme([[-0.12, -0.05], [0.14, -0.05], [0.02, 0.1]], -0.07, 0.07, M.metalMoyen);
+    a.boite(0, -0.05, 0, 0.2, 0.012, 0.12, M.carbone);
+  } else {
+    a.boite(0, 0, 0, 0.13, 0.06, 0.2, M.alliage, 0.012);
+    a.boite(0, 0.035, 0, 0.09, 0.012, 0.14, M.carbone);
+    a.boite(0.07, 0, 0.05, 0.012, 0.03, 0.05, M.braise);
+  }
+  return a;
+}
 
 // ==========================================================================
 // LES BOSS
@@ -748,4 +958,131 @@ export function noyauBoss(): Assembleur {
 }
 export function sphereNoire(): Assembleur {
   return new Assembleur().sphere(1, 3, mat('#05060a', 1, 0.08));
+}
+
+// ==========================================================================
+// (V4-H) LES MÉCANISMES DU BORD DE PISTE : des structures qui bougent pour de vrai (une partie fixe, une
+// partie mobile dessinée à part et animée par la scène). Hors des voies : elles ne gênent jamais le jeu.
+// ==========================================================================
+/** Une turbine de soufflerie : un carénage circulaire sur un pylône ; le rotor (6 pales) tourne. Axe : z. */
+export function turbineCadre(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  // Le pylône, ses jambes de force et son socle.
+  a.boite(0, -1.6, 0, 1.1, 3.6, 1.1, M.metalSombre, 0.12);
+  a.boite(0, -3.4, 0, 2.2, 0.4, 2.2, M.metalMoyen, 0.1);
+  for (const s of [-1, 1]) a.poutre([s * 1.0, -3.2, 0], [s * 0.4, 0.6, 0], 0.16, M.acier);
+  // Le carénage : une couronne épaisse, des nervures, un anneau lumineux.
+  a.pousser().deplacer(0, 2.6, 0);
+  a.tore(2.35, 0.34, 48, 10, M.metalMoyen);
+  a.tore(2.0, 0.06, 48, 6, M.accentDoux);
+  for (let i = 0; i < 12; i++) {
+    const t = (i / 12) * Math.PI * 2;
+    a.pousser().tourner(0, 0, t).deplacer(2.36, 0, 0).boite(0, 0, 0, 0.5, 0.22, 0.95, M.metalSombre, 0.05).retirer();
+  }
+  // Le moyeu fixe (les bras qui tiennent le rotor) et la grille arrière.
+  for (let i = 0; i < 3; i++) a.pousser().tourner(0, 0, (i / 3) * Math.PI * 2 + 0.5).boite(1.1, 0, -0.45, 2.1, 0.12, 0.12, M.acier).retirer();
+  a.pousser().tourner(Math.PI / 2).cylindre(0.42, 0.5, -0.6, -0.2, 16, M.metalSombre).retirer();
+  a.retirer();
+  for (const s of [-1, 1]) h.ajouter(s * 2.35, 2.6, 0.4, 0.5, [1, 0.35, 0.25], 0.5);
+  return { solide: a, halos: h };
+}
+export function turbineRotor(): Assembleur {
+  const a = new Assembleur();
+  for (let i = 0; i < 6; i++) {
+    a.pousser().tourner(0, 0, (i / 6) * Math.PI * 2).tourner(0.38);
+    a.prisme([[0.35, -0.16], [1.95, -0.1], [2.0, 0.1], [0.35, 0.2]], -0.035, 0.035, M.alliage);
+    a.retirer();
+  }
+  a.pousser().tourner(Math.PI / 2).cylindre(0.38, 0.12, -0.2, 0.45, 16, M.coqueSombre).cylindre(0.4, 0.4, -0.22, -0.18, 16, M.accent2).retirer();
+  return a;
+}
+/** Un radar sur sa tour : la tour est fixe, l'antenne (une parabole en treillis) tourne. */
+export function radarTour(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.cylindre(0.6, 0.85, -3.5, 3.2, 10, M.metalSombre, true, false);
+  for (let y = -2.5; y < 3; y += 1.3) a.cylindre(0.9, 0.9, y, y + 0.12, 10, M.metalMoyen, true, false);
+  a.cylindre(1.1, 0.9, 3.2, 3.6, 12, M.metalMoyen);
+  a.boite(0, 3.75, 0, 0.5, 0.3, 0.5, M.acier);
+  a.boite(0.6, 1.5, 0, 0.02, 0.5, 0.6, M.fenetre);
+  h.ajouter(0, 3.9, 0, 0.6, [1, 0.3, 0.25], 0.6);
+  return { solide: a, halos: h };
+}
+export function radarAntenne(): Assembleur {
+  const a = new Assembleur();
+  // La parabole : des anneaux de rayon croissant, reculés, et des rayons.
+  a.pousser().deplacer(0, 1.3, 0).tourner(-0.35);
+  for (let k = 1; k <= 5; k++) {
+    const r = k * 0.42;
+    a.pousser().deplacer(0, 0, -r * r * 0.12).tore(r, 0.035, 32, 4, M.alliage).retirer();
+  }
+  for (let i = 0; i < 8; i++) a.pousser().tourner(0, 0, (i / 8) * Math.PI * 2).poutre([0, 0, 0], [2.1, 0, -0.53], 0.05, M.acier).retirer();
+  a.pousser().tourner(Math.PI / 2).cylindre(0.08, 0.04, 0, 1.2, 8, M.acier).retirer();
+  a.boite(0, 0, 1.2, 0.18, 0.18, 0.18, M.accent);
+  a.retirer();
+  a.boite(0, 0.6, 0, 0.3, 1.2, 0.3, M.metalMoyen, 0.04);
+  return a;
+}
+/** Une presse industrielle : un portique fixe ; la tête (un marteau) monte et descend. */
+export function presseCadre(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  for (const s of [-1, 1]) {
+    a.boite(s * 1.5, 1.6, 0, 0.5, 6.2, 0.7, M.metalSombre, 0.08);
+    a.boite(s * 1.5, 1.6, 0.36, 0.08, 5.6, 0.02, M.jaune);
+    a.boite(s * 1.5, -1.5, 0, 0.9, 0.3, 1.1, M.metalMoyen);
+  }
+  a.boite(0, 4.9, 0, 3.8, 0.7, 0.9, M.metalMoyen, 0.1);
+  a.boite(0, 5.35, 0, 1.2, 0.3, 0.6, M.acier);
+  // L'enclume, en bas.
+  a.boite(0, -1.0, 0, 2.2, 0.8, 1.2, M.acier, 0.08);
+  for (let i = -3; i <= 3; i++) a.boite(i * 0.3, -0.58, 0.61, 0.15, 0.04, 0.01, i % 2 ? M.jaune : M.noir);
+  h.ajouter(0, 4.45, 0.5, 0.7, [1, 0.6, 0.25], 0.5);
+  return { solide: a, halos: h };
+}
+export function presseTete(): Assembleur {
+  const a = new Assembleur();
+  a.boite(0, 0, 0, 2.0, 1.0, 1.0, M.metalSombre, 0.1);
+  a.boite(0, -0.55, 0, 2.1, 0.12, 1.1, M.acier);
+  a.boite(0, 0.9, 0, 0.45, 1.6, 0.45, M.alliage); // la tige du vérin
+  for (const s of [-1, 1]) a.boite(s * 0.98, 0, 0, 0.06, 0.6, 0.8, M.accent2);
+  return a;
+}
+/** Une balise : un mât, et une tête lumineuse qui tourne (deux faces émissives). */
+export function baliseMat(): Assembleur {
+  const a = new Assembleur();
+  a.boite(0, 0.8, 0, 0.22, 3.2, 0.22, M.metalSombre, 0.04);
+  a.boite(0, -0.8, 0, 0.6, 0.2, 0.6, M.metalMoyen);
+  a.cylindre(0.24, 0.24, 2.4, 2.5, 10, M.acier);
+  return a;
+}
+export function baliseTete(): Assembleur {
+  const a = new Assembleur();
+  a.cylindre(0.2, 0.2, 0, 0.42, 12, M.verrerie);
+  a.boite(0, 0.21, 0.13, 0.3, 0.28, 0.05, M.danger);
+  a.boite(0, 0.21, -0.13, 0.3, 0.28, 0.05, M.dangerDoux);
+  a.cylindre(0.23, 0.23, 0.42, 0.48, 12, M.acier);
+  return a;
+}
+/** La plateforme qui porte un mécanisme, et la passerelle qui la relie au bord de la piste (vers −x). */
+export function plateformeMeca(): { solide: Assembleur; halos: Halos } {
+  const a = new Assembleur();
+  const h = new Halos();
+  a.boite(0, -0.75, 0, 4.4, 0.5, 4.4, M.metalMoyen, 0.12);
+  a.boite(0, -0.49, 0, 4.0, 0.02, 4.0, M.plaque);
+  a.boite(0, -1.2, 0, 3.0, 0.5, 3.0, M.metalSombre, 0.1);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    a.boite(sx * 2.1, -0.46, sz * 2.1, 0.12, 0.05, 0.12, M.eclatBlanc);
+    h.ajouter(sx * 2.1, -0.38, sz * 2.1, 0.35, [1, 0.8, 0.5], 0.4);
+  }
+  // La passerelle : tablier, garde-corps, câbles lumineux.
+  a.boite(-4.4, -0.62, 0, 4.4, 0.16, 1.0, M.metalMoyen, 0.03);
+  for (let x = -6.4; x <= -2.4; x += 0.5) a.boite(x, -0.53, 0, 0.04, 0.012, 0.9, M.joint);
+  for (const sz of [-0.48, 0.48]) {
+    a.boite(-4.4, -0.1, sz, 4.4, 0.04, 0.04, M.acier);
+    for (let x = -6.4; x <= -2.4; x += 1) a.boite(x, -0.33, sz, 0.04, 0.5, 0.04, M.acier);
+    a.boite(-4.4, -0.55, sz, 4.4, 0.02, 0.02, M.accentDoux);
+  }
+  return { solide: a, halos: h };
 }

@@ -1,0 +1,132 @@
+---
+// LA RECHERCHE : une palette légère (bouton « Rechercher », Ctrl + K ou Cmd + K) qui retrouve
+// ce que contient vraiment le portfolio. L'index est construit ici, au moment du build, à partir
+// du seul contenu réel : réalisations, compétences, référentiel BTS, méthode, parcours, veille,
+// contact, CV et Portal Rush. Rien n'est inventé ni écrit à la main.
+//
+// Chaque entrée dit où elle mène : une destination (d) et, si besoin, l'un de ses chapitres (ch),
+// ou une adresse (href). Le comportement est dans src/scripts/recherche.ts.
+//
+// Les concepts (16 octobre 2026) : chaque entrée reçoit aussi, sans les afficher, les mots-concepts
+// des groupes de synonymes dont elle relève (src/scripts/synonymes.ts). « alternance », « hiring » ou
+// « recrutement » retrouvent ainsi le CV, le parcours et le contact ; « gaming », Portal Rush.
+import { cheminAccueil, cheminFiche, cheminTableau, estACompleter } from '../contenu';
+import { BLOCS } from '../contenu/referentiel';
+import { chargerVeille } from '../contenu/veille';
+import type { Contenu, IdSection } from '../contenu/types';
+
+interface Props {
+  contenu: Contenu;
+  page: 'accueil' | 'fiche';
+}
+
+const { contenu: c, page } = Astro.props;
+const r = c.navigation.recherche;
+const langue = c.langue;
+const veille = await chargerVeille(langue);
+const projets = c.realisations.projets;
+const nomDe = (slug: string) => projets.find((p) => p.slug === slug)?.nom ?? slug;
+const reel = (texte: string) => (estACompleter(texte) ? '' : texte);
+const nombres: Record<string, number> = { competences: c.competences.domaines.length, realisations: projets.length };
+
+interface Entree {
+  /** Le genre de résultat (son étiquette). */
+  t: keyof Contenu['navigation']['recherche']['types'];
+  titre: string;
+  texte: string;
+  /** Des mots en plus, cherchés mais pas affichés. */
+  mots?: string;
+  /** La destination, et le chapitre visé. */
+  d?: IdSection;
+  ch?: string;
+  /** Une adresse, à la place (CV, liens externes). */
+  href?: string;
+  externe?: boolean;
+  /** La fiche d'une réalisation (action secondaire). */
+  fiche?: string;
+  /** Lance Portal Rush. */
+  jeu?: boolean;
+}
+
+const entrees: Entree[] = [];
+const destinations: IdSection[] = ['accueil', 'competences', 'realisations', 'veille', 'contact'];
+/** Les concepts de chaque destination (le premier mot d'un groupe de synonymes). */
+const CONCEPTS: Record<IdSection, string> = {
+  accueil: 'formation ia',
+  competences: 'technologies',
+  realisations: 'projet',
+  veille: 'veille',
+  contact: 'contact candidature',
+};
+destinations.forEach((d) =>
+  entrees.push({ t: 'destination', titre: c.sections[d], texte: c.explorateur.destinations[d].replace('{n}', String(nombres[d] ?? '')), mots: CONCEPTS[d], d }),
+);
+projets.forEach((p) =>
+  entrees.push({
+    t: 'projet',
+    titre: p.nom,
+    texte: reel(p.phrase),
+    mots: [p.court, p.genre, p.annee, ...p.stack, 'projet'].join(' '),
+    d: 'realisations',
+    ch: p.slug,
+    fiche: cheminFiche(langue, p.slug),
+  }),
+);
+entrees.push({ t: 'jeu', titre: 'Portal Rush', texte: c.rush.accroche, mots: `${c.vitrine.badge} ${c.rush.surtitre} jeu projet`, jeu: true, fiche: cheminFiche(langue, 'portal-rush') });
+c.competences.domaines.forEach((domaine, j) => {
+  entrees.push({ t: 'competence', titre: domaine.nom, texte: domaine.competences.map((k) => k.nom).join(', '), mots: 'technologies', d: 'competences', ch: `domaine-${j}` });
+  domaine.competences.forEach((k) =>
+    entrees.push({ t: 'competence', titre: k.nom, texte: [domaine.nom, k.projets.map(nomDe).join(', ')].filter(Boolean).join(' · '), mots: 'technologies', d: 'competences', ch: `domaine-${j}` }),
+  );
+});
+entrees.push({ t: 'competence', titre: c.competences.tableau.titre, texte: c.competences.tableau.texte, mots: 'BTS SIO SLAM référentiel RNCP formation', d: 'competences', ch: 'tableau' });
+BLOCS.forEach((bloc) =>
+  bloc.competences.forEach((k) => entrees.push({ t: 'competence', titre: k.intitule, texte: `BTS SIO · Bloc ${bloc.numero} : ${bloc.intitule}`, mots: 'formation', d: 'competences', ch: 'tableau' })),
+);
+entrees.push({ t: 'document', titre: c.competences.tableau.telecharger, texte: 'CSV', href: cheminTableau(), externe: true });
+c.methode.etapes.forEach((etape) => entrees.push({ t: 'methode', titre: etape.nom, texte: etape.texte, mots: etape.exemple, d: 'accueil', ch: 'methode' }));
+c.apropos.histoire.moments.forEach((moment) => entrees.push({ t: 'parcours', titre: moment.nom, texte: moment.texte, mots: 'candidature', d: 'accueil', ch: 'parcours' }));
+c.apropos.parcours.etapes
+  .filter((etape) => !estACompleter(etape.nom))
+  .forEach((etape) => entrees.push({ t: 'parcours', titre: etape.nom, texte: [etape.date, reel(etape.lieu)].filter(Boolean).join(' · '), mots: `${reel(etape.texte)} candidature formation`, d: 'accueil', ch: 'parcours' }));
+if (!estACompleter(c.apropos.cap.titre)) entrees.push({ t: 'parcours', titre: c.apropos.cap.titre, texte: c.apropos.cap.texte, mots: 'candidature formation', d: 'accueil', ch: 'parcours' });
+veille.entrees.forEach((note) =>
+  entrees.push({ t: 'veille', titre: note.titre, texte: [c.veille.sujets[note.sujet] ?? note.sujet, note.source, note.dateLisible].join(' · '), mots: `${note.article ?? ''} veille`, d: 'veille', ch: note.id }),
+);
+entrees.push({ t: 'contact', titre: c.contact.titre, texte: c.contact.dispo, mots: 'contact candidature', d: 'contact', ch: 'presentation' });
+entrees.push({ t: 'contact', titre: c.contact.emailNom, texte: c.contact.email, mots: 'email mail courriel e-mail écrire write contact', d: 'contact', ch: 'coordonnees' });
+entrees.push({ t: 'contact', titre: c.contact.telephoneNom, texte: c.contact.telephone.join(' '), mots: 'téléphone phone appeler call contact', d: 'contact', ch: 'coordonnees' });
+c.contact.liens.forEach((lien) => {
+  const cv = lien.href.endsWith('.pdf');
+  // (LinkedIn et le CV servent aussi une candidature ; GitHub montre du code.)
+  const concepts = cv ? 'cv candidature' : lien.nom === 'LinkedIn' ? 'contact candidature' : lien.nom === 'GitHub' ? 'contact projet technologies' : 'contact';
+  entrees.push({ t: cv ? 'document' : 'contact', titre: lien.nom, texte: lien.texte, mots: `${cv ? 'curriculum vitae resume pdf ' : ''}${concepts}`, href: lien.href, externe: true });
+});
+// Les suggestions, quand rien n'est encore tapé : les destinations, le CV, Portal Rush.
+const suggestions = [...entrees.keys()].filter((i) => entrees[i].t === 'destination' || entrees[i].jeu || entrees[i].href?.endsWith('.pdf'));
+---
+
+<dialog class="recherche" aria-labelledby="recherche-titre" data-lenis-prevent data-index={JSON.stringify(entrees)} data-suggestions={JSON.stringify(suggestions)} data-textes={JSON.stringify(r)} data-accueil={cheminAccueil(langue)} data-page={page}>
+  <form class="recherche__saisie" role="search" method="dialog">
+    <svg class="recherche__loupe" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+      <circle cx="7.8" cy="7.8" r="5.3"></circle><path d="m11.8 11.8 4 4"></path>
+    </svg>
+    <label class="sr" for="recherche-champ" id="recherche-titre">{r.titre}</label>
+    <input
+      id="recherche-champ"
+      type="search"
+      role="combobox"
+      aria-expanded="true"
+      aria-controls="recherche-liste"
+      aria-autocomplete="list"
+      autocomplete="off"
+      spellcheck="false"
+      enterkeyhint="go"
+      placeholder={r.invite}
+    />
+    <button class="recherche__fermer etiquette" type="button" data-recherche-fermer aria-label={c.interface.fermer}><kbd>{langue === 'en' ? 'Esc' : 'Échap'}</kbd></button>
+  </form>
+  <p class="recherche__etat etiquette" aria-live="polite"></p>
+  <ul class="recherche__liste" id="recherche-liste" role="listbox" aria-label={r.titre}></ul>
+  <p class="recherche__aide etiquette" aria-hidden="true">{r.aide}</p>
+</dialog>

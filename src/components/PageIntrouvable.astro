@@ -27,6 +27,7 @@ const scenePortrait = await getImage({ src: dunesPortrait, format: 'webp', quali
   cheminAutreLangue={cheminAccueil(langue === 'fr' ? 'en' : 'fr')}
   titre={c.introuvable.titreOnglet}
   indexable={false}
+  ici={c.introuvable.surtitre}
 >
   <div class="hero">
     <div class="hero__cadre toujours-sombre" style={`--scene: url(${scenePaysage.src}); --scene-portrait: url(${scenePortrait.src})`}>

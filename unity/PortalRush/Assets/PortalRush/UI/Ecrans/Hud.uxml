@@ -1,0 +1,121 @@
+<!-- PORTAL RUSH (Unity) — LE HUD (Scripts/Interface/Hud.cs) : rien n'attrape le pointeur, sauf les trois boutons. -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="hud-racine" class="hud calque" picking-mode="Ignore">
+        <ui:VisualElement class="hud__voile-haut" picking-mode="Ignore" />
+        <!-- En haut à gauche : le secteur, la phase, le score, le record. -->
+        <ui:VisualElement class="hud__gauche" picking-mode="Ignore">
+            <ui:VisualElement class="hud__ligne" picking-mode="Ignore">
+                <ui:Label name="hud-secteur" class="etiquette hud__secteur" picking-mode="Ignore" />
+                <ui:Label name="hud-phase" class="etiquette hud__phase" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement name="hud-score-bloc" class="hud__score-bloc" picking-mode="Ignore">
+                <ui:Label name="hud-score" class="hud__score" picking-mode="Ignore" />
+                <ui:Label name="hud-gain" class="hud__gain" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hud__ligne" picking-mode="Ignore">
+                <ui:Label name="hud-record-libelle" class="etiquette" picking-mode="Ignore" />
+                <ui:Label name="hud-record" class="hud__record" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <!-- En haut au centre : l'avancement, l'objectif, le boss. -->
+        <ui:VisualElement class="hud__centre" picking-mode="Ignore">
+            <ui:VisualElement class="hud__progression" picking-mode="Ignore">
+                <ui:VisualElement name="hud-progression-plein" class="hud__progression-plein" picking-mode="Ignore" />
+                <ui:VisualElement name="hud-reperes" class="hud__reperes" picking-mode="Ignore" />
+                <ui:VisualElement name="hud-curseur" class="hud__curseur" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:Label name="hud-objectif" class="etiquette hud__objectif" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-boss" class="hud__boss" picking-mode="Ignore">
+                <ui:Label name="hud-boss-libelle" class="etiquette hud__boss-libelle" picking-mode="Ignore" />
+                <ui:VisualElement class="hud__boss-barre" picking-mode="Ignore">
+                    <ui:VisualElement name="hud-boss-vie" class="hud__boss-vie" picking-mode="Ignore" />
+                    <ui:VisualElement name="hud-boss-phases" class="hud__boss-phases" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="hud-boss-phase" class="etiquette hud__boss-phase" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <!-- En haut à droite : les boucliers, les fragments, la pause. -->
+        <ui:VisualElement class="hud__droite" picking-mode="Ignore">
+            <ui:Label name="hud-boucliers-libelle" class="etiquette" picking-mode="Ignore" />
+            <ui:VisualElement name="hud-boucliers" class="hud__boucliers" picking-mode="Ignore" />
+            <ui:VisualElement class="hud__ligne hud__ligne--droite" picking-mode="Ignore">
+                <ui:VisualElement class="icone icone--fragment hud__fragment-icone" picking-mode="Ignore" />
+                <ui:Label name="hud-fragments-libelle" class="etiquette" picking-mode="Ignore" />
+                <ui:Label name="hud-fragments" class="hud__fragments" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:Button name="hud-pause" class="hud__pause plaque">
+                <ui:VisualElement class="icone icone--pause hud__pause-icone" picking-mode="Ignore" />
+            </ui:Button>
+        </ui:VisualElement>
+        <!-- À gauche : l'Overdrive (anneau gradué). -->
+        <ui:VisualElement name="hud-overdrive" class="hud__overdrive" picking-mode="Ignore">
+            <ui:VisualElement name="hud-anneau" class="hud__anneau" picking-mode="Ignore">
+                <ui:VisualElement class="hud__anneau-centre" picking-mode="Ignore">
+                    <ui:VisualElement class="icone icone--eclair hud__od-icone" picking-mode="Ignore" />
+                    <ui:Label name="hud-od-valeur" class="hud__od-valeur" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="hud-od-libelle" class="etiquette hud__od-libelle" picking-mode="Ignore" />
+            <ui:Label name="hud-od-touche" class="touche hud__od-touche" picking-mode="Ignore" />
+            <ui:Label name="hud-od-etat" class="etiquette hud__od-etat" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <!-- À droite : le multiplicateur, le combo et son délai. -->
+        <ui:VisualElement name="hud-combo-bloc" class="hud__combo" picking-mode="Ignore">
+            <ui:Label name="hud-mult" class="hud__mult" picking-mode="Ignore" />
+            <ui:VisualElement class="hud__ligne hud__ligne--droite" picking-mode="Ignore">
+                <ui:Label name="hud-combo-libelle" class="etiquette" picking-mode="Ignore" />
+                <ui:Label name="hud-combo" class="hud__combo-valeur" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="hud__delai" picking-mode="Ignore">
+                <ui:VisualElement name="hud-delai" class="hud__delai-plein" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <!-- Au doigt : l'Overdrive (glisser vers le haut marche aussi). -->
+        <ui:Button name="hud-od-tactile" class="hud__od-tactile plaque">
+            <ui:VisualElement class="icone icone--eclair hud__od-tactile-icone" picking-mode="Ignore" />
+            <ui:Label name="hud-od-tactile-texte" class="etiquette" picking-mode="Ignore" />
+        </ui:Button>
+        <!-- Au centre : les annonces et le compte à rebours ; en bas : les conseils. -->
+        <ui:Label name="annonce" class="annonce" picking-mode="Ignore" />
+        <ui:Label name="compte" class="compte" picking-mode="Ignore" />
+        <ui:Label name="conseil" class="conseil" picking-mode="Ignore" />
+        <!-- L'entraînement (Scripts/Interface/Tutoriel.cs). -->
+        <ui:VisualElement name="tuto" class="tuto plaque" picking-mode="Ignore">
+            <ui:VisualElement class="tuto__tete" picking-mode="Ignore">
+                <ui:Label name="tuto-etape" class="etiquette tuto__etape" picking-mode="Ignore" />
+                <ui:Label name="tuto-titre" class="etiquette tuto__titre" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:Label name="tuto-consigne" class="tuto__consigne" picking-mode="Ignore" />
+            <ui:VisualElement name="tuto-touches" class="tuto__touches" picking-mode="Ignore">
+                <ui:VisualElement name="tuto-gauche" class="tuto__touche" picking-mode="Ignore">
+                    <ui:Label text="←" class="tuto__fleche" picking-mode="Ignore" />
+                    <ui:Label text="A" class="tuto__lettre" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:VisualElement name="tuto-droite" class="tuto__touche" picking-mode="Ignore">
+                    <ui:Label text="→" class="tuto__fleche" picking-mode="Ignore" />
+                    <ui:Label text="D" class="tuto__lettre" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="tuto-tactile" class="tuto__tactile" picking-mode="Ignore">
+                <ui:VisualElement name="tuto-zone-gauche" class="tuto__zone" picking-mode="Ignore" />
+                <ui:VisualElement name="tuto-zone-droite" class="tuto__zone" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement name="tuto-progres" class="tuto__progres" picking-mode="Ignore">
+                <ui:VisualElement class="tuto__pas" picking-mode="Ignore" />
+                <ui:VisualElement class="tuto__pas" picking-mode="Ignore" />
+                <ui:VisualElement class="tuto__pas" picking-mode="Ignore" />
+                <ui:VisualElement class="tuto__pas" picking-mode="Ignore" />
+                <ui:VisualElement class="tuto__pas" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement name="tuto-ok" class="tuto__ok icone" picking-mode="Ignore" />
+        </ui:VisualElement>
+        <ui:Button name="tuto-passer" class="tuto__passer plaque">
+            <ui:Label name="tuto-passer-texte" class="action__texte" picking-mode="Ignore" />
+        </ui:Button>
+        <ui:VisualElement name="tuto-fin" class="tuto__fin" picking-mode="Ignore">
+            <ui:Label name="tuto-fin-titre" class="tuto__fin-titre" picking-mode="Ignore" />
+            <ui:VisualElement class="tuto__fin-trait" picking-mode="Ignore" />
+            <ui:Label name="tuto-fin-sous" class="tuto__fin-sous" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

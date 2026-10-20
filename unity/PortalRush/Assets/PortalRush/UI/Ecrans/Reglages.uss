@@ -1,0 +1,321 @@
+/* ==========================================================================
+   PORTAL RUSH (Unity) — LE PANNEAU DES RÉGLAGES ET SES COMMANDES (interrupteur, curseur, segments, touches)
+   ========================================================================== */
+.panneau-fond {
+    background-color: rgba(3, 6, 12, 0.5);
+}
+
+.panneau {
+    position: absolute;
+    right: 44px;
+    top: 92px;
+    bottom: 40px;
+    width: 680px;
+    padding: 26px 28px 18px 28px;
+    --plaque-fond: rgba(5, 9, 18, 0.93);
+    --plaque-bord: rgba(168, 236, 255, 0.36);
+    --plaque-accent: rgb(168, 236, 255);
+    --plaque-coupe: 20;
+    --plaque-accent-longueur: 120;
+}
+
+.pr.anime .panneau {
+    transition-property: opacity, translate;
+    transition-duration: 0.28s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.pr .panneau.entree {
+    opacity: 0;
+    translate: 24px 0;
+}
+
+.pr.anime .panneau.entree {
+    transition-duration: 0s;
+}
+
+.panneau__tete {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.panneau__titre {
+    -unity-font-definition: url("../Polices/Tektur-Medium.ttf");
+    -unity-font-style: italic;
+    font-size: 42px;
+    color: var(--blanc);
+    margin-top: 2px;
+}
+
+.panneau__pages {
+    flex-grow: 1;
+}
+
+.panneau__page {
+    flex-grow: 1;
+}
+
+.panneau__sous-titre {
+    margin: 22px 0 10px 0;
+    color: var(--cyan);
+}
+
+/* ---- Une option : son texte à gauche, sa commande à droite ---- */
+.option {
+    flex-direction: row;
+    align-items: center;
+    min-height: 66px;
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--trait);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.option:hover {
+    background-color: rgba(98, 217, 255, 0.05);
+}
+
+.pr.clavier .option:focus {
+    background-color: rgba(98, 217, 255, 0.12);
+    border-bottom-color: var(--cyan);
+}
+
+.option__texte {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: 18px;
+}
+
+.option__titre {
+    font-size: 16px;
+    color: var(--blanc);
+}
+
+.option__detail {
+    margin-top: 3px;
+    font-size: 12px;
+    color: var(--pale);
+}
+
+.option__effectif {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--glacier);
+}
+
+/* L'interrupteur. */
+.interrupteur__rail {
+    width: 54px;
+    height: 28px;
+    flex-shrink: 0;
+    padding: 3px;
+    border-radius: 14px;
+    border-width: 1px;
+    border-color: var(--trait-fort);
+    background-color: rgba(8, 14, 26, 0.8);
+}
+
+.interrupteur__bouton {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background-color: var(--pale);
+}
+
+.pr.anime .interrupteur__bouton {
+    transition-property: translate, background-color;
+    transition-duration: 0.18s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.interrupteur.actif .interrupteur__rail {
+    border-color: var(--cyan);
+    background-color: rgba(98, 217, 255, 0.24);
+}
+
+.interrupteur.actif .interrupteur__bouton {
+    translate: 26px 0;
+    background-color: var(--blanc);
+}
+
+/* Le curseur. */
+.curseur {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.curseur__tete {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.curseur__sortie {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 13px;
+    color: var(--glacier);
+}
+
+.curseur__rail {
+    height: 22px;
+    justify-content: center;
+}
+
+.curseur__plein {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 9px;
+    height: 4px;
+    background-color: var(--cyan);
+    transform-origin: left;
+    scale: 0 1;
+}
+
+.curseur__poignee {
+    position: absolute;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: var(--glacier);
+    background-color: var(--nuit);
+}
+
+.pr.clavier .curseur:focus .curseur__poignee {
+    background-color: var(--glacier);
+    border-color: var(--blanc);
+}
+
+/* La piste, sous le plein. */
+.curseur__piste {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 9px;
+    height: 4px;
+    background-color: rgba(205, 224, 246, 0.16);
+}
+
+/* Les segments (choix). */
+.choix {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.choix .option__texte {
+    margin: 0 0 12px 0;
+}
+
+.segments {
+    flex-direction: row;
+}
+
+.segment {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 42px;
+    margin-right: 6px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: var(--trait-fort);
+    border-radius: 2px;
+    background-color: rgba(8, 14, 26, 0.6);
+}
+
+.segment:hover {
+    border-color: var(--glacier);
+}
+
+.pr.clavier .segment:focus {
+    border-color: var(--blanc);
+    background-color: rgba(98, 217, 255, 0.16);
+}
+
+.segment.actif {
+    border-color: var(--cyan);
+    background-color: rgba(98, 217, 255, 0.24);
+}
+
+.segment__texte {
+    -unity-font-definition: url("../Polices/GeistMono-Bold.ttf");
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--doux);
+    -unity-text-align: middle-center;
+}
+
+.segment.actif .segment__texte {
+    color: var(--blanc);
+}
+
+/* L'aide clavier : les touches, puis les explications. */
+.touches__ligne {
+    flex-direction: row;
+    align-items: center;
+    min-height: 40px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--trait);
+}
+
+.touches__cles {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 270px;
+    flex-shrink: 0;
+}
+
+.touches__cles .touche {
+    margin: 3px 6px 3px 0;
+}
+
+.touches__texte {
+    flex-shrink: 1;
+    font-size: 14px;
+    color: var(--texte);
+}
+
+.commandes__ligne {
+    flex-direction: row;
+    margin-bottom: 10px;
+}
+
+.commandes__puce {
+    width: 5px;
+    height: 5px;
+    margin: 8px 12px 0 2px;
+    flex-shrink: 0;
+    background-color: var(--cyan);
+    rotate: 45deg;
+}
+
+.commandes__texte {
+    flex-shrink: 1;
+    font-size: 14px;
+    color: var(--doux);
+}
+
+/* ==========================================================================
+   LES TAILLES D'ÉCRAN
+   ========================================================================== */
+.pr.etroit .panneau {
+    width: 600px;
+}
+
+.pr.portrait .panneau {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    top: 84px;
+    bottom: 16px;
+}
+
+.pr.portrait .touches__cles {
+    width: 180px;
+}

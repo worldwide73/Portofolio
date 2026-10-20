@@ -231,6 +231,13 @@ export function initChamp(): boolean {
   };
   dimensionner();
   window.addEventListener('resize', apresPause(dimensionner, 120));
+  // L'accueil est masqué quand une autre destination est affichée (destinations.css) : la scène n'a
+  // alors aucune taille, et elle restait noire en revenant. On la mesure dès que son cadre reparaît.
+  // (La photographie, elle, se charge tout de suite : le portail peut être demandé d'une autre destination.)
+  if (!largeur) chargerPhoto(window.innerWidth / window.innerHeight < 0.85 ? 'portrait' : 'paysage');
+  const cadreScene = toile.parentElement;
+  const redimensionner = apresPause(dimensionner, 120);
+  if (cadreScene) new ResizeObserver(() => (largeur ? redimensionner() : dimensionner())).observe(cadreScene);
 
   // ---- Qui tient la lampe ? ----
   // 0 : personne. Un « curseur fantôme » se promène alors lentement sur les
@@ -282,8 +289,9 @@ export function initChamp(): boolean {
       horsChamp = true;
       return;
     }
-    // Pendant le jeu (Portal Rush, en plein écran), la carte graphique est à lui.
-    if (jeu?.open) {
+    // Pendant le jeu (Portal Rush, en plein écran), la carte graphique est à lui ; pendant la
+    // visite rapide, la scène est cachée derrière elle.
+    if (jeu?.open || document.documentElement.classList.contains('visite-rapide')) {
       horsChamp = true;
       return;
     }
@@ -403,6 +411,7 @@ export function initChamp(): boolean {
     Object.assign(etat, { reveal: 1, verreIntro: 1, tourIntro: 0 });
     const figer = () => requestAnimationFrame(() => image(8));
     window.addEventListener('resize', apresPause(figer, 160));
+    if (cadreScene) new ResizeObserver(figer).observe(cadreScene); // (de retour sur l'accueil : l'image est redessinée)
     toile.addEventListener('scene-prete', figer);
     figer();
     return true;

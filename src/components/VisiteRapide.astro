@@ -1,0 +1,125 @@
+---
+// LA VISITE RAPIDE : le portfolio en un coup d'œil, pour un recruteur pressé.
+// Une seule page lisible, sans animation secondaire, ouverte par le troisième outil de la barre.
+// Tout vient du contenu réel (fr.ts, en.ts) : le profil, les compétences et les réalisations qui
+// les prouvent, le parcours, le CV et les moyens de contact. Rien n'est ajouté ici.
+// (Elle remplace l'idée de l'ancien « mode recruteur », retiré le 14 octobre 2026 : demande du 16 octobre.)
+import { cheminFiche, estACompleter, typo } from '../contenu';
+import type { Contenu } from '../contenu/types';
+import Symbole from './Symbole.astro';
+
+interface Props {
+  contenu: Contenu;
+}
+
+const { contenu: c } = Astro.props;
+const v = c.navigation.rapide;
+const langue = c.langue;
+const t = (texte: string) => typo(texte, langue);
+const reel = (texte: string) => (estACompleter(texte) ? '' : texte);
+const linkedin = c.contact.liens.find((l) => l.nom === 'LinkedIn');
+const autres = c.contact.liens.filter((l) => !l.href.endsWith('.pdf'));
+const nom = c.hero.titre[0].replace(/\.$/, '');
+const metier = c.hero.titre[1].replace(/\.$/, '');
+---
+
+<dialog class="rapide" aria-labelledby="rapide-titre" data-lenis-prevent>
+  <div class="rapide__cadre">
+    <header class="rapide__tete">
+      <p class="rapide__marque etiquette"><Symbole taille={16} />{v.titre}</p>
+      <button class="pastille etiquette" type="button" data-rapide-fermer>{v.quitter}</button>
+    </header>
+
+    <section class="rapide__profil" aria-labelledby="rapide-titre">
+      <p class="rapide__surtitre etiquette">{t(c.hero.surtitre)}</p>
+      <h2 class="rapide__nom" id="rapide-titre">{nom}</h2>
+      <p class="rapide__metier">{t(metier)}</p>
+      <p class="rapide__texte">{t(c.hero.accroche)}</p>
+      <p class="rapide__dispo etiquette"><span class="rapide__pouls" aria-hidden="true"></span>{t(c.contact.dispo)}</p>
+      {!estACompleter(c.apropos.cap.titre) && <p class="rapide__texte rapide__cap">{t(c.apropos.cap.titre)}</p>}
+      <div class="rapide__actions etiquette">
+        <a class="pastille pastille--pleine" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">{v.cv}</a>
+        <a class="pastille" href="/CV_Matheo_Maleyran.pdf" download="CV_Matheo_Maleyran.pdf">{v.telecharger}</a>
+        <a class="pastille" href={`mailto:${c.contact.email}`}>{v.ecrire}</a>
+        {linkedin && <a class="pastille" href={linkedin.href} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a>}
+      </div>
+      <p class="rapide__intro">{t(v.intro)}</p>
+    </section>
+
+    <div class="rapide__grille">
+      <section class="rapide__bloc rapide__bloc--large" aria-labelledby="rapide-realisations">
+        <h3 class="rapide__titre etiquette" id="rapide-realisations">{v.realisations}</h3>
+        <ul class="rapide__projets">
+          {
+            c.realisations.projets.map((p) => (
+              <li>
+                <p class="rapide__projet-nom">
+                  {p.nom}
+                  {p.jouable && <span class="carte__badge etiquette">{t(c.vitrine.badge)}</span>}
+                </p>
+                <p class="rapide__meta etiquette">{p.annee} · {p.genre}</p>
+                {reel(p.phrase) && <p class="rapide__phrase">{t(p.phrase)}</p>}
+                <p class="rapide__stack etiquette">{p.stack.join(', ')}</p>
+                <p class="rapide__liens etiquette">
+                  <a class="lien" href={cheminFiche(langue, p.slug)}>{v.fiche} →</a>
+                  {p.lien && <a class="lien" href={p.lien.href} target="_blank" rel="noopener">{v.site} ↗</a>}
+                </p>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="rapide__bloc" aria-labelledby="rapide-competences">
+        <h3 class="rapide__titre etiquette" id="rapide-competences">{v.competences}</h3>
+        <dl class="rapide__domaines">
+          {
+            c.competences.domaines.map((d) => (
+              <div>
+                <dt class="etiquette">{t(d.nom)}</dt>
+                <dd>{d.competences.map((k) => t(k.nom)).join(', ')}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </section>
+
+      <section class="rapide__bloc" aria-labelledby="rapide-parcours">
+        <h3 class="rapide__titre etiquette" id="rapide-parcours">{v.parcours}</h3>
+        <ol class="rapide__parcours">
+          {
+            c.apropos.parcours.etapes
+              .filter((e) => !estACompleter(e.nom))
+              .map((e) => (
+                <li>
+                  <span class="etiquette">{e.date}</span>
+                  <b>{t(e.nom)}</b>
+                  {reel(e.lieu) && <span class="rapide__meta">{t(e.lieu)}</span>}
+                </li>
+              ))
+          }
+        </ol>
+      </section>
+
+      <section class="rapide__bloc" aria-labelledby="rapide-contact">
+        <h3 class="rapide__titre etiquette" id="rapide-contact">{v.contact}</h3>
+        <ul class="rapide__contact">
+          <li><span class="etiquette">{c.contact.emailNom}</span><a class="lien" href={`mailto:${c.contact.email}`}>{c.contact.email}</a></li>
+          <li>
+            <span class="etiquette">{c.contact.telephoneNom}</span>
+            <a class="lien" href="#contact" data-telephone={JSON.stringify(c.contact.telephone)}><span class="valeur"></span></a>
+          </li>
+          {
+            autres.map((lien) => (
+              <li>
+                <span class="etiquette">{lien.nom}</span>
+                <a class="lien" href={lien.href} target="_blank" rel="noopener noreferrer">{lien.texte} ↗</a>
+              </li>
+            ))
+          }
+          <li><span class="etiquette">CV</span><a class="lien" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">{v.cv} ↗</a></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</dialog>

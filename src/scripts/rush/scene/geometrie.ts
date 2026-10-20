@@ -17,7 +17,7 @@ export type V3 = [number, number, number];
 type Gl = ConstructorParameters<typeof Geometry>[0];
 
 /** Les canaux d'une matière : sa couleur vient du sommet, ou d'un réglage du monde. */
-export const CANAL = { fixe: 0, peinture: 1, accent: 2, accent2: 3, danger: 4, coeur: 5, ligne: 6, fissure: 7, clignote: 8, peinture2: 9 } as const;
+export const CANAL = { fixe: 0, peinture: 1, accent: 2, accent2: 3, danger: 4, coeur: 5, ligne: 6, fissure: 7, clignote: 8, peinture2: 9, revetement: 10 } as const;
 
 /**
  * Une matière. c : couleur sRGB (0 à 1) ; m : métal ; r : rugosité ; e : émission
@@ -132,6 +132,40 @@ export class Assembleur {
     const l = lineaire(q.c);
     this.c.push(l[0], l[1], l[2]);
     this.m.push(q.m, q.r, q.e, q.k ?? 0);
+  }
+
+  /**
+   * (V4-H7) Ajoute un maillage importé (modèle Blender, voir assets.ts) dans le repère courant. Un repère en miroir
+   * (échelle négative) retourne l'ordre des sommets pour garder les faces vers l'extérieur.
+   */
+  importer(
+    m: { attributs: { position: Float32Array; normal: Float32Array; couleur: Float32Array; matiere: Float32Array; index: ArrayLike<number> } },
+    /** Facultatif : une matière qui remplace celle du modèle, selon la normale locale du sommet (recolorer). */
+    remplacer?: (n: V3) => Matiere,
+  ): this {
+    const a = m.attributs;
+    const t = this.t;
+    const det = t[0] * (t[5] * t[10] - t[9] * t[6]) - t[4] * (t[1] * t[10] - t[9] * t[2]) + t[8] * (t[1] * t[6] - t[5] * t[2]);
+    const ordre = det < 0 ? [0, 2, 1] : [0, 1, 2];
+    const idx = a.index;
+    for (let f = 0; f < idx.length; f += 3)
+      for (const o of ordre) {
+        const i = idx[f + o];
+        const p = this.point([a.position[i * 3], a.position[i * 3 + 1], a.position[i * 3 + 2]]);
+        const n = this.direction([a.normal[i * 3], a.normal[i * 3 + 1], a.normal[i * 3 + 2]]);
+        this.p.push(p[0], p[1], p[2]);
+        this.n.push(n[0], n[1], n[2]);
+        if (remplacer) {
+          const q = remplacer([a.normal[i * 3], a.normal[i * 3 + 1], a.normal[i * 3 + 2]]);
+          const l = lineaire(q.c);
+          this.c.push(l[0], l[1], l[2]);
+          this.m.push(q.m, q.r, q.e, q.k ?? 0);
+          continue;
+        }
+        this.c.push(a.couleur[i * 3], a.couleur[i * 3 + 1], a.couleur[i * 3 + 2]);
+        this.m.push(a.matiere[i * 4], a.matiere[i * 4 + 1], a.matiere[i * 4 + 2], a.matiere[i * 4 + 3]);
+      }
+    return this;
   }
 
   // ---- Les faces ----
@@ -263,9 +297,25 @@ export class Assembleur {
     }
     const rayon = v.map((p) => r * (relief ? relief(p) : 1));
     const pos = v.map((p, i): V3 => [p[0] * rayon[i], p[1] * rayon[i], p[2] * rayon[i]]);
+    // (V4-H) Un relief sans « net » est lissé : les normales de chaque sommet sont la moyenne de celles des faces
+    // qui le touchent (la roche paraît ronde ; la texture « brute » lui donne ensuite ses fissures).
+    let lisses: V3[] | null = null;
+    if (relief && !net) {
+      const somme = pos.map((): V3 => [0, 0, 0]);
+      for (const [a, b, c] of f) {
+        const n = croix(sous(pos[b], pos[a]), sous(pos[c], pos[a]));
+        for (const i of [a, b, c]) {
+          somme[i][0] += n[0];
+          somme[i][1] += n[1];
+          somme[i][2] += n[2];
+        }
+      }
+      lisses = somme.map((n) => normer(n));
+    }
     for (const [a, b, c] of f) {
       const qq = qRelief ? qRelief(normer([v[a][0] + v[b][0] + v[c][0], v[a][1] + v[b][1] + v[c][1], v[a][2] + v[b][2] + v[c][2]])) : q;
-      if (net || relief) this.tri(pos[a], pos[b], pos[c], qq);
+      if (net) this.tri(pos[a], pos[b], pos[c], qq);
+      else if (lisses) this.triLisse(pos[a], pos[b], pos[c], lisses[a], lisses[b], lisses[c], qq);
       else this.triLisse(pos[a], pos[b], pos[c], v[a], v[b], v[c], qq);
     }
     return this;

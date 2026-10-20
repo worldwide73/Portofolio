@@ -99,6 +99,8 @@ export interface Contenu {
     linkedin: string;
     github: string;
     cv: string;
+    /** Le petit bouton qui télécharge le CV, à côté de « Mon CV » (qui l'ouvre). */
+    telecharger: string;
     partager: string;
     copie: string;
     copieManuelle: string;
@@ -108,7 +110,11 @@ export interface Contenu {
     ecrire: string;
     raccourcis: string;
     fermer: string;
+    /** Les raccourcis, par contexte. Dans une liste de touches, « + » (ensemble) et « / » (ou) sont des liaisons. */
     groupes: { nom: string; lignes: [string[], string][] }[];
+    /** Sous le titre de l'aide clavier, et sa note de bas. */
+    aideTouches: string;
+    aideSaisie: string;
   };
   /** L'introduction jouée à l'arrivée sur l'accueil : trois lignes, écrites en capitales par le CSS. */
   initialisation: { nom: string; metier: string; etat: string; passer: string };
@@ -162,15 +168,34 @@ export interface Contenu {
     accroche: string;
     /** La barre du haut : la touche Échap (son effet selon l'écran), l'état du système, les icônes, les langues. */
     barre: { echap: { quitter: string; retour: string; fermer: string; pause: string; reprendre: string; menu: string; passer: string }; systeme: string; principal: string; course: string; langue: string; langues: { fr: string; en: string }; entree: string; espace: string };
+    /** Le voyage temporel (entrée dans le jeu) : le bouton discret pour le passer. */
+    voyage: { passer: string };
+    /** Le tutoriel immersif de la première entrée (V4). */
+    tutoriel: {
+      titre: string;
+      phases: { titre: string; consigne: string; tactile: string }[];
+      bravo: string;
+      rate: string;
+      ralenti: string;
+      energie: string;
+      fin: [string, string];
+      passer: string;
+      refaire: string;
+      refaireTexte: string;
+      etape: string;
+    };
+    /** RUSH RADIO : le lecteur compact du menu principal. */
+    radio: { titre: string; lire: string; pause: string; precedente: string; suivante: string; volume: string; liste: string; original: string; adaptative: string; fixe: string };
     menu: { commencer: string; continuer: string; campagne: string; infini: string; defi: string; records: string; garage: string; reglages: string; quitter: string; retour: string; lancer: string; commandes: string };
     /** Sous chaque entrée du menu. « {n} » : le secteur, « {d} » : la difficulté. */
     descriptions: { commencer: string; continuer: string; campagne: string; infini: string; defi: string; records: string; garage: string; reglages: string; quitter: string };
     stats: { meilleur: string; campagne: string; etoiles: string; pieces: string; defis: string; derniere: string; bienvenue: string };
     /** Les trois étoiles d'un secteur. « {v} » : le score cible ; « {n} » : un secteur ; « {p} » : une pièce. */
-    etoiles: { titre: string; une: string; deux: string; nouvelle: string; aGagner: string; recompenses: string; debloque: string; piece: string; cauchemar: string; aucune: string; resume: string };
+    etoiles: { titre: string; une: string; deux: string; nouvelle: string; aGagner: string; recompenses: string; debloque: string; piece: string; cauchemar: string; paradoxe: string; aucune: string; resume: string };
     difficulte: string;
-    difficultes: Record<'pilote' | 'as' | 'expert' | 'cauchemar', { nom: string; role: string; texte: string }>;
+    difficultes: Record<'pilote' | 'as' | 'expert' | 'cauchemar' | 'paradoxe', { nom: string; role: string; texte: string }>;
     verrouCauchemar: string;
+    verrouParadoxe: string;
     secteur: string;
     niveaux: { nom: string; mecanique: string }[];
     /** « {v} » : la valeur à atteindre. */
@@ -179,9 +204,9 @@ export interface Contenu {
     verrou: string;
     meilleur: string;
     aucunRecord: string;
-    hud: { score: string; record: string; combo: string; boucliers: string; fragments: string; overdrive: string; charges: string; pause: string; boss: string; touche: string; toucheTactile: string };
+    hud: { score: string; record: string; combo: string; boucliers: string; fragments: string; overdrive: string; charges: string; pause: string; boss: string; touche: string; toucheTactile: string; odVerrouille: string; odUtilise: string; odCharge: string; vie: string };
     phases: Record<'calibrage' | 'acceleration' | 'pression' | 'finale' | 'assaut' | 'tempete' | 'effondrement', string>;
-    annonces: { depart: string; parfait: string; overdrive: string; pret: string; choc: string; dernier: string; portail: string; phase: string; comboPerdu: string; motif: string; record: string };
+    annonces: { depart: string; parfait: string; overdrive: string; pret: string; choc: string; dernier: string; portail: string; phase: string; comboPerdu: string; motif: string; record: string; odOuvert: string };
     conseils: { clavier: string[]; tactile: string[] };
     pause: { titre: string; sousTitre: string; reprendre: string; recommencer: string; confirmer: string; reglages: string; menu: string; confirmerMenu: string; quitter: string; confirmerQuitter: string };
     fin: {
@@ -206,7 +231,7 @@ export interface Contenu {
       autreDifficulte: string;
       menu: string;
     };
-    victoire: { titre: string; recompenses: string; aucune: string; meilleurNiveau: string; suivant: string; rejouer: string; menu: string; cauchemar: string; secteurDebloque: string };
+    victoire: { titre: string; recompenses: string; aucune: string; meilleurNiveau: string; suivant: string; rejouer: string; menu: string; cauchemar: string; paradoxe: string; secteurDebloque: string };
     defi: { titre: string; objectif: string; parcours: string; regles: string; score: string; meilleur: string; derniere: string; aucune: string; lancer: string; tentatives: string };
     infini: { titre: string; texte: string; lancer: string };
     records: {
@@ -229,6 +254,16 @@ export interface Contenu {
     garage: {
       titre: string;
       texte: string;
+      /** Les vaisseaux (V4). */
+      vaisseaux: {
+        titre: string;
+        noms: Record<'aube' | 'faucon' | 'bastion' | 'spectre', string>;
+        roles: Record<'aube' | 'faucon' | 'bastion' | 'spectre', string>;
+        stats: { deplacement: string; boucliers: string; parfait: string; jauge: string };
+        choisi: string;
+        apercu: string;
+        defi: string;
+      };
       emplacements: Record<'coque' | 'trainee' | 'overdrive' | 'noyau', string>;
       pieces: Record<string, string>;
       conditions: { depart: string; niveau: string; rang: string; difficulte: string; infini: string; overdrives: string; parfaits: string; defis: string; multiplicateur: string };
@@ -250,6 +285,12 @@ export interface Contenu {
       toucher: string;
       glisser: string;
       onglets: { audio: string; affichage: string; commandes: string };
+      sequenceFin: string;
+      sequenceFinTexte: string;
+      sequenceChoix: { complete: string; courte: string };
+      qualite: string;
+      qualiteTexte: string;
+      qualiteChoix: { auto: string; elevee: string; equilibree: string; economie: string };
       sons: string;
       sonsTexte: string;
       animations: string;
@@ -263,34 +304,60 @@ export interface Contenu {
   reglages: {
     titre: string;
     /** Les deux pages du panneau. */
-    onglets: { affichage: string; atmosphere: string };
+    onglets: { affichage: string; son: string };
     opacite: string;
     flou: string;
     lueur: string;
     animations: string;
     niveaux: { complet: string; allege: string; coupe: string };
     sons: string;
-    musique: string;
     volume: string;
+    /** La densité de l'interface : son titre, les trois modes et une phrase pour chacun. */
+    densite: string;
+    densites: Record<'compact' | 'equilibre' | 'cinematique', { nom: string; texte: string }>;
+    /** « Restaurer l'affichage d'origine » : le bouton, ce qu'il rétablit, et sa confirmation. */
+    restaurer: string;
+    restaurerAide: string;
+    restaure: string;
+    dejaOrigine: string;
   };
-  /** La page « Atmosphère » du panneau : quatre ambiances facultatives, et le lecteur de musique. */
-  atmosphere: {
+  /** La page « Son » du panneau : les effets sonores, le son de l'introduction, et où trouver la musique. */
+  son: {
+    introduction: string;
+    introductionTexte: string;
+    musique: string;
+    musiqueTexte: string;
+    ouvrirRadio: string;
+  };
+  /** DREAM RADIO : le lecteur de musique du portfolio (icône casque, à côté de la langue). */
+  radio: {
+    bouton: string;
     titre: string;
-    /** Affiché tant qu'aucune ambiance n'est choisie. */
-    aide: string;
-    modes: Record<'chill' | 'espace' | 'focus' | 'silence', { nom: string; texte: string }>;
-    pistes: Record<'derive' | 'heure-bleue' | 'trait', { titre: string; texte: string }>;
+    sousTitre: string;
     lire: string;
     pause: string;
-    /** Dit d'où vient la musique : elle est fabriquée par le code, sans fichier audio. */
-    genere: string;
+    precedente: string;
+    suivante: string;
+    volume: string;
+    muet: string;
+    reactiver: string;
+    liste: string;
+    progression: string;
+    fermer: string;
+    enCours: string;
     silence: string;
-    /** La case « son dès l'ouverture du site », et ce qu'elle fait. */
-    lancement: string;
-    lancementTexte: string;
+    chargement: string;
+    erreur: string;
+    reprise: string;
+    original: string;
+    genere: string;
+    credits: string;
+    creditsTexte: string;
+    creditsLien: string;
+    clavier: string;
   };
   sections: Record<IdSection, string>;
-  /** Le fil de navigation, en bas de l'écran, et le portail qui ouvre la carte. */
+  /** Le fil des chapitres, en bas de l'écran, et le portail qui ouvre la carte. */
   trajet: {
     titre: string;
     precedent: string;
@@ -301,16 +368,69 @@ export interface Contenu {
     /** La courte indication affichée sous le portail (le CSS la met en capitales et ajoute la flèche). */
     invite: string;
   };
+  /**
+   * Le mini-guidage de la première visite (guidage.ts), près du grand portail : un titre, puis deux
+   * lignes « geste — effet » (à la souris, ou au doigt), le bouton qui le ferme, et le libellé du
+   * bouton qui le remontre depuis l'aide clavier.
+   */
+  guidage: {
+    titre: string;
+    explorer: { souris: string; doigt: string; texte: string };
+    voyager: { geste: string; texte: string };
+    fermer: string;
+    revoir: string;
+  };
+  /**
+   * La navigation par destinations (16 octobre 2026) : chaque section est une destination
+   * indépendante ; on voyage de l'une à l'autre par le portail. La barre du haut porte trois
+   * outils (Portail, Rechercher, Visite rapide), le fil du bas les chapitres de la destination.
+   */
+  navigation: {
+    /** La barre du haut : « ici » précède, pour les lecteurs d'écran, le nom de la destination affichée ; « iciAide » est sa bulle. */
+    outils: { titre: string; ici: string; iciAide: string; rechercher: string; rechercherAide: string; rapide: string; rapideAide: string };
+    /** Les chapitres internes qui n'ont pas de titre propre dans la page. */
+    chapitres: { intro: string; methode: string; parcours: string; explorer: string; tableau: string; presentation: string; coordonnees: string; credits: string };
+    /** Au-dessus du fil : « {destination} · {k} / {n} ». */
+    etat: string;
+    /** La conclusion de chaque destination : une invitation à rejoindre le portail. */
+    suites: Record<IdSection, { repere: string; titre: string; texte: string; action: string }>;
+    recherche: {
+      titre: string;
+      invite: string;
+      aide: string;
+      vide: string;
+      suggestions: string;
+      resultats: string;
+      types: Record<'destination' | 'projet' | 'competence' | 'parcours' | 'methode' | 'veille' | 'contact' | 'document' | 'jeu', string>;
+      fiche: string;
+    };
+    rapide: {
+      titre: string;
+      intro: string;
+      quitter: string;
+      profil: string;
+      competences: string;
+      realisations: string;
+      parcours: string;
+      contact: string;
+      cv: string;
+      telecharger: string;
+      fiche: string;
+      site: string;
+      ecrire: string;
+    };
+  };
   /** La carte du portail : les destinations du site, en constellation (voir Explorateur.astro). */
   explorateur: {
     titre: string;
     aide: string;
     ici: string;
-    cv: string;
+    /** Lu par les lecteurs d'écran sur une destination déjà explorée (souvenirs.ts). */
+    visitee: string;
     /** Le libellé du noyau de la carte : un clic dessus la referme. */
     refermer: string;
     /** Une ligne par destination. « {n} » est remplacé par le vrai nombre (domaines, réalisations). */
-    destinations: Record<IdSection | 'cv', string>;
+    destinations: Record<IdSection, string>;
   };
   hero: {
     /** Petite ligne au-dessus du titre. */
@@ -413,7 +533,6 @@ export interface Contenu {
     credits: { titre: string; signature: string; role: string; roleTexte: string; outils: string; outilsTexte: string; liens: string; droits: string };
     /** Lien du pied de page vers la fiche qui raconte comment ce site est fait. */
     coulisses: string;
-    haut: string;
   };
   introuvable: { titreOnglet: string; surtitre: string; titre: [string, string]; texte: string; accueil: string; realisations: string };
   /** La palette de commandes, en forme de terminal (Ctrl + K, touche ², ou le mot « trace »). */

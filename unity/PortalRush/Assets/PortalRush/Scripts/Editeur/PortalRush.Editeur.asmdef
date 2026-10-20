@@ -1,0 +1,26 @@
+{
+    "name": "PortalRush.Editeur",
+    "rootNamespace": "PortalRush.Editeur",
+    "references": [
+        "PortalRush.Coeur",
+        "PortalRush.Jeu",
+        "PortalRush.Interface",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Core.Editor",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Universal.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "PORTALRUSH_PAQUETS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -9,8 +9,8 @@
 .contact {
   position: relative;
   margin: var(--s-6) var(--marge-cadre) 0;
-  min-height: calc(100svh - 2 * var(--marge-cadre));
-  padding: clamp(26px, 4vw, 60px);
+  min-height: var(--contact-hauteur, calc(100svh - 2 * var(--marge-cadre)));
+  padding: calc(clamp(26px, 4vw, 60px) * var(--k-panneau, 1));
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   column-gap: var(--colonne);
@@ -60,7 +60,7 @@
 
 .titre.contact__titre {
   grid-column: 1 / span 8;
-  font-size: clamp(2.6rem, 6vw, 6.2rem);
+  font-size: calc(clamp(2.6rem, 6vw, 6.2rem) * var(--k-grand, 1));
   line-height: 0.98;
   letter-spacing: -0.048em;
 }
@@ -132,7 +132,7 @@
   justify-self: start;
   max-width: 100%;
   overflow-wrap: anywhere;
-  font-size: clamp(1.45rem, 3.5vw, 3.4rem);
+  font-size: calc(clamp(1.45rem, 3.5vw, 3.4rem) * var(--k-grand, 1));
   line-height: 1.05;
   letter-spacing: -0.042em;
   text-decoration: none;
@@ -161,7 +161,7 @@
 
 /* LinkedIn : une petite lame de verre dans la lame, qui s'éclaire au survol. */
 .contact__linkedin {
-  padding: clamp(18px, 2vw, 28px);
+  padding: calc(clamp(18px, 2vw, 28px) * var(--k-panneau, 1));
   border: 1px solid var(--filet);
   border-radius: 20px;
   background: rgba(150, 190, 255, 0.05);
@@ -186,7 +186,7 @@
 }
 
 .contact__profil {
-  font-size: clamp(1.2rem, 2vw, 1.9rem);
+  font-size: calc(clamp(1.2rem, 2vw, 1.9rem) * var(--k-sous, 1));
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
 }
@@ -307,7 +307,7 @@
 .pied {
   position: relative;
   margin: 0 var(--marge-cadre);
-  padding: clamp(48px, 6vw, 88px) clamp(26px, 4vw, 60px) calc(var(--marge-cadre) + 92px);
+  padding: calc(clamp(48px, 6vw, 88px) * var(--k-espace, 1)) calc(clamp(26px, 4vw, 60px) * var(--k-panneau, 1)) calc(var(--marge-cadre) + 92px);
   color: var(--texte);
 }
 
@@ -341,7 +341,7 @@
 
 .pied__nom {
   margin: 0.3rem 0 0;
-  font-size: clamp(1.5rem, 2.4vw, 2.3rem);
+  font-size: calc(clamp(1.5rem, 2.4vw, 2.3rem) * var(--k-sous, 1));
   letter-spacing: -0.04em;
   color: var(--texte);
 }
@@ -414,37 +414,6 @@
   margin: 0;
 }
 
-.pied__haut {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5em;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--filet);
-  border-radius: 999px;
-  background: var(--verre);
-  color: var(--texte);
-  text-decoration: none;
-  transition:
-    border-color var(--d-interface) var(--c-douce),
-    box-shadow var(--d-interface) var(--c-douce);
-}
-
-.pied__haut span {
-  transition: transform 0.45s var(--c-masque);
-}
-
-.pied__haut:hover,
-.pied__haut:focus-visible {
-  border-color: var(--filet-fort);
-  box-shadow: 0 0 calc(var(--lueur, 0.7) * 24px) rgba(130, 175, 255, 0.25);
-}
-
-.pied__haut:hover span,
-.pied__haut:focus-visible span {
-  transform: translateY(-3px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .contact__pouls::after {
     animation: none;
@@ -462,7 +431,7 @@
   }
 
   .titre.contact__titre {
-    font-size: clamp(2.2rem, 10vw, 3.4rem);
+    font-size: calc(clamp(2.2rem, 10vw, 3.4rem) * var(--k-grand, 1));
   }
 
   .contact__canaux {

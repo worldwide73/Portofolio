@@ -23,11 +23,18 @@
 // il peut exiger de planifier (une seule bonne voie, toujours visible à temps).
 // Aucun obstacle n'est donc impossible, et le jeu ne triche pas selon le joueur.
 
-import { BOSS, COMBO, DEPLACEMENT, JAUGE, OVERDRIVE_COMBO, POINTS, PROFILS, RANGS, apparition, type Difficulte, type Profil } from './equilibrage';
-import { DEFI, DIFFICULTE_DEFI, NIVEAUX, VOIES, graineDuJour, hasardGraine, niveauInfini, type Famille, type Mode, type Niveau, type Objectif, type Phase } from './donnees';
+import { BOSS, COMBO, DEPLACEMENT, INFINI, JAUGE, OVERDRIVE, OVERDRIVE_COMBO, POINTS, PROFILS, RANGS, apparition, type Difficulte, type Profil } from './equilibrage';
+import { DEFI, DIFFICULTE_DEFI, NIVEAUX, VEHICULES, VOIES, graineDuJour, hasardGraine, niveauInfini, type Famille, type Mode, type Niveau, type Objectif, type Phase, type Vehicule } from './donnees';
 
-export type TypeObjet = 'bloc' | 'debris' | 'laser' | 'mobile' | 'faille' | 'portail' | 'fragment' | 'dore' | 'noyau' | 'frappe';
-const OBSTACLES: TypeObjet[] = ['bloc', 'debris', 'laser', 'mobile', 'faille', 'frappe'];
+// Les obstacles mobiles de la V4 (16 octobre 2026) ont chacun leur dessin et leur mouvement à l'écran, mais
+// obéissent à la même règle que les autres : leur configuration finale est figée assez tôt pour réagir.
+//   drone      des drones de patrouille qui glissent sur le côté avant de se poser sur leur voie ;
+//   porte      une structure mécanique qui se referme : ses battants ferment une voie de plus en approchant ;
+//   rotor      une structure tournante dont l'ouverture tourne, puis s'arrête ;
+//   chute      un bloc qui tombe du ciel sur sa voie (sa voie est connue dès qu'il apparaît) ;
+//   eclaireur  un vaisseau ennemi qui fonce vers le joueur (sa voie est connue dès qu'il apparaît).
+export type TypeObjet = 'bloc' | 'debris' | 'laser' | 'mobile' | 'faille' | 'portail' | 'fragment' | 'dore' | 'noyau' | 'frappe' | 'drone' | 'porte' | 'rotor' | 'chute' | 'eclaireur';
+const OBSTACLES: TypeObjet[] = ['bloc', 'debris', 'laser', 'mobile', 'faille', 'frappe', 'drone', 'porte', 'rotor', 'chute', 'eclaireur'];
 export const estObstacle = (t: TypeObjet) => OBSTACLES.includes(t);
 
 export interface Objet {
@@ -75,6 +82,7 @@ export type TypeEvenement =
   | 'motif'
   | 'combo-perdu'
   | 'conseil'
+  | 'od-ouvert'
   | 'fin';
 export interface Evenement {
   type: TypeEvenement;
@@ -149,6 +157,9 @@ export class Partie {
   readonly niveauBase: Niveau;
   readonly graine: number;
   private readonly hasard: () => number;
+  /** Le vaisseau piloté, et la durée réelle de ses changements de voie (s). */
+  readonly vehicule: Vehicule;
+  readonly deplacement: number;
 
   // ---- L'état visible ----
   distance = 0;
@@ -160,7 +171,19 @@ export class Partie {
   voiePrecedente = 1;
   dernierDeplacement = -10;
   boucliers: number;
+  /** Les boucliers au départ (profil et vaisseau). */
+  bouclierMax = 1;
   invincible = 0;
+  /** Vrai pendant qu'une étape du tutoriel retient le vaisseau (il ne change pas de voie). */
+  figee = false;
+  /**
+   * Le tutoriel (V4) pilote la partie lui-même : le générateur se tait, les objets sont posés par le tutoriel
+   * (« placer »), la vitesse est imposée (« vitesseImposee »), un choc ne coûte rien et la partie ne finit jamais seule.
+   */
+  scriptee = false;
+  vitesseImposee: number | null = null;
+  /** L'ouverture de la jauge d'Overdrive a été annoncée. */
+  private odAnnonce = false;
   score = 0;
   combo = 0;
   comboMax = 0;
@@ -196,15 +219,22 @@ export class Partie {
   private prochainePression = 0;
   private signatures = new Set<number>(); //    les phases qui ont déjà reçu leur motif signature
   private motifs = new Map<number, Motif>();
+  /** Jusqu'où (m) une rangée suit de trop près un obstacle mobile pour qu'on exige de l'avoir prévue. */
+  private incertainJusqua = 0;
 
-  constructor(mode: Mode, difficulte: Difficulte, niveauId = 1, graine?: number) {
+  constructor(mode: Mode, difficulte: Difficulte, niveauId = 1, graine?: number, vehicule?: Vehicule['id']) {
     this.mode = mode;
     this.difficulte = mode === 'defi' ? DIFFICULTE_DEFI : difficulte;
     this.profil = PROFILS[this.difficulte];
+    // Le vaisseau : ses vraies différences (le défi du jour se court pour tous avec le même, l'Aube).
+    this.vehicule = VEHICULES.find((v) => v.id === (mode === 'defi' ? 'aube' : vehicule)) ?? VEHICULES[0];
+    this.deplacement = DEPLACEMENT * this.vehicule.deplacement;
     this.niveauBase = mode === 'campagne' ? NIVEAUX[niveauId - 1] : mode === 'defi' ? DEFI : niveauInfini();
     this.graine = graine ?? (mode === 'defi' ? graineDuJour() : Math.floor(Math.random() * 1e9));
     this.hasard = hasardGraine(this.graine);
-    this.boucliers = this.profil.boucliers;
+    // En survie infinie, une seule vie (V4) ; ailleurs, les boucliers du profil, plus ou moins ceux du vaisseau.
+    this.boucliers = mode === 'infini' ? INFINI.boucliers : Math.max(1, this.profil.boucliers + this.vehicule.boucliers);
+    this.bouclierMax = this.boucliers;
     if (this.niveauBase.boss) {
       const vie = Math.round(this.niveauBase.boss.vie * BOSS.vie[this.difficulte]);
       this.boss = { vie, max: vie, phase: 1, phases: this.niveauBase.boss.phases };
@@ -222,7 +252,13 @@ export class Partie {
   /** La vitesse de base à une position : accélération constante dans le temps, jusqu'au maximum. */
   vitesseA(pos: number): number {
     const a = this.profil.vitesse.acceleration;
-    return Math.min(this.profil.vitesse.max, Math.sqrt(this.v0 * this.v0 + 2 * a * Math.max(0, pos)));
+    const vmax = this.profil.vitesse.max;
+    const v = Math.sqrt(this.v0 * this.v0 + 2 * a * Math.max(0, pos));
+    if (v <= vmax || this.mode !== 'infini') return Math.min(vmax, v);
+    // Survie (V4) : au-delà du maximum, la vitesse continue de monter, plus doucement, jusqu'au plafond.
+    const dmax = (vmax * vmax - this.v0 * this.v0) / (2 * a);
+    const s = INFINI.surcroit;
+    return Math.min(INFINI.plafond, Math.sqrt(vmax * vmax + 2 * s * Math.max(0, pos - dmax)));
   }
   /** Le temps qu'un joueur met pour atteindre cette position (sans compter les pauses). */
   tempsA(pos: number): number {
@@ -230,6 +266,13 @@ export class Partie {
     const vmax = this.profil.vitesse.max;
     const dmax = (vmax * vmax - this.v0 * this.v0) / (2 * a);
     if (pos <= dmax) return (this.vitesseA(pos) - this.v0) / a;
+    if (this.mode === 'infini') {
+      const v = this.vitesseA(pos);
+      const s = INFINI.surcroit;
+      const dplaf = dmax + (INFINI.plafond ** 2 - vmax * vmax) / (2 * s);
+      if (pos <= dplaf) return (vmax - this.v0) / a + (v - vmax) / s;
+      return (vmax - this.v0) / a + (INFINI.plafond - vmax) / s + (pos - dplaf) / INFINI.plafond;
+    }
     return (vmax - this.v0) / a + (pos - dmax) / vmax;
   }
   ecartA(pos: number): number {
@@ -242,7 +285,28 @@ export class Partie {
   }
   get complexite(): number {
     const c = this.profil.complexite;
-    return borner(c.depart + this.niveauBase.complexite + c.parMotif * this.motifsPoses, 0, c.max);
+    // (V4) Dans un secteur, la complexité monte aussi avec l'avancée : la fin est plus dure que le début.
+    const avancee = this.mode === 'campagne' && Number.isFinite(this.longueur) ? 0.18 * borner(this.derniere / this.longueur, 0, 1) : 0;
+    return borner(c.depart + this.niveauBase.complexite + c.parMotif * this.motifsPoses + avancee, 0, c.max);
+  }
+
+  // ---- L'Overdrive rare (V4) ----
+  /** La jauge peut-elle se remplir ? Pas au départ ; plus jamais après usage. */
+  get overdriveOuvert(): boolean {
+    if (this.overdrives >= OVERDRIVE.parPartie) return false;
+    const seuil = Number.isFinite(this.longueur) ? Math.max(OVERDRIVE.depart.metres, OVERDRIVE.depart.part * this.longueur) : OVERDRIVE.depart.metres;
+    return this.boss ? this.avancement >= 0.2 || this.distance >= OVERDRIVE.depart.metres : this.distance >= seuil;
+  }
+  /** Où en est l'Overdrive : verrouillé (départ), en charge, prêt, actif, ou déjà utilisé. */
+  get etatOverdrive(): 'verrouille' | 'charge' | 'pret' | 'actif' | 'utilise' {
+    if (this.overdrive > 0) return 'actif';
+    if (this.overdrives >= OVERDRIVE.parPartie) return 'utilise';
+    if (!this.overdriveOuvert) return 'verrouille';
+    return this.jauge >= 1 ? 'pret' : 'charge';
+  }
+  /** La distance à partir de laquelle la jauge s'ouvre. */
+  get seuilOverdrive(): number {
+    return Number.isFinite(this.longueur) && !this.boss ? Math.max(OVERDRIVE.depart.metres, OVERDRIVE.depart.part * this.longueur) : OVERDRIVE.depart.metres;
   }
   /** La distance à laquelle les objets apparaissent, à la vitesse en cours. */
   get apparition(): number {
@@ -282,6 +346,7 @@ export class Partie {
   // LES COMMANDES
   // ==========================================================================
   deplacer(sens: -1 | 1): void {
+    if (this.figee) return;
     if (this.termine) return;
     const cible = borner(this.voie + sens, 0, VOIES - 1);
     if (cible === this.voie) return;
@@ -293,7 +358,7 @@ export class Partie {
 
   /** Déclenche l'Overdrive, si la jauge est pleine. Un gros combo le rend plus rentable. */
   declencher(): boolean {
-    if (this.termine || this.jauge < 1 || this.overdrive > 0) return false;
+    if (this.termine || this.jauge < 1 || this.overdrive > 0 || !this.overdriveOuvert) return false;
     const o = this.profil.overdrive;
     this.overdrive = o.duree;
     this.charges = o.charges;
@@ -312,10 +377,10 @@ export class Partie {
     if (this.termine) return;
     this.temps += dt;
     // (L'Overdrive n'accélère pas le vaisseau : la justice des écarts tient toujours.)
-    this.vitesse = this.vitesseA(this.distance);
+    this.vitesse = this.vitesseImposee ?? this.vitesseA(this.distance);
     const pas = this.vitesse * dt;
     this.distance += pas;
-    const glisse = dt / DEPLACEMENT;
+    const glisse = dt / this.deplacement;
     this.x += borner(this.voie - this.x, -glisse, glisse);
     this.invincible = Math.max(0, this.invincible - dt);
     if (this.overdrive > 0) {
@@ -333,11 +398,15 @@ export class Partie {
     this.score += pas * POINTS.metre * this.profil.score * (this.overdrive > 0 ? this.multOverdrive : 1);
 
     const phase = this.phaseA(this.distance);
-    if (phase !== this.phase) {
+    if (phase !== this.phase && !this.scriptee) {
       this.phase = phase;
       this.evenements.push({ type: 'phase', valeur: phase });
     }
     this.tutoriel();
+    if (!this.odAnnonce && !this.scriptee && this.overdriveOuvert && this.overdrives === 0) {
+      this.odAnnonce = true;
+      this.evenements.push({ type: 'od-ouvert' });
+    }
     this.genererJusqua(this.distance + this.apparition);
 
     for (const o of this.objets) {
@@ -358,7 +427,20 @@ export class Partie {
     }
     this.objets = this.objets.filter((o) => o.pos + (o.longueur ?? 0) - this.distance > -16);
 
+    if (this.scriptee) return;
     if (this.boss ? this.boss.vie <= 0 : this.distance >= this.longueur) this.finir(true);
+  }
+
+  /** Le tutoriel pose un objet à « devant » mètres du vaisseau (ses voies finales, ses états d'approche). */
+  placer(type: TypeObjet, devant: number, voies: number[], options: { avant?: { des: number; voies: number[] }[]; fige?: number } = {}): Objet {
+    const o = this.objet(type, this.distance + devant, voies, estObstacle(type) ? 0 : undefined);
+    if (options.avant) o.avant = options.avant;
+    if (options.fige !== undefined) o.fige = options.fige;
+    return o;
+  }
+  /** Retire tout ce qui est encore devant le vaisseau (une phase du tutoriel recommence). */
+  vider(): void {
+    this.objets = this.objets.filter((o) => o.pos < this.distance - 1);
   }
 
   /** Les voies bloquées par un obstacle quand il est à « z » mètres du vaisseau. */
@@ -402,7 +484,7 @@ export class Partie {
     // Un obstacle.
     const bloquees = this.voiesA(o, 0);
     if (bloquees.includes(ici)) this.heurter(o);
-    else if (bloquees.includes(this.voiePrecedente) && this.voiePrecedente !== ici && this.temps - this.dernierDeplacement <= this.profil.parfait) {
+    else if (bloquees.includes(this.voiePrecedente) && this.voiePrecedente !== ici && this.temps - this.dernierDeplacement <= this.profil.parfait * this.vehicule.parfait) {
       // Esquivé au tout dernier moment : Perfect Dodge.
       this.parfaits++;
       const gain = this.reussite(POINTS.parfait, JAUGE.parfait);
@@ -424,9 +506,17 @@ export class Partie {
       return;
     }
     if (this.invincible > 0) return;
+    if (this.scriptee) {
+      this.chocs++;
+      this.invincible = 0.6;
+      this.evenements.push({ type: 'choc', valeur: this.boucliers });
+      return;
+    }
     this.boucliers--;
     this.chocs++;
     this.combo = 0;
+    // (V4) Un choc fait reculer la jauge d'Overdrive : il faut la mériter d'un bout à l'autre.
+    if (this.overdrive <= 0) this.jauge = Math.max(0, this.jauge - JAUGE.choc);
     this.invincible = this.profil.invulnerable;
     if (o.motif !== undefined) {
       const m = this.motifs.get(o.motif);
@@ -444,9 +534,9 @@ export class Partie {
     this.multiplicateurMax = Math.max(this.multiplicateurMax, this.multiplicateur);
     const gain = Math.round(points * this.multiplicateur * this.profil.score * (this.overdrive > 0 ? this.multOverdrive : 1));
     this.score += gain;
-    if (this.overdrive <= 0) {
+    if (this.overdrive <= 0 && this.overdriveOuvert) {
       const avant = this.jauge;
-      this.jauge = Math.min(1, this.jauge + jauge * this.profil.gainOverdrive);
+      this.jauge = Math.min(1, this.jauge + jauge * this.profil.gainOverdrive * this.vehicule.jauge);
       if (avant < 1 && this.jauge >= 1) this.evenements.push({ type: 'pret' });
     }
     return gain;
@@ -479,15 +569,12 @@ export class Partie {
 
   /** Le tutoriel du premier niveau : quatre conseils, au bon moment. */
   private tutoriel(): void {
-    if (!this.niveauBase.tutoriel || this.mode !== 'campagne') return;
+    if (!this.niveauBase.tutoriel || this.mode !== 'campagne' || this.scriptee) return;
     const etapes = [20, 380, 760, 1150];
     const prochain = this.conseil + 1;
     if (prochain < etapes.length && this.distance >= etapes[prochain]) {
       this.conseil = prochain;
-      if (prochain === 3 && this.jauge < 1) {
-        this.jauge = 1;
-        this.evenements.push({ type: 'pret' });
-      }
+      // (V4 : plus d'Overdrive offert au premier secteur ; il se mérite.)
       this.evenements.push({ type: 'conseil', valeur: prochain });
     }
   }
@@ -579,6 +666,7 @@ export class Partie {
 
   /** Pose des motifs jusqu'à une position du parcours (sert aussi aux vérifications). */
   genererJusqua(limite: number): void {
+    if (this.scriptee) return;
     while (this.derniere < limite) {
       // Plus rien dans les derniers mètres : on arrive au portail.
       if (this.derniere > this.longueur - 90) {
@@ -775,6 +863,44 @@ export class Partie {
         ];
         return etapes;
       }
+      // ---- Les familles mobiles de la V4 ----
+      case 'drones': {
+        // Une patrouille : un ou deux drones qui glissent d'une voie à l'autre avant de se poser.
+        const n = 1 + (c > 0.45 ? 1 : 0) + (c > 0.8 ? 1 : 0);
+        const etapes: Etape[] = [];
+        for (let k = 0; k < n; k++) etapes.push({ type: 'drone', voies: this.bloquer(c > 0.6 && h() < 0.4 ? 2 : 1), ecart: k === 0 ? 1 : 0.6, changeant: true, chaine: k > 0 });
+        return etapes;
+      }
+      case 'portes': {
+        // Une structure qui se referme : elle bloque deux voies une fois close ; plus loin, une seule.
+        const etapes: Etape[] = [{ type: 'porte', voies: this.bloquer(2), ecart: 1, changeant: true }];
+        if (c > 0.55) etapes.push({ type: 'porte', voies: this.bloquer(2), ecart: 0.7, changeant: true, chaine: true });
+        return etapes;
+      }
+      case 'rotors': {
+        const n = 1 + (c > 0.5 ? 1 : 0);
+        const etapes: Etape[] = [];
+        for (let k = 0; k < n; k++) etapes.push({ type: 'rotor', voies: this.bloquer(2), ecart: k === 0 ? 1 : 0.7, changeant: true, chaine: k > 0 });
+        return etapes;
+      }
+      case 'chutes': {
+        // Des blocs qui tombent : leur voie est connue dès qu'ils apparaissent ; ils arrivent en rafale.
+        const n = 2 + Math.round(2 * c);
+        const etapes: Etape[] = [];
+        for (let k = 0; k < n; k++) etapes.push({ type: 'chute', voies: this.bloquer(c > 0.7 && h() < 0.3 ? 2 : 1), ecart: k === 0 ? 1 : 0.5, chaine: k > 0 });
+        return etapes;
+      }
+      case 'convoi': {
+        // Des éclaireurs ennemis qui foncent vers le joueur, l'un derrière l'autre, sur des voies différentes.
+        const n = 2 + Math.round(2 * c);
+        const etapes: Etape[] = [];
+        let voie = this.voieAtteinte();
+        for (let k = 0; k < n; k++) {
+          etapes.push({ type: 'eclaireur', voies: [voie], ecart: k === 0 ? 1 : 0.45, chaine: k > 0 });
+          voie = this.tirer(TOUTES.filter((v) => v !== voie));
+        }
+        return etapes;
+      }
       case 'effondrement': {
         const voies = this.bloquer(2);
         const libre = TOUTES.find((v) => !voies.includes(v)) ?? 1;
@@ -796,10 +922,10 @@ export class Partie {
     const v = this.vitesseA(pos0 + 40) * 1.03; // la vitesse au moment d'arriver (elle ne fait que monter)
     const reaction = this.reactionA(pos0);
     const r = e.chaine ? Math.max(0.12, reaction * 0.55) : reaction;
-    const pieges = e.choix || this.difficulte === 'expert' || this.difficulte === 'cauchemar';
+    const pieges = e.choix || this.difficulte === 'expert' || this.difficulte === 'cauchemar' || this.difficulte === 'paradoxe';
 
     if (e.type === 'portail' && e.portail !== undefined) {
-      const pos = pos0 + Math.max(this.ecartA(pos0) * e.ecart, v * (r + DEPLACEMENT) + 3);
+      const pos = pos0 + Math.max(this.ecartA(pos0) * e.ecart, v * (r + this.deplacement) + 3);
       const o = this.objet('portail', pos, e.voies, motif);
       o.vers = e.portail;
       this.poserFragments(e, pos, motif);
@@ -812,14 +938,19 @@ export class Partie {
     const libres = TOUTES.filter((x) => !e.voies.includes(x));
     if (!libres.length) return null;
     /** Le temps qu'il faut pour aller de la voie a à la voie l. */
-    const temps = (a: number, l: number) => (a === l ? 0 : r + Math.abs(a - l) * DEPLACEMENT);
+    const temps = (a: number, l: number) => (a === l ? 0 : r + Math.abs(a - l) * this.deplacement);
     // L'écart minimal : au moins une voie libre atteignable (ou, sans piège, une sortie depuis chaque voie sûre).
     const depuis = [...this.atteignables];
     const meilleur = (a: number) => Math.min(...libres.map((l) => temps(a, l)));
-    const besoin = pieges ? Math.min(...depuis.map(meilleur)) : Math.max(...depuis.map(meilleur));
+    // (V4) Un obstacle qui change encore (laser, cargo, drone, porte, rotor) ne laisse pas planifier : sa place finale
+    // n'est connue qu'au dernier moment. Il garantit donc toujours une sortie depuis chaque voie possible, même en
+    // Expert et au-delà (la simulation a montré qu'un « piège » posé sur un obstacle mobile pouvait être impossible).
+    // Les rangées qui suivent de près un obstacle mobile non plus : on ne pouvait pas savoir où se placer avant lui.
+    const incertain = e.changeant || pos0 < this.incertainJusqua;
+    const besoin = pieges && !incertain ? Math.min(...depuis.map(meilleur)) : Math.max(...depuis.map(meilleur));
     const ecart = Math.max(this.ecartA(pos0) * e.ecart, v * besoin + 4);
     // Laser, obstacle mobile : la configuration finale est figée assez tôt pour réagir puis traverser deux voies.
-    const fige = e.changeant ? v * (reaction + 2 * DEPLACEMENT + 0.08) : undefined;
+    const fige = e.changeant ? v * (reaction + 2 * this.deplacement + 0.08) : undefined;
     const pos = pos0 + ecart;
     const dt = ecart / v;
     const suivantes = new Set(libres.filter((l) => depuis.some((a) => temps(a, l) <= dt + 1e-9)));
@@ -830,7 +961,10 @@ export class Partie {
       // Dans un couloir, on ne traverse pas une voie effondrée : seules les voies libres voisines communiquent.
       this.derniere = pos + e.longueur;
     } else this.derniere = pos;
-    if (e.changeant && fige !== undefined) this.changer(o, fige);
+    if (e.changeant && fige !== undefined) {
+      this.changer(o, fige);
+      this.incertainJusqua = Math.max(this.incertainJusqua, pos + apparition(v));
+    }
     this.poserFragments(e, pos, motif);
     if (e.noyau !== undefined && this.boss) this.objet('noyau', pos - 3, [this.tirer(libres)], motif);
     this.atteignables = suivantes.size ? suivantes : new Set(libres);
@@ -851,9 +985,12 @@ export class Partie {
     o.avant = [];
     for (let k = 0; k < 2; k++) {
       let voies: number[];
-      if (o.type === 'mobile') {
+      if (o.type === 'mobile' || o.type === 'drone') {
         const decalage = (k === 0 ? 2 : 1) * (this.hasard() < 0.5 ? 1 : -1);
         voies = [...new Set(o.voies.map((b) => borner(b + decalage, 0, 2)))];
+      } else if (o.type === 'porte') {
+        // Une porte qui se referme : de loin, ses battants ne ferment qu'une de ses voies, puis les deux.
+        voies = k === 0 ? [] : [o.voies[Math.floor(this.hasard() * o.voies.length) % o.voies.length]];
       } else {
         const libreAvant = this.tirer(TOUTES);
         voies = TOUTES.filter((x) => x !== libreAvant).slice(0, o.voies.length);

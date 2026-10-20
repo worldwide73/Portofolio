@@ -1,0 +1,51 @@
+<!-- PORTAL RUSH (Unity) — LE CHOIX DU MODE (Scripts/Interface/EcranModes.cs). -->
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement name="modes" class="ecran ecran--modes" picking-mode="Ignore">
+        <ui:VisualElement class="ecran__tete" picking-mode="Ignore">
+            <ui:Label text="MOD · 00" class="etiquette ecran__module" />
+            <ui:Label name="modes-titre" class="ecran__titre" />
+            <ui:Label name="modes-sous" class="ecran__sous" />
+        </ui:VisualElement>
+        <ui:VisualElement class="modes__cartes" picking-mode="Ignore">
+            <ui:Button name="mode-campagne" class="mode plaque">
+                <ui:VisualElement name="mode-campagne-vue" class="mode__vue" picking-mode="Ignore" />
+                <ui:VisualElement class="mode__tete" picking-mode="Ignore">
+                    <ui:Label text="01" class="mode__index" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--campagne mode__icone" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="mode-campagne-titre" class="mode__titre" picking-mode="Ignore" />
+                <ui:Label name="mode-campagne-texte" class="mode__texte" picking-mode="Ignore" />
+                <ui:VisualElement class="mode__pied" picking-mode="Ignore">
+                    <ui:Label name="mode-campagne-etat" class="mode__etat" picking-mode="Ignore" />
+                    <ui:Label name="mode-campagne-detail" class="etiquette mode__detail" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:Button>
+            <ui:Button name="mode-infini" class="mode plaque">
+                <ui:VisualElement name="mode-infini-vue" class="mode__vue" picking-mode="Ignore" />
+                <ui:VisualElement class="mode__tete" picking-mode="Ignore">
+                    <ui:Label text="02" class="mode__index" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--infini mode__icone" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="mode-infini-titre" class="mode__titre" picking-mode="Ignore" />
+                <ui:Label name="mode-infini-texte" class="mode__texte" picking-mode="Ignore" />
+                <ui:VisualElement class="mode__pied" picking-mode="Ignore">
+                    <ui:Label name="mode-infini-etat" class="mode__etat" picking-mode="Ignore" />
+                    <ui:Label name="mode-infini-detail" class="etiquette mode__detail" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:Button>
+            <ui:Button name="mode-defi" class="mode plaque">
+                <ui:VisualElement name="mode-defi-vue" class="mode__vue" picking-mode="Ignore" />
+                <ui:VisualElement class="mode__tete" picking-mode="Ignore">
+                    <ui:Label text="03" class="mode__index" picking-mode="Ignore" />
+                    <ui:VisualElement class="icone icone--defi mode__icone" picking-mode="Ignore" />
+                </ui:VisualElement>
+                <ui:Label name="mode-defi-titre" class="mode__titre" picking-mode="Ignore" />
+                <ui:Label name="mode-defi-texte" class="mode__texte" picking-mode="Ignore" />
+                <ui:VisualElement class="mode__pied" picking-mode="Ignore">
+                    <ui:Label name="mode-defi-etat" class="mode__etat" picking-mode="Ignore" />
+                    <ui:Label name="mode-defi-detail" class="etiquette mode__detail" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:Button>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

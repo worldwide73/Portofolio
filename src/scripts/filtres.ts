@@ -34,6 +34,8 @@ function brancher(groupe: HTMLElement, surChoix: (valeur: string) => void): HTML
   placer();
   window.addEventListener('resize', apresPause(placer, 150));
   document.fonts.ready.then(placer);
+  // (Masqué avec sa destination, le groupe n'a aucune taille : le fond est replacé dès qu'il reparaît.)
+  new ResizeObserver(placer).observe(groupe);
   return boutons;
 }
 

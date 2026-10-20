@@ -1,0 +1,1119 @@
+/* ==========================================================================
+   LA NAVIGATION PAR DESTINATIONS (16 octobre 2026)
+   - une seule destination affichée à la fois (html[data-lieu], posé par
+     public/avant.js puis voyage.ts) ; sans JavaScript, tout reste visible ;
+   - la barre du haut, dans la pastille de verre d'origine : la destination
+     où l'on est (un repère, sans action), puis Rechercher et Visite rapide ;
+   - le fil du bas : les chapitres de la destination, et son état « 02 / 04 » ;
+   - la fin de chaque destination : le passage vers le portail, posé hors des
+     panneaux, comme celui de l'accueil ;
+   - la recherche et la visite rapide.
+   Rien ici ne touche au grand portail ni à la carte du portail.
+   ========================================================================== */
+
+/* ---- Une seule destination à la fois ---- */
+html[data-lieu='accueil'] main > :is([data-section], .pied):not(#accueil),
+html[data-lieu='competences'] main > :is([data-section], .pied):not(#competences),
+html[data-lieu='realisations'] main > :is([data-section], .pied):not(#realisations),
+html[data-lieu='veille'] main > :is([data-section], .pied):not(#veille),
+html[data-lieu='contact'] main > [data-section]:not(#contact) {
+  display: none;
+}
+
+/* Le passage vers le portail qui suit chaque destination (hors de son panneau) ne paraît qu'avec elle.
+   (Celui de l'accueil est dans sa section.) */
+html[data-lieu] main > .suite {
+  display: none;
+}
+
+html[data-lieu='competences'] main > .suite[data-suite-de='competences'],
+html[data-lieu='realisations'] main > .suite[data-suite-de='realisations'],
+html[data-lieu='veille'] main > .suite[data-suite-de='veille'],
+html[data-lieu='contact'] main > .suite[data-suite-de='contact'] {
+  display: grid;
+}
+
+/* Chaque destination commence en haut de la page, juste sous la barre. (Le retrait d'ancre vaut cette
+   marge : arrivé par une adresse #realisations…, le navigateur laisse la page tout en haut.) */
+html[data-lieu] :is(#competences, #veille) {
+  margin-top: calc(var(--barre-h) + var(--marge-cadre) + var(--s-3));
+  scroll-margin-top: calc(var(--barre-h) + var(--marge-cadre) + var(--s-3));
+}
+
+html[data-lieu] :is(#realisations, #contact) {
+  scroll-margin-top: calc(var(--barre-h) + var(--marge-cadre) * 2);
+}
+
+/* Les réalisations dans leur lame de verre, comme les autres destinations (16 octobre 2026) : même
+   contour, même fond (l'opacité et le flou des réglages s'y appliquent), mêmes coins. La galerie 3D
+   tourne dedans, inchangée ; ses cartes de côté s'effacent au bord de la lame. */
+html[data-lieu] #realisations {
+  margin: calc(var(--barre-h) + var(--marge-cadre) * 2) var(--marge-cadre) 0;
+  overflow: hidden;
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon-cadre);
+  background: var(--panneau);
+  -webkit-backdrop-filter: blur(calc(var(--flou, 0.7) * 32px)) saturate(1.2);
+  backdrop-filter: blur(calc(var(--flou, 0.7) * 32px)) saturate(1.2);
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 80px) rgba(130, 175, 255, calc(var(--lueur, 0.7) * 0.1)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* Dans la lame, la scène commence sous son bord (plus sous la barre) ; ses commandes et son aide restent
+   au-dessus du fil des chapitres. */
+html[data-lieu] .galerie__scene {
+  padding-top: calc(var(--s-3) * 0.9);
+  padding-bottom: calc(var(--marge-cadre) + 74px);
+}
+
+/* L'anneau (ordinateur) remplit la lame, qui occupe l'écran sous la barre. */
+html[data-lieu] .galerie--anneau .galerie__scene {
+  height: calc(100svh - var(--barre-h) - var(--marge-cadre) * 3 - 2px);
+}
+
+/* Le ruban (téléphone, mouvement réduit) : la lame suit son contenu. */
+html[data-lieu] .galerie:not(.galerie--anneau) .galerie__scene {
+  min-height: 0;
+}
+
+html[data-lieu] #contact {
+  margin-top: calc(var(--barre-h) + var(--marge-cadre) * 2);
+}
+
+/* ---- La barre : où l'on est, puis deux outils ---- */
+.nav__outil {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: color-mix(in srgb, var(--texte) 84%, transparent);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  transition:
+    color var(--d-interface) var(--c-douce),
+    opacity 0.08s linear;
+}
+
+.nav__outil:focus-visible {
+  outline: 1px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Le lieu : un simple repère sur le fond clair (nav.ts), sans action. Il n'écrit que la destination affichée. */
+.nav__lieu {
+  margin: 0;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+.nav__lieu [data-lieu-nom] {
+  display: none;
+}
+
+html:not([data-lieu]) .nav__lieu [data-lieu-nom='accueil'],
+html[data-lieu='accueil'] .nav__lieu [data-lieu-nom='accueil'],
+html[data-lieu='competences'] .nav__lieu [data-lieu-nom='competences'],
+html[data-lieu='realisations'] .nav__lieu [data-lieu-nom='realisations'],
+html[data-lieu='veille'] .nav__lieu [data-lieu-nom='veille'],
+html[data-lieu='contact'] .nav__lieu [data-lieu-nom='contact'] {
+  display: inline;
+}
+
+/* ---- Le fil des chapitres ---- */
+.trajet[hidden] {
+  display: none;
+}
+
+.trajet__point {
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.trajet__point span {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Au-dessus de la ligne : la destination, et le chapitre sur le nombre de chapitres. */
+.trajet__etat {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 1px);
+  margin: 0;
+  translate: -50% 0;
+  white-space: nowrap;
+  font-size: 0.5625rem;
+  letter-spacing: 0.18em;
+  color: color-mix(in srgb, var(--texte) 62%, transparent);
+  text-shadow: 0 1px 10px var(--fond);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Beaucoup de chapitres (les réalisations, les domaines), ou des noms longs (la veille) : points rapprochés,
+   seul le nom du chapitre actif est écrit, même sur grand écran. */
+.trajet[data-dense] {
+  --pas: 46px;
+}
+
+@media (min-width: 1400px) {
+  .trajet[data-dense] {
+    --pas: 58px;
+  }
+
+  .trajet[data-dense] .trajet__point span {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .trajet[data-dense] .trajet__point:is([aria-current], :hover, :focus-visible) span {
+    opacity: 1;
+  }
+
+  .trajet[data-dense] .trajet__fil:hover .trajet__point[aria-current]:not(:hover) span {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .trajet[data-dense] {
+    --pas: 34px;
+  }
+
+  .trajet__etat {
+    font-size: 0.5rem;
+  }
+}
+
+/* ---- Le passage qui se brise (explorateur.ts) ----
+   Il s'allume et tremble pendant que ses fissures se dessinent, disparaît quand il vole en éclats
+   (la carte prend le relais), puis se reforme quand la carte se referme. */
+.suite__action .fissures {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.suite__action.est-charge {
+  border-color: rgba(214, 240, 255, 0.95);
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 34px) rgba(159, 230, 255, 0.55),
+    inset 0 0 14px rgba(159, 230, 255, 0.25);
+  animation: portail-tremble 0.07s linear infinite;
+}
+
+.suite__action.est-brise {
+  opacity: 0;
+  transition: opacity 0.06s linear;
+}
+
+.suite__action.est-reforme {
+  animation: portail-reforme 0.5s var(--c-douce) both;
+}
+
+@keyframes portail-tremble {
+  0% { translate: 0 0; }
+  25% { translate: -0.7px 0.4px; }
+  50% { translate: 0.6px -0.5px; }
+  75% { translate: -0.4px -0.3px; }
+  100% { translate: 0.7px 0.5px; }
+}
+
+@keyframes portail-reforme {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .suite__action.est-charge {
+    animation: none;
+  }
+}
+
+/* ---- La fin d'une destination : l'invitation à rejoindre le portail ---- */
+.suite {
+  grid-column: 1 / -1;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  padding: var(--s-5) var(--gouttiere) calc(var(--s-5) + 84px);
+  text-align: center;
+}
+
+/* Sous Contact, le pied de page suit : le passage reste près des coordonnées, sans grand vide. */
+.suite[data-suite-de='contact'] {
+  padding-top: var(--s-4);
+  padding-bottom: 0;
+}
+
+/* Un filet de lumière, qui s'efface vers les bords. */
+.suite::before {
+  content: '';
+  width: min(26rem, 64%);
+  height: 1px;
+  margin-bottom: var(--s-2);
+  background: linear-gradient(90deg, transparent, var(--filet-fort), transparent);
+}
+
+.suite--grande {
+  min-height: 78svh;
+  align-content: center;
+  margin: var(--s-6) var(--gouttiere) 0;
+  padding-top: var(--s-5);
+  padding-bottom: calc(var(--s-5) + 96px);
+}
+
+/* Le repère orbital : le symbole du site, une orbite inclinée, et son voyageur. */
+.suite__orbite {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  color: var(--lampe);
+}
+
+.suite--grande .suite__orbite {
+  width: 96px;
+  height: 96px;
+}
+
+.suite__orbite .symbole {
+  filter: drop-shadow(0 0 calc(var(--lueur, 0.7) * 8px) rgba(207, 225, 255, 0.6));
+}
+
+.suite__anneau,
+.suite__voyageur {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transform: rotateX(70deg);
+}
+
+.suite__anneau {
+  border: 1px solid rgba(207, 225, 255, 0.3);
+}
+
+.suite__voyageur {
+  animation: suite-orbite 9s linear infinite;
+}
+
+.suite__voyageur::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: #e8f4ff;
+  box-shadow: 0 0 8px 1px var(--lampe);
+}
+
+@keyframes suite-orbite {
+  from { transform: rotateX(70deg) rotateZ(0deg); }
+  to { transform: rotateX(70deg) rotateZ(360deg); }
+}
+
+.suite__repere {
+  margin: 0;
+  color: var(--discret);
+}
+
+.suite__titre {
+  margin: 0;
+  max-width: 18ch;
+}
+
+.suite__texte {
+  margin: 0;
+  max-width: 36ch;
+  font-size: var(--t-chapo);
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  color: color-mix(in srgb, var(--texte) 86%, transparent);
+}
+
+.suite--grande .suite__texte {
+  max-width: 32ch;
+  font-size: var(--t-sous-titre);
+}
+
+/* Les fins des autres destinations n'ont qu'une phrase : elle s'écrit en grand, comme le titre de la
+   fin de l'accueil (un peu plus petit), avec un repère orbital plus présent. Elle suit la densité. */
+.suite:not(.suite--grande) {
+  gap: 1rem;
+  padding-top: calc(var(--s-5) + 0.5rem);
+}
+
+.suite:not(.suite--grande) .suite__orbite {
+  width: 80px;
+  height: 80px;
+}
+
+.suite:not(.suite--grande) .suite__texte {
+  max-width: 20ch;
+  font-size: calc(var(--t-titre) * 0.8);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  color: var(--texte);
+}
+
+/* L'action : une pastille de verre au contour cyan, qu'un reflet traverse de temps en temps. */
+.suite__action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  min-height: 44px;
+  margin-top: 0.6rem;
+  padding: 0 22px;
+  overflow: hidden;
+  border: 1px solid rgba(159, 230, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(150, 182, 235, 0.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+  color: var(--texte);
+  cursor: pointer;
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 22px) rgba(120, 200, 255, calc(var(--lueur, 0.7) * 0.22)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    border-color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce),
+    background var(--d-interface) var(--c-douce);
+}
+
+.suite__action:hover,
+.suite__action:focus-visible {
+  border-color: rgba(159, 230, 255, 0.85);
+  background: rgba(150, 182, 235, 0.14);
+  box-shadow:
+    0 0 calc(var(--lueur, 0.7) * 34px) rgba(120, 210, 255, calc(var(--lueur, 0.7) * 0.36)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.suite__action:focus-visible {
+  outline: 1px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.suite__verre {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.2) 50%, transparent 62%) no-repeat;
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  animation: suite-reflet 6s var(--c-douce) infinite 1.5s;
+  pointer-events: none;
+}
+
+@keyframes suite-reflet {
+  0%, 70% { background-position: 130% 0; }
+  100% { background-position: -30% 0; }
+}
+
+/* ---- Le mini-guidage de la première visite (guidage.ts) ----
+   Une petite lame de verre à côté du grand portail (au-dessus de lui sur téléphone). Elle est posée
+   dans .hero, hors du cadre de la scène : la toucher ne touche jamais le portail. */
+.guidage {
+  position: absolute;
+  z-index: 3;
+  left: calc(50% + min(10.5%, 20svh) + 34px);
+  top: 31%;
+  width: min(18.5rem, calc(50% - min(10.5%, 20svh) - 70px));
+  display: grid;
+  gap: 0.8rem;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  background: rgba(12, 16, 26, 0.56);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 40px) rgba(120, 175, 255, calc(var(--lueur, 0.7) * 0.14));
+  color: var(--texte);
+  opacity: 0;
+  translate: 0 8px;
+  transition:
+    opacity 0.45s var(--c-douce),
+    translate 0.6s var(--c-masque);
+}
+
+.guidage[hidden] {
+  display: none;
+}
+
+.guidage.est-visible {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* Un filet de lumière en haut de la lame, qui s'éteint vers les bords. */
+.guidage::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 14%;
+  right: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(159, 230, 255, 0.85), transparent);
+}
+
+.guidage__titre {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.guidage__gestes {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.guidage__gestes div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+/* Le geste : une petite touche de verre. */
+.guidage__gestes dt {
+  padding: 2px 8px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 6px;
+  background: rgba(150, 182, 235, 0.08);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.guidage__gestes dd {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--discret);
+}
+
+.guidage__doigt {
+  display: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .guidage__souris {
+    display: none;
+  }
+
+  .guidage__doigt {
+    display: inline;
+  }
+}
+
+.guidage__fermer {
+  justify-self: end;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 999px;
+  background: none;
+  color: var(--texte);
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--d-micro) var(--c-douce);
+}
+
+.guidage__fermer:hover {
+  background: var(--surface);
+}
+
+.guidage__fermer:focus-visible {
+  outline: 1.5px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+  .guidage {
+    left: 50%;
+    top: calc(var(--barre-h) + var(--marge-cadre) + 10px);
+    width: min(22rem, calc(100% - 40px));
+    translate: -50% -6px;
+    padding: 14px 14px 12px;
+    gap: 0.6rem;
+  }
+
+  .guidage.est-visible {
+    translate: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guidage {
+    transition: opacity 0.2s linear;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (max-width: 860px) {
+  .guidage {
+    translate: -50% 0;
+  }
+}
+
+/* ---- La recherche ---- */
+.recherche {
+  width: min(40rem, calc(100vw - 24px));
+  max-height: min(72svh, 36rem);
+  margin: 12svh auto auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-carte);
+  background: rgba(14, 20, 34, 0.88);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+  backdrop-filter: blur(28px) saturate(1.3);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 60px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.16));
+  color: var(--texte);
+}
+
+.recherche[open] {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  animation: raccourcis-entree 0.3s var(--c-douce) both;
+}
+
+.recherche::backdrop {
+  background: rgba(4, 7, 14, 0.55);
+}
+
+.recherche__saisie {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--filet);
+}
+
+.recherche__loupe {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--lampe);
+}
+
+.recherche input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--texte);
+  font: inherit;
+  font-size: 1.05rem;
+  outline: none;
+}
+
+.recherche input::placeholder {
+  color: var(--discret);
+}
+
+.recherche input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.recherche__fermer {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.recherche kbd {
+  display: inline-grid;
+  place-items: center;
+  padding: 0.15em 0.5em;
+  border: 1px solid var(--filet-fort);
+  border-radius: 6px;
+  background: rgba(150, 192, 255, 0.08);
+  font: inherit;
+  font-size: 0.6875rem;
+  color: var(--discret);
+}
+
+.recherche__etat {
+  margin: 10px 18px 2px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--discret);
+}
+
+.recherche__liste {
+  margin: 0;
+  padding: 4px 8px 8px;
+  overflow-y: auto;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.recherche__resultat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.recherche__resultat[aria-selected='true'] {
+  background: rgba(150, 192, 255, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(207, 225, 255, 0.22);
+}
+
+.recherche__resultat b {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recherche__resultat small {
+  grid-column: 1;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: var(--discret);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recherche__resultat mark {
+  background: none;
+  color: #9fe6ff;
+}
+
+.recherche__type {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 3px 9px;
+  border: 1px solid var(--filet);
+  border-radius: 999px;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--discret);
+  white-space: nowrap;
+}
+
+.recherche__aide {
+  margin: 0;
+  padding: 10px 18px;
+  border-top: 1px solid var(--filet);
+  font-size: 0.6875rem;
+  color: var(--discret);
+}
+
+/* ---- La visite rapide : lisible avant tout, sans animation secondaire ---- */
+.rapide {
+  width: min(76rem, calc(100vw - 2 * var(--marge-cadre)));
+  height: calc(100dvh - 2 * var(--marge-cadre));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--filet-fort);
+  border-radius: var(--rayon-cadre);
+  background: rgba(10, 14, 24, 0.95);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 70px) rgba(120, 165, 255, calc(var(--lueur, 0.7) * 0.14));
+  color: var(--texte);
+}
+
+.rapide[open] {
+  animation: rapide-entree 0.28s var(--c-douce) both;
+}
+
+@keyframes rapide-entree {
+  from {
+    opacity: 0;
+  }
+}
+
+.rapide::backdrop {
+  background: rgba(4, 7, 14, 0.6);
+}
+
+.rapide__cadre {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(18px, 3.2vw, 48px);
+  display: grid;
+  align-content: start;
+  gap: var(--s-5);
+}
+
+.rapide__tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rapide__marque {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0;
+  color: var(--discret);
+}
+
+.rapide__profil {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 56rem;
+}
+
+.rapide__surtitre,
+.rapide__intro {
+  margin: 0;
+  color: var(--discret);
+}
+
+.rapide__intro {
+  max-width: 62ch;
+  font-size: 0.875rem;
+}
+
+.rapide__nom {
+  margin: 0;
+  font-size: var(--t-titre);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.rapide__metier {
+  margin: 0;
+  font-size: var(--t-sous-titre);
+  color: color-mix(in srgb, var(--texte) 80%, transparent);
+}
+
+.rapide__texte {
+  margin: 0;
+  max-width: 62ch;
+  line-height: 1.5;
+}
+
+.rapide__cap {
+  color: color-mix(in srgb, var(--texte) 80%, transparent);
+}
+
+.rapide__dispo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0;
+  color: #9fe6ff;
+}
+
+.rapide__pouls {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9fe6ff;
+  box-shadow: 0 0 8px #9fe6ff;
+}
+
+.rapide__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 0.3rem;
+}
+
+.rapide__grille {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-4) var(--colonne);
+}
+
+.rapide__bloc--large {
+  grid-column: 1 / -1;
+}
+
+.rapide__titre {
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--filet);
+  font-weight: 500;
+  color: var(--discret);
+}
+
+.rapide__projets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rapide__projets li {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  padding: 14px 16px;
+  border: 1px solid var(--filet);
+  border-radius: var(--rayon-carte);
+  background: rgba(150, 182, 235, 0.05);
+}
+
+.rapide__projet-nom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.rapide .carte__badge {
+  padding: 2px 8px;
+  border: 1px solid var(--filet-fort);
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 400;
+}
+
+.rapide__meta,
+.rapide__stack {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--discret);
+}
+
+.rapide__phrase {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.rapide__liens {
+  display: flex;
+  gap: 14px;
+  margin: 0.25rem 0 0;
+}
+
+.rapide__domaines {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.rapide__domaines dt {
+  color: var(--discret);
+}
+
+.rapide__domaines dd {
+  margin: 3px 0 0;
+  line-height: 1.45;
+}
+
+.rapide__parcours,
+.rapide__contact {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rapide__parcours li,
+.rapide__contact li {
+  display: grid;
+  gap: 2px;
+}
+
+.rapide__parcours .etiquette,
+.rapide__contact .etiquette {
+  color: var(--discret);
+}
+
+@media (max-width: 860px) {
+  .rapide__grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rapide__tete {
+    flex-wrap: wrap;
+  }
+}
+
+/* Le curseur personnalisé s'efface dans ces fenêtres : on y lit et on y clique normalement. */
+html.curseur-actif :is(.recherche, .rapide) {
+  cursor: auto;
+}
+
+html.curseur-actif :is(.recherche, .rapide) :is(a, button, [role='option']) {
+  cursor: pointer;
+}
+
+/* Mouvement réduit, ou animations coupées : aucune animation décorative ici. */
+@media (prefers-reduced-motion: reduce) {
+  .suite__voyageur,
+  .suite__verre {
+    animation: none;
+  }
+}
+
+html.animations-coupees :is(.suite__voyageur, .suite__verre) {
+  animation: none;
+}
+
+/* ---- Les reflets de verre au curseur (reflets.ts) ----
+   Trois surfaces seulement : la pastille de la barre, le passage vers le portail, la carte LinkedIn.
+   Un dégradé bleu glacier très doux, peint dans le fond de la surface (donc sous le texte), centré
+   sous le curseur (--rx, --ry) ; --reflet le fait paraître et s'éteindre en douceur. */
+@property --reflet {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+.reflet:is(.nav__liste, .suite__action, .contact__linkedin) {
+  background-image: radial-gradient(
+    circle var(--reflet-r, 120px) at var(--rx, 50%) var(--ry, 50%),
+    rgba(226, 242, 255, calc(var(--reflet) * 0.13)),
+    rgba(170, 215, 255, calc(var(--reflet) * 0.05)) 45%,
+    transparent 72%
+  );
+}
+
+.reflet.a-reflet {
+  --reflet: 1;
+}
+
+.reflet.nav__liste {
+  --reflet-r: 90px;
+  transition:
+    background-color var(--d-interface) var(--c-douce),
+    border-color var(--d-interface) var(--c-douce),
+    --reflet 0.45s var(--c-douce);
+}
+
+.reflet.suite__action {
+  --reflet-r: 70px;
+  transition:
+    border-color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce),
+    background-color var(--d-interface) var(--c-douce),
+    --reflet 0.45s var(--c-douce);
+}
+
+.reflet.contact__linkedin {
+  --reflet-r: 160px;
+  transition:
+    border-color var(--d-interface) var(--c-douce),
+    background-color var(--d-interface) var(--c-douce),
+    box-shadow var(--d-interface) var(--c-douce),
+    --reflet 0.45s var(--c-douce);
+}
+
+/* Dans le menu plein écran (téléphone, ou fenêtre étroite), la pastille n'a plus de fond : pas de reflet. */
+@media (max-width: 860px) {
+  .reflet.nav__liste {
+    background-image: none;
+  }
+}
+
+/* ---- Les chapitres parcourus, sur le fil (fil.ts) ----
+   Un mince trait cyan sur le segment qui suit un chapitre lu ; à l'instant où il est lu, une lumière
+   parcourt ce segment une fois, et le point du chapitre s'éclaire à peine. */
+.trajet__fil li {
+  position: relative;
+}
+
+.trajet__fil li.est-lu:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  z-index: 1; /* (au-dessus de la partie allumée du fil, qu'il teinte de cyan ; sous les points) */
+  left: 50%;
+  top: 50%;
+  width: var(--pas);
+  height: 1px;
+  margin-top: -0.5px;
+  background: linear-gradient(90deg, rgba(159, 230, 255, 0.8), rgba(159, 230, 255, 0.45));
+  box-shadow: 0 0 calc(var(--lueur, 0.7) * 6px) rgba(159, 230, 255, 0.4);
+  pointer-events: none;
+}
+
+.trajet__fil li.vient-d-etre-lu:not(:last-child)::after {
+  background:
+    linear-gradient(90deg, transparent, rgba(236, 250, 255, 1), transparent) no-repeat,
+    linear-gradient(90deg, rgba(159, 230, 255, 0.8), rgba(159, 230, 255, 0.45));
+  background-size: 40% 100%, 100% 100%;
+  animation: fil-lumiere 0.95s var(--c-douce) both;
+}
+
+/* (Le point du chapitre affiché garde son propre éclat : « affiché » et « parcouru » restent distincts.) */
+.trajet__fil li.est-lu .trajet__point:not([aria-current]) i {
+  box-shadow: inset 0 0 0 1px rgba(159, 230, 255, 0.7);
+}
+
+.trajet__fil li.est-lu .trajet__point.est-passe:not([aria-current]) i {
+  box-shadow:
+    0 0 0 3px rgba(159, 230, 255, calc(var(--lueur, 0.7) * 0.22)),
+    0 0 calc(var(--lueur, 0.7) * 8px) rgba(159, 230, 255, 0.6);
+}
+
+.trajet__fil li.vient-d-etre-lu .trajet__point i {
+  animation: point-lu 0.9s var(--c-douce);
+}
+
+@keyframes fil-lumiere {
+  from {
+    background-position: -60% 0, 0 0;
+  }
+  to {
+    background-position: 160% 0, 0 0;
+  }
+}
+
+@keyframes point-lu {
+  40% {
+    box-shadow: 0 0 0 6px rgba(159, 230, 255, 0.28), 0 0 14px rgba(159, 230, 255, 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trajet__fil li.vient-d-etre-lu:not(:last-child)::after,
+  .trajet__fil li.vient-d-etre-lu .trajet__point i {
+    animation: none;
+  }
+}

@@ -1,55 +1,44 @@
-// LE MENU : cinq catégories dans une pastille, en haut de l'écran.
-//   - la catégorie de la section affichée est mise en avant, et son fond clair
-//     glisse de l'une à l'autre quand on défile ;
-//   - sur téléphone, le bouton « Menu » ouvre les catégories en plein écran ;
-//   - la barre change de ton quand elle passe au-dessus du panneau clair.
+// LA BARRE DU HAUT (16 octobre 2026).
+// La même pastille de verre qu'avant. Elle dit d'abord où l'on est : la destination affichée
+// (Accueil, Compétences, Réalisations, Veille, Contact ; sur une fiche, Réalisations), sur le fond
+// clair. Ce n'est qu'un repère, sans action : on change de destination par le portail, en bas de
+// chaque page. Viennent ensuite deux outils :
+//   - Rechercher : la recherche dans le portfolio (recherche.ts, aussi Ctrl + K) ;
+//   - Visite rapide : le profil en un coup d'œil (rapide.ts).
+// Le nom affiché suit html[data-lieu] en CSS (destinations.css) ; ici, on ajuste seulement le fond
+// clair à sa largeur. Sur téléphone, le bouton « Menu » ouvre la même liste en plein écran.
 
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { decoder } from './decode';
 import { lenis } from './defilement';
 import { apresPause } from './outils';
-import { rangCourant } from './voyage';
+import { ouvrirRecherche } from './recherche';
+import { basculerRapide } from './rapide';
 
 export function initNav(): void {
   const barre = document.querySelector<HTMLElement>('.barre');
   const nav = document.querySelector<HTMLElement>('.nav');
   if (!barre || !nav) return;
 
-  const liens = [...nav.querySelectorAll<HTMLAnchorElement>('[data-section-lien]')];
+  const outils = [...nav.querySelectorAll<HTMLButtonElement>('[data-outil]')];
+  const lieu = nav.querySelector<HTMLElement>('.nav__lieu');
   const fond = nav.querySelector<HTMLElement>('.nav__actif');
-  const sections = liens.map((lien) => document.getElementById(lien.dataset.sectionLien ?? ''));
-  const surAccueil = sections.every(Boolean);
-  let active = -1;
 
-  /** Glisse le fond clair sous le lien actif. */
+  /** Le fond clair épouse le nom de la destination (sa largeur change avec elle). */
   const placer = () => {
-    const lien = liens[active];
-    if (!fond || !lien) return;
-    fond.style.transform = `translateX(${lien.offsetLeft}px)`;
-    fond.style.width = `${lien.offsetWidth}px`;
+    if (!fond || !lieu) return;
+    fond.style.transform = `translateX(${lieu.offsetLeft}px)`;
+    fond.style.width = `${lieu.offsetWidth}px`;
   };
-
-  const activer = (i: number) => {
-    if (i === active) return;
-    active = i;
-    liens.forEach((lien, k) => {
-      if (k === i) lien.setAttribute('aria-current', 'true');
-      else lien.removeAttribute('aria-current');
-    });
-    placer();
-  };
-
-  // ---- Suivi de la section affichée ----
-  const suivre = () => {
-    // La section courante : la même règle que le fil du bas (voir voyage.ts).
-    if (surAccueil) activer(rangCourant());
-
-  };
-  gsap.ticker.add(suivre);
-  ScrollTrigger.addEventListener('refresh', placer);
+  window.addEventListener('destination', placer);
   window.addEventListener('resize', apresPause(placer, 150));
+  window.addEventListener('langue', () => requestAnimationFrame(placer));
   document.fonts.ready.then(placer);
+  placer();
+
+  // La Visite rapide se dit « enfoncée » tant que sa fenêtre est ouverte.
+  window.addEventListener('outil', () =>
+    outils.find((b) => b.dataset.outil === 'rapide')?.setAttribute('aria-pressed', String(!!document.querySelector('.rapide[open]'))),
+  );
 
   // ---- Menu plein écran (téléphone) ----
   const bouton = barre.querySelector<HTMLButtonElement>('.barre__menu');
@@ -62,11 +51,20 @@ export function initNav(): void {
     decoder(libelle, ouvert ? bouton?.dataset.fermer : bouton?.dataset.ouvrir);
     if (ouvert) {
       lenis?.stop();
-      liens[Math.max(active, 0)]?.focus({ preventScroll: true });
+      outils[0]?.focus({ preventScroll: true });
     } else {
       lenis?.start();
     }
   };
+
+  // ---- Les deux outils ----
+  outils.forEach((outil) =>
+    outil.addEventListener('click', () => {
+      if (html.classList.contains('menu-ouvert')) basculer(false);
+      if (outil.dataset.outil === 'recherche') ouvrirRecherche(outil);
+      else if (outil.dataset.outil === 'rapide') basculerRapide(outil);
+    }),
+  );
 
   bouton?.addEventListener('click', () => basculer(!html.classList.contains('menu-ouvert')));
   nav.addEventListener('click', (e) => {

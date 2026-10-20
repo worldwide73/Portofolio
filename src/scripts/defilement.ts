@@ -41,7 +41,9 @@ export function allerA(cible: number | HTMLElement, immediat = false, retrait = 
   // La position d'arrivée est toujours calculée ici, en pixels : un seul calcul,
   // que le défilement soit amorti (Lenis) ou natif.
   const y = Math.max(0, Math.round((typeof cible === 'number' ? cible : cible.getBoundingClientRect().top + window.scrollY) - retrait));
-  if (lenis) lenis.scrollTo(y, { immediate: immediat, duration: 1.5, easing: (t) => 1 - Math.pow(1 - t, 4) });
+  // (Un saut immédiat passe même quand le défilement est suspendu, par exemple sous la carte du portail :
+  // c'est le site qui change de destination, pas le visiteur qui fait défiler.)
+  if (lenis) lenis.scrollTo(y, { immediate: immediat, force: immediat, duration: 1.5, easing: (t) => 1 - Math.pow(1 - t, 4) });
   else window.scrollTo({ top: y, behavior: 'auto' });
 }
 

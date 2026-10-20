@@ -1,26 +1,32 @@
 ---
 // L'interface fixe : barre du haut (marque, menu des 5 catégories, outils),
 // curseur personnalisé, et le terminal caché.
-import { SECTIONS, cheminAccueil, cheminFiche } from '../contenu';
+import { cheminAccueil, cheminFiche } from '../contenu';
 import type { Contenu } from '../contenu/types';
 import Drapeau from './Drapeau.astro';
 import OrbitalHub from './OrbitalHub.astro';
 import PortalRush from './PortalRush.astro';
+import Recherche from './Recherche.astro';
 import Symbole from './Symbole.astro';
+import VisiteRapide from './VisiteRapide.astro';
+import { CATALOGUE_DREAM, minutes } from '../scripts/audio/catalogue';
+
+// Les destinations, dans l'ordre du site : la barre écrit celle qui est affichée (html[data-lieu]).
+const DESTINATIONS = ['accueil', 'competences', 'realisations', 'veille', 'contact'] as const;
 
 interface Props {
   contenu: Contenu;
   page: 'accueil' | 'fiche';
   cheminAutreLangue: string;
+  /** Le lieu écrit dans la barre hors de l'accueil (par défaut : les réalisations, pour une fiche). */
+  ici?: string;
 }
 
-const { contenu, page, cheminAutreLangue } = Astro.props;
+const { contenu, page, cheminAutreLangue, ici } = Astro.props;
 const langue = contenu.langue;
 const autre = langue === 'fr' ? 'en' : 'fr';
 const accueil = cheminAccueil(langue);
-// Sur l'accueil, les liens du menu sont des ancres (#contact) : le défilement
-// est animé. Depuis une fiche, ils ramènent à l'accueil, à la bonne section.
-const ancre = (id: string) => (page === 'accueil' ? `#${id}` : `${accueil}#${id}`);
+const n = contenu.navigation;
 // Ce que le terminal caché doit connaître : ses textes et la liste des réalisations.
 const projetsDuTerminal = contenu.realisations.projets.map((p) => ({ nom: p.nom, href: cheminFiche(langue, p.slug) }));
 // Le panneau d'actions rapides réutilise les vraies adresses du projet (bloc contact, adresse du site).
@@ -29,6 +35,9 @@ const linkedin = lien('LinkedIn');
 const github = lien('GitHub');
 const adresseSite = new URL(accueil, Astro.site ?? 'https://matheomaleyran.com').href;
 const a = contenu.acces;
+const r = contenu.radio;
+// L'icône du casque (DREAM RADIO), et ses trois ondes qui bougent quand la musique joue.
+const CASQUE = '<svg viewBox="0 0 18 18" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 11.2V9.4a5.8 5.8 0 0 1 11.6 0v1.8"/><rect x="2.4" y="10.4" width="3.5" height="5.2" rx="1.4"/><rect x="12.1" y="10.4" width="3.5" height="5.2" rx="1.4"/></svg><span class="radio-bouton__ondes" aria-hidden="true"><i></i><i></i><i></i></span>';
 const ICONES = {
   linkedin: '<svg viewBox="0 0 18 18" aria-hidden="true"><rect x="1.5" y="1.5" width="15" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.6 7.6v5M5.6 5.3v.1M8.4 12.6V7.6M8.4 9.9c0-1.4.9-2.4 2.1-2.4s2 .8 2 2.3v2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   github: '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1.6a7.4 7.4 0 0 0-2.3 14.4c.4.1.5-.2.5-.4v-1.4c-2 .4-2.5-.9-2.5-.9-.3-.8-.8-1-.8-1-.7-.5 0-.5 0-.5.7.1 1.1.8 1.1.8.7 1.1 1.8.8 2.2.6.1-.5.3-.8.5-1-1.7-.2-3.4-.8-3.4-3.6 0-.8.3-1.5.8-2-.1-.2-.3-1 .1-2 0 0 .6-.2 2 .8a7 7 0 0 1 3.7 0c1.4-1 2-.8 2-.8.4 1 .2 1.8.1 2 .5.5.8 1.2.8 2 0 2.9-1.7 3.4-3.4 3.6.3.2.5.7.5 1.4v2c0 .2.1.5.5.4A7.4 7.4 0 0 0 9 1.6Z" fill="currentColor"/></svg>',
@@ -60,40 +69,62 @@ const ICONES = {
 }
 
 <header class="barre">
-  <!-- Le bloc d'identité : le symbole et le nom ramènent à l'accueil (sans recharger
-       la page quand on y est déjà) ; le chevron ouvre l'accès rapide. -->
+  <!-- Le bloc d'identité : un menu déroulant (l'accès rapide). Le nom comme le chevron l'ouvrent ;
+       le nom ne ramène plus à l'accueil (16 octobre 2026 : on voyage par le portail). -->
   <div class="identite" data-intro="barre">
-    <a class="identite__lien" href={page === 'accueil' ? '#accueil' : accueil}>
+    <button class="identite__lien" type="button" popovertarget="acces" aria-expanded="false" aria-haspopup="menu" data-accueil={accueil} title={contenu.acces.titre}>
       <Symbole taille={20} />
       <b class="identite__nom">Mathéo Maleyran</b>
-    </a>
+    </button>
     <button class="identite__commande" type="button" popovertarget="acces" aria-expanded="false" aria-label={contenu.acces.titre} title={contenu.acces.titre}>
       <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
     </button>
   </div>
 
-  <nav class="nav etiquette" id="menu" aria-label={contenu.interface.navigation}>
+  <!-- Le centre de commandes, dans la pastille de verre d'origine : d'abord la destination où l'on est
+       (un simple repère, sans action : on change de destination par le portail, en bas de chaque page),
+       puis deux outils, Rechercher et Visite rapide (voir src/scripts/nav.ts). -->
+  <nav class="nav etiquette" id="menu" aria-label={n.outils.titre}>
     <div class="nav__liste" data-intro="barre">
       <span class="nav__actif" aria-hidden="true"></span>
-      {
-        SECTIONS.map((id) => (
-          <a href={ancre(id)} data-section-lien={id}>
-            {contenu.sections[id]}
-          </a>
-        ))
-      }
+      <p class="nav__lieu" title={n.outils.iciAide}>
+        <span class="sr">{n.outils.ici} </span>
+        {
+          page === 'accueil'
+            ? DESTINATIONS.map((id) => <span class="nav__nom" data-lieu-nom={id}>{contenu.sections[id]}</span>)
+            : <span class="nav__nom">{ici ?? contenu.sections.realisations}</span>
+        }
+      </p>
+      <button class="nav__outil" type="button" data-outil="recherche" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" title={n.outils.rechercherAide}>
+        <span class="nav__libelle">{n.outils.rechercher}</span>
+      </button>
+      <button class="nav__outil" type="button" data-outil="rapide" aria-haspopup="dialog" aria-pressed="false" title={n.outils.rapideAide}>
+        <span class="nav__libelle">{n.outils.rapide}</span>
+      </button>
     </div>
 
     <!-- Sur téléphone, ces deux boutons vivent dans le menu plutôt que dans la barre. -->
     <div class="nav__annexe">
+      <button class="pastille pastille--ronde radio-bouton" type="button" popovertarget="dream-radio" aria-expanded="false" aria-label={r.bouton} title={r.bouton} set:html={CASQUE} />
       <a class="pastille pastille--ronde" href={cheminAutreLangue} hreflang={autre} data-langue data-bloc aria-label={contenu.interface.changerLangue}>
         <Drapeau langue={langue} />
       </a>
-      <a class="pastille pastille--pleine" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener">{contenu.interface.cv}</a>
+      <a class="pastille pastille--pleine" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">{contenu.interface.cv}</a>
     </div>
   </nav>
 
   <div class="barre__outils etiquette">
+    <!-- DREAM RADIO (16 octobre 2026) : le casque, juste à côté du drapeau de la langue. -->
+    <button
+      class="pastille pastille--ronde barre__secondaire radio-bouton"
+      type="button"
+      popovertarget="dream-radio"
+      aria-expanded="false"
+      aria-label={r.bouton}
+      title={r.bouton}
+      data-intro="barre"
+      set:html={CASQUE}
+    />
     <a
       class="pastille pastille--ronde barre__secondaire"
       href={cheminAutreLangue}
@@ -106,7 +137,7 @@ const ICONES = {
     >
       <Drapeau langue={langue} />
     </a>
-    <a class="pastille pastille--pleine barre__secondaire" href="/cv-matheo-maleyran.pdf" target="_blank" rel="noopener" data-intro="barre">
+    <a class="pastille pastille--pleine barre__secondaire" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener" data-intro="barre">
       <span data-decode>{contenu.interface.cv}</span>
     </a>
     <button
@@ -142,6 +173,15 @@ const ICONES = {
      la touche Échap, le clic à côté et le retour du focus (attribut « popover »). -->
 <div class="acces etiquette" id="acces" popover aria-label={a.titre} data-adresse={adresseSite}>
   <p class="acces__titre">{a.titre}</p>
+  <div class="acces__contact">
+    <a class="acces__lien" href="/CV_Matheo_Maleyran.pdf" target="_blank" rel="noopener">
+      <span class="acces__icone" set:html={ICONES.cv} />
+      <span class="acces__texte">{a.cv}</span>
+    </a>
+    <span class="acces__boutons">
+      <a class="acces__mini" href="/CV_Matheo_Maleyran.pdf" download="CV_Matheo_Maleyran.pdf">{a.telecharger}</a>
+    </span>
+  </div>
   {
     linkedin && (
       <a class="acces__action" href={linkedin} target="_blank" rel="noopener noreferrer">
@@ -160,24 +200,20 @@ const ICONES = {
       </a>
     )
   }
-  <a class="acces__action" href="/cv-matheo-maleyran.pdf" download="cv-matheo-maleyran.pdf">
-    <span class="acces__icone" set:html={ICONES.cv} />
-    <span class="acces__texte">{a.cv}</span>
-    <span class="acces__suite" aria-hidden="true">PDF</span>
-  </a>
+  <div class="acces__contact">
+    <button class="acces__lien" type="button" data-action="email" data-fait={a.emailCopie} data-email={contenu.contact.email}>
+      <span class="acces__icone" set:html={ICONES.email} />
+      <span class="acces__texte">{a.contact}</span>
+    </button>
+    <span class="acces__boutons">
+      <a class="acces__mini" href={`mailto:${contenu.contact.email}`}>{a.ecrire}</a>
+    </span>
+  </div>
   <button class="acces__action" type="button" data-action="partager" data-fait={a.copie}>
     <span class="acces__icone" set:html={ICONES.partager} />
     <span class="acces__texte">{a.partager}</span>
     <span class="acces__suite" aria-hidden="true"></span>
   </button>
-  <div class="acces__contact">
-    <span class="acces__icone" set:html={ICONES.email} />
-    <span class="acces__texte">{a.contact}</span>
-    <span class="acces__boutons">
-      <button class="acces__mini" type="button" data-action="email" data-fait={a.emailCopie} data-email={contenu.contact.email}>{a.copierEmail}</button>
-      <a class="acces__mini" href={`mailto:${contenu.contact.email}`}>{a.ecrire}</a>
-    </span>
-  </div>
   <button class="acces__action" type="button" data-action="raccourcis">
     <span class="acces__icone" set:html={ICONES.clavier} />
     <span class="acces__texte">{a.raccourcis}</span>
@@ -188,27 +224,37 @@ const ICONES = {
   <p class="acces__annonce sr" role="status" aria-live="polite"></p>
 </div>
 
-<!-- Les raccourcis clavier : seulement ceux qui existent réellement dans le code. -->
-<dialog class="raccourcis etiquette" aria-labelledby="raccourcis-titre">
+<!-- L'aide clavier (refaite le 16 octobre 2026) : seulement les raccourcis qui existent réellement dans le
+     code, rangés par contexte, chaque touche dessinée comme une touche de verre. Échap la ferme. -->
+<dialog class="raccourcis" aria-labelledby="raccourcis-titre" aria-describedby="raccourcis-aide" data-lenis-prevent>
   <div class="raccourcis__tete">
-    <h2 id="raccourcis-titre">{a.raccourcis}</h2>
-    <button class="pastille" type="button" data-fermer-raccourcis>{a.fermer}</button>
+    <div>
+      <h2 id="raccourcis-titre">{a.raccourcis}</h2>
+      <p class="raccourcis__sous-titre etiquette" id="raccourcis-aide">{a.aideTouches}</p>
+    </div>
+    <button class="pastille raccourcis__fermer" type="button" data-fermer-raccourcis>{a.fermer} <kbd>{langue === 'en' ? 'Esc' : 'Échap'}</kbd></button>
   </div>
-  {
-    a.groupes.map((g) => (
-      <section class="raccourcis__groupe">
-        <h3>{g.nom}</h3>
-        <dl>
-          {g.lignes.map(([touches, texte]) => (
-            <div>
-              <dt>{touches.map((t) => <kbd>{t}</kbd>)}</dt>
-              <dd>{texte}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    ))
-  }
+  <div class="raccourcis__groupes">
+    {
+      a.groupes.map((g) => (
+        <section class="raccourcis__groupe">
+          <h3>{g.nom}</h3>
+          <dl>
+            {g.lignes.map(([touches, texte]) => (
+              <div>
+                <dt>{touches.map((t) => (t === '+' || t === '/' ? <span class="raccourcis__lien">{t}</span> : <kbd>{t}</kbd>))}</dt>
+                <dd>{texte}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))
+    }
+  </div>
+  <div class="raccourcis__pied">
+    <p>{a.aideSaisie}</p>
+    {page === 'accueil' && <button class="raccourcis__guidage etiquette" type="button" data-revoir-guidage>{contenu.guidage.revoir}</button>}
+  </div>
 </dialog>
 
 <div class="curseur" aria-hidden="true">
@@ -221,14 +267,27 @@ const ICONES = {
      fermeture (touche Échap, clic à côté) et le focus. Les valeurs sont lues et
      mémorisées par src/scripts/reglages-panneau.ts. -->
 <div class="reglages etiquette" id="reglages" popover data-lenis-prevent aria-label={contenu.reglages.titre}>
-  <!-- Deux pages : l'affichage, et l'atmosphère (ambiance, musique, effets sonores).
+  <!-- Deux pages : l'affichage, et le son (effets sonores, son de l'introduction ; la musique est dans DREAM RADIO).
        Les deux boutons du haut choisissent la page affichée (voir reglages.css). -->
   <div class="reglages__choix reglages__onglets">
     <label><input type="radio" name="onglet" value="affichage" checked /><span>{contenu.reglages.onglets.affichage}</span></label>
-    <label><input type="radio" name="onglet" value="atmosphere" /><span>{contenu.reglages.onglets.atmosphere}</span></label>
+    <label><input type="radio" name="onglet" value="son" /><span>{contenu.reglages.onglets.son}</span></label>
   </div>
 
   <div class="reglages__page" data-page="affichage">
+    <!-- La densité (16 octobre 2026) : « Équilibré » est l'affichage d'origine (voir densites.css). -->
+    <fieldset class="reglages__groupe">
+      <legend>{contenu.reglages.densite}</legend>
+      <div class="reglages__choix">
+        {(['compact', 'equilibre', 'cinematique'] as const).map((d) => (
+          <label><input type="radio" name="densite" value={d} /><span>{contenu.reglages.densites[d].nom}</span></label>
+        ))}
+      </div>
+      <p class="reglages__note densites__texte">
+        {(['compact', 'equilibre', 'cinematique'] as const).map((d) => <span data-pour={d}>{contenu.reglages.densites[d].texte}</span>)}
+      </p>
+    </fieldset>
+
     <label class="reglages__ligne">
       <span>{contenu.reglages.opacite} <output data-pour="opacite"></output></span>
       <input type="range" name="opacite" min="20" max="90" step="1" />
@@ -250,56 +309,17 @@ const ICONES = {
         <label><input type="radio" name="animations" value="0" /><span>{contenu.reglages.niveaux.coupe}</span></label>
       </div>
     </fieldset>
+
+    <!-- Revenir à l'affichage d'origine, d'un geste (reglages.ts, restaurerAffichage). -->
+    <div class="reglages__restaurer">
+      <button class="reglages__bouton" type="button" data-restaurer>{contenu.reglages.restaurer}</button>
+      <p class="reglages__note">{contenu.reglages.restaurerAide}</p>
+      <p class="reglages__confirmation" role="status" data-confirmation data-fait={contenu.reglages.restaure} data-deja={contenu.reglages.dejaOrigine}></p>
+    </div>
   </div>
 
-  <div class="reglages__page" data-page="atmosphere">
-    <!-- Quatre ambiances facultatives : un seul bouton peut être enfoncé, ou aucun (le site d'origine). -->
-    <fieldset class="reglages__groupe">
-      <legend>{contenu.atmosphere.titre}</legend>
-      <div class="ambiances">
-        {
-          (['chill', 'espace', 'focus', 'silence'] as const).map((mode) => (
-            <button type="button" data-ambiance={mode} aria-pressed="false">
-              {contenu.atmosphere.modes[mode].nom}
-            </button>
-          ))
-        }
-      </div>
-      <!-- La description de l'ambiance choisie : une seule de ces phrases est affichée à la fois. -->
-      <p class="ambiances__texte" aria-live="polite">
-        <span data-pour="">{contenu.atmosphere.aide}</span>
-        {(['chill', 'espace', 'focus', 'silence'] as const).map((mode) => <span data-pour={mode}>{contenu.atmosphere.modes[mode].texte}</span>)}
-      </p>
-    </fieldset>
-
-    <!-- Le lecteur : les pistes disponibles, lecture ou pause, volume. -->
-    <fieldset class="reglages__groupe lecteur">
-      <legend>{contenu.reglages.musique} <output data-pour="volumeMusique"></output></legend>
-      <div class="lecteur__pistes">
-        {
-          (['derive', 'heure-bleue', 'trait'] as const).map((piste) => (
-            <label>
-              <input type="radio" name="piste" value={piste} />
-              <span>
-                <b>{contenu.atmosphere.pistes[piste].titre}</b>
-                <small>{contenu.atmosphere.pistes[piste].texte}</small>
-              </span>
-            </label>
-          ))
-        }
-      </div>
-      <div class="lecteur__commandes">
-        <button class="lecteur__lecture" type="button" data-lecture aria-pressed="false">
-          <span class="lecteur__lire">{contenu.atmosphere.lire}</span>
-          <span class="lecteur__pause">{contenu.atmosphere.pause}</span>
-        </button>
-        <input type="range" name="volumeMusique" min="0" max="100" step="1" aria-label={`${contenu.reglages.volume} : ${contenu.reglages.musique}`} />
-      </div>
-      <p class="lecteur__note">{contenu.atmosphere.genere}</p>
-      <p class="lecteur__silence">{contenu.atmosphere.silence}</p>
-    </fieldset>
-
-    <!-- Les effets sonores (portail, changements de section) se règlent à part. -->
+  <div class="reglages__page" data-page="son">
+    <!-- Les effets sonores (portail, carte, changements de destination, Portal Rush) se règlent ici. -->
     <div class="reglages__son">
       <label class="reglages__bascule">
         <input type="checkbox" name="sons" />
@@ -308,41 +328,104 @@ const ICONES = {
       <input type="range" name="volumeSons" min="0" max="100" step="1" aria-label={`${contenu.reglages.volume} : ${contenu.reglages.sons}`} />
     </div>
 
-    <!-- Décochée : le site s'ouvre en silence (ni musique, ni son d'introduction). -->
+    <!-- Décochée : le site s'ouvre en silence (sans le son de l'introduction). -->
     <label class="reglages__bascule reglages__lancement">
       <input type="checkbox" name="sonAuLancement" />
-      <span>{contenu.atmosphere.lancement}<small>{contenu.atmosphere.lancementTexte}</small></span>
+      <span>{contenu.son.introduction}<small>{contenu.son.introductionTexte}</small></span>
     </label>
+
+    <!-- La musique n'est plus ici : elle est dans DREAM RADIO (le casque, à côté de la langue). -->
+    <div class="reglages__musique">
+      <p class="reglages__note"><b>{contenu.son.musique}</b> · {contenu.son.musiqueTexte}</p>
+      <button class="reglages__bouton" type="button" popovertarget="dream-radio">{contenu.son.ouvrirRadio}</button>
+    </div>
   </div>
+</div>
+
+<!-- DREAM RADIO : le lecteur de musique du portfolio (src/scripts/audio/dream.ts). Fermer le lecteur
+     n'arrête pas la musique ; rien ne démarre seul. -->
+<div class="dream etiquette" id="dream-radio" popover data-lenis-prevent aria-label={r.titre} data-textes={JSON.stringify(r)} data-lecture="false">
+  <div class="dream__tete">
+    <p class="dream__marque"><b>DREAM</b> RADIO<small>{r.sousTitre}</small></p>
+    <button class="dream__fermer" type="button" popovertarget="dream-radio" popovertargetaction="hide" aria-label={r.fermer} title={r.fermer}>
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"></path></svg>
+    </button>
+  </div>
+  <div class="dream__scene">
+    <canvas class="dream__spectre" aria-hidden="true"></canvas>
+    <div class="dream__titres" aria-live="polite">
+      <p class="dream__titre" data-dream="titre">{CATALOGUE_DREAM[0].titre}</p>
+      <p class="dream__artiste" data-dream="artiste"></p>
+      <p class="dream__licence" data-dream="licence"></p>
+    </div>
+  </div>
+  <div class="dream__temps">
+    <span data-dream="position">0:00</span>
+    <input class="dream__curseur" type="range" min="0" max="1000" step="1" value="0" data-dream="progression" aria-label={r.progression} />
+    <span data-dream="duree">{minutes(CATALOGUE_DREAM[0].duree)}</span>
+  </div>
+  <div class="dream__commandes">
+    <button class="dream__rond" type="button" data-dream="precedente" aria-label={r.precedente} title={r.precedente}>
+      <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M14.5 3.8v10.4L6.4 9z" fill="currentColor"></path></svg>
+    </button>
+    <button class="dream__lecture" type="button" data-dream="lecture" aria-pressed="false" aria-label={r.lire} title={r.lire}>
+      <svg class="dream__icone-lire" viewBox="0 0 18 18" aria-hidden="true"><path d="M5.5 3.2v11.6L15 9z" fill="currentColor"></path></svg>
+      <svg class="dream__icone-pause" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 3.5h2.6v11H5zM10.4 3.5H13v11h-2.6z" fill="currentColor"></path></svg>
+    </button>
+    <button class="dream__rond" type="button" data-dream="suivante" aria-label={r.suivante} title={r.suivante}>
+      <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M14 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"></path><path d="M3.5 3.8v10.4L11.6 9z" fill="currentColor"></path></svg>
+    </button>
+  </div>
+  <div class="dream__volume">
+    <button class="dream__muet" type="button" data-dream="muet" aria-pressed="false" aria-label={r.muet} title={r.muet}>
+      <svg viewBox="0 0 18 18" fill="none" aria-hidden="true" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 7h2.6L9 4v10l-3.6-3H2.8z"></path><path class="dream__onde" d="M11.6 6.6a3.4 3.4 0 0 1 0 4.8M13.6 4.8a6 6 0 0 1 0 8.4"></path><path class="dream__barre" d="m11.5 6.5 5 5M16.5 6.5l-5 5"></path></svg>
+    </button>
+    <input class="dream__curseur" type="range" min="0" max="100" step="1" data-dream="volume" aria-label={r.volume} />
+    <output data-dream="volumeSortie">55 %</output>
+  </div>
+  <p class="dream__etat" data-dream="etat" role="status"></p>
+  <ol class="dream__liste" aria-label={r.liste}>
+    {
+      CATALOGUE_DREAM.map((p, i) => (
+        <li>
+          <button type="button" data-dream-piste={i} aria-current={i === 0 ? 'true' : 'false'}>
+            <span class="dream__numero">{String(i + 1).padStart(2, '0')}</span>
+            <span class="dream__piste">
+              <b>{p.titre}</b>
+              <small>{p.licence === 'original' ? r.original : `${p.artiste} · CC BY-SA 3.0`}</small>
+            </span>
+            <span class="dream__ondes" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="dream__longueur">{minutes(p.duree)}</span>
+          </button>
+        </li>
+      ))
+    }
+  </ol>
+  <p class="dream__note">{r.silence}</p>
+  <details class="dream__credits">
+    <summary>{r.credits}</summary>
+    <p>{r.creditsTexte}</p>
+    <a href="/audio/CREDITS.txt" target="_blank" rel="noopener">{r.creditsLien}</a>
+  </details>
 </div>
 
 <!-- L'éclair de tunnel : une toile par-dessus toute la page. Elle ne sert plus qu'à la fin de
      l'introduction et quand le portail éclate (voir src/scripts/voyage.ts). -->
 <div class="voyage" aria-hidden="true"><canvas></canvas></div>
 
-<!-- Le fil de navigation : une ligne fine en bas de l'écran, un point par section.
-     Sa partie allumée suit le défilement ; un faisceau la parcourt quand on change
-     de section. Les deux flèches font le tour du site, en boucle. -->
+<!-- Le fil des chapitres : une ligne fine en bas de l'écran, un point par chapitre de la destination
+     affichée (src/scripts/fil.ts les pose d'après les blocs marqués data-chapitre). Sa partie allumée
+     suit la lecture ; les deux flèches passent au chapitre précédent ou suivant. -->
 {
   page === 'accueil' && (
-    <nav class="trajet" aria-label={contenu.trajet.titre}>
+    <nav class="trajet" aria-label={contenu.trajet.titre} data-etat={n.etat}>
+      <p class="trajet__etat" aria-live="polite"></p>
       <button class="trajet__bouton" type="button" data-trajet="precedent" aria-label={contenu.trajet.precedent} title={contenu.trajet.precedent}>
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3 5 8l5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
       </button>
       <div class="trajet__fil">
         <span class="trajet__faisceau" aria-hidden="true"></span>
-        <ol>
-          {
-            SECTIONS.map((id) => (
-              <li>
-                <a class="trajet__point" href={`#${id}`}>
-                  <i aria-hidden="true" />
-                  <span>{contenu.sections[id]}</span>
-                </a>
-              </li>
-            ))
-          }
-        </ol>
+        <ol></ol>
       </div>
       <button class="trajet__bouton" type="button" data-trajet="suivant" aria-label={contenu.trajet.suivant} title={contenu.trajet.suivant}>
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m6 3 5 5-5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -354,9 +437,13 @@ const ICONES = {
 <!-- L'Orbital Hub : l'icône flottante en bas à droite, son panneau (l'assistant, la visite
      guidée, les coulisses), et le jeu Portal Rush qu'il lance. -->
 <OrbitalHub contenu={contenu} page={page} cheminAutreLangue={cheminAutreLangue} />
+
+<!-- Les deux outils de la barre : la recherche (Ctrl + K) et la visite rapide. -->
+<Recherche contenu={contenu} page={page} />
+<VisiteRapide contenu={contenu} />
 <PortalRush contenu={contenu} cheminAutreLangue={cheminAutreLangue} />
 
-<!-- La palette de commandes : Ctrl + K, touche ², ou le mot « trace » (voir src/scripts/terminal.ts).
+<!-- Le terminal caché : touche ², ou le mot « trace » (voir src/scripts/terminal.ts). Ctrl + K ouvre désormais la recherche.
      Ses textes et la liste des réalisations lui sont transmis par les attributs data-. -->
 <div
   class="terminal"
@@ -366,11 +453,11 @@ const ICONES = {
   data-textes={JSON.stringify(contenu.terminal)}
   data-projets={JSON.stringify(projetsDuTerminal)}
   data-accueil={accueil}
-  data-cv="/cv-matheo-maleyran.pdf"
+  data-cv="/CV_Matheo_Maleyran.pdf"
   data-langue={cheminAutreLangue}
 >
   <div class="terminal__tete">
-    <span>{contenu.terminal.titre} <kbd>Ctrl K</kbd></span>
+    <span>{contenu.terminal.titre} <kbd>²</kbd></span>
     <button class="terminal__fermer" type="button">{contenu.interface.fermer}</button>
   </div>
   <div class="terminal__sortie" aria-live="polite" data-lenis-prevent></div>

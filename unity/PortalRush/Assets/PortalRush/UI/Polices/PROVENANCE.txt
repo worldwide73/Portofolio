@@ -1,0 +1,11 @@
+Polices de l'interface Unity de Portal Rush (gratuites, SIL Open Font License 1.1, texte complet joint).
+
+- Geist Mono (GeistMono-Regular.ttf, GeistMono-Bold.ttf) : Copyright 2024 The Geist Project Authors
+  (https://github.com/vercel/geist-font). Famille sœur de Geist, la police du portfolio. Licence : GeistMono-OFL.txt.
+- Tektur (Tektur-Regular.ttf, Tektur-Medium.ttf) : Copyright 2023 The Tektur Project Authors
+  (https://www.github.com/hyvyys/Tektur). Titres, chiffres et actions. Licence : Tektur-OFL.txt.
+
+Fichiers copiés sans modification depuis la bibliothèque de polices locale de l'environnement de travail
+(aucun téléchargement). Geist (sans « Mono ») n'existe dans le projet qu'en .woff2 (node_modules/@fontsource-variable/geist),
+format que Unity n'importe pas : d'où Geist Mono. Aucune de ces licences ne déclare de nom réservé ; la redistribution
+avec le jeu est permise, la vente des polices seules ne l'est pas.

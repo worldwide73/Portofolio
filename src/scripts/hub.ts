@@ -22,10 +22,10 @@
 // l'aide ouvre l'assistant par-dessus le jeu.
 
 import type { Contenu, IdSection, Intention } from '../contenu/types';
-import { ouvrirCarte } from './explorateur';
 import { changerLangue } from './langue';
+import { ouvrirPortail } from './portail';
 import { ouvrirRush } from './rush/rush';
-import { rangCourant, voyager } from './voyage';
+import { voyager } from './voyage';
 
 type Textes = Contenu['hub'];
 interface Savoir {
@@ -82,7 +82,7 @@ const MOTS: Record<Intention, string[]> = {
   competences: ['competence', 'skill', 'savoir faire', 'domaine', 'referentiel', 'tableau', 'technologie', 'techno', 'langage', 'stack', 'maitrise'],
   veille: ['veille', 'actualite', 'news', 'watch', 'sujet', 'topic', 'article', 'source'],
   contact: ['contact', 'mail', 'courriel', 'ecrire', 'telephone', 'numero', 'linkedin', 'github', 'joindre', 'phone', 'reach', 'email', 'appeler', 'message'],
-  reglages: ['reglage', 'parametre', 'setting', 'son', 'sound', 'volume', 'musique', 'music', 'opacite', 'flou', 'blur', 'animation', 'ambiance', 'atmosphere', 'mute', 'couper', 'bruit', 'lumiere', 'luminosite'],
+  reglages: ['reglage', 'parametre', 'setting', 'son', 'sound', 'volume', 'musique', 'music', 'radio', 'dream radio', 'casque', 'headphone', 'opacite', 'flou', 'blur', 'animation', 'mute', 'couper', 'bruit', 'lumiere', 'luminosite'],
   jeu: ['jeu', 'jouer', 'rush', 'game', 'play', 'niveau', 'level', 'boss', 'arcade', 'score', 'record'],
   commandes: [
     'commande',
@@ -182,16 +182,12 @@ export function initHub(): void {
     if (hub.parentElement !== place.parent) place.parent.insertBefore(hub, place.suivant);
   });
   hub.querySelectorAll<HTMLElement>('[data-onglet]').forEach((bouton) =>
-    bouton.addEventListener('click', () => {
+    bouton.addEventListener('click', (e) => {
       const vue = bouton.dataset.onglet as 'assistant' | 'rush' | 'explorer' | 'coulisses';
-      if (vue === 'rush') {
-        bouton.classList.add('est-lance');
-        window.setTimeout(() => {
-          bouton.classList.remove('est-lance');
-          masquer();
-          ouvrirRush();
-        }, 140);
-      } else montrerVue(vue);
+      // Portal Rush : le bouton se fissure là où on l'a touché, se brise, et le voyage temporel commence
+      // (rush/tunnel.ts). Le Hub reste ouvert dessous et ne se range qu'à l'arrivée dans le jeu.
+      if (vue === 'rush') ouvrirRush('accueil', bouton, e.detail > 0 ? { x: e.clientX, y: e.clientY } : null);
+      else montrerVue(vue);
     }),
   );
 
@@ -372,6 +368,14 @@ export function initHub(): void {
                 document.querySelector<HTMLElement>('#reglages')?.showPopover();
               },
             },
+            // La musique est dans DREAM RADIO (16 octobre 2026), pas dans les réglages.
+            {
+              libelle: 'DREAM RADIO',
+              faire: () => {
+                masquer();
+                document.querySelector<HTMLElement>('#dream-radio')?.showPopover();
+              },
+            },
           ],
         };
       case 'jeu':
@@ -384,12 +388,10 @@ export function initHub(): void {
           actions: [
             {
               libelle: rep.action,
+              // Le grand portail de l'accueil, d'où que l'on soit : il se brise comme d'habitude (portail.ts).
               faire: () => {
-                if (savoir.page !== 'accueil') return void (window.location.href = savoir.accueil);
                 masquer();
-                const ici = rangCourant() === 0;
-                if (!ici) voyager('accueil');
-                window.setTimeout(() => ouvrirCarte(), ici ? 60 : 750);
+                ouvrirPortail();
               },
             },
           ],
@@ -615,9 +617,7 @@ export function initHub(): void {
       if (savoir.page !== 'accueil') return void (window.location.href = `${savoir.accueil}?visite=${id}`);
       masquer();
       if (id === 'libre') {
-        const ici = rangCourant() === 0;
-        if (!ici) voyager('accueil');
-        window.setTimeout(() => ouvrirCarte(), ici ? 60 : 750);
+        ouvrirPortail();
         return;
       }
       visite = { id, k: 0 };

@@ -1,3 +1,129 @@
+## Portal Rush → Unity (18–19 octobre 2026, en cours) — remplace la suite de V4-H, V4-F et V4-G ci-dessous
+
+Légende : V = vérifié (comment), É = écrit et contrôlé hors Unity, jamais exécuté dans Unity, C = en cours, À = à faire.
+
+| Demande | État | Preuve |
+|---|---|---|
+| Unity Web, pas un jeu séparé ; version stable adaptée au Web | V (choix) | Unity 6.3 LTS 6000.3.26f1, URP 17.3, WebGL2 ; sources dans `docs/UNITY_MIGRATION.md` §3 |
+| WebGPU évalué sans en dépendre | V (choix) | WebGL2 seul dans `Configuration.cs` ; statut expérimental sourcé (§3.3) |
+| Dire précisément ce qui manque ici, préparer le PC | V | `docs/UNITY_MIGRATION.md` §5–7, `outils/unity/unity.ps1` (essayé avec un faux Unity seulement) |
+| Audit et correspondance ancien → Unity | V | `docs/UNITY_MIGRATION.md` §1–2 |
+| Gameplay porté en C# à l'identique | V | 29/29 parties de référence identiques bit pour bit (`outils/unity/coeur-tests`) |
+| Ancien jeu conservé et inchangé | V | jeu par défaut, Unity seulement avec `?rush=unity` ; `.prm` inchangés (sha256) ; site construit (18 pages) ; `portal-rush-v4.mjs` 27/27 et `portal-rush-v4c.mjs` 20/20 après l'intégration |
+| Routes larges, courbes, reliefs, dévers, bordures profilées, rails lumineux, 3 voies | É | `Parcours.cs`, `Route.cs`, textures `outils/unity/textures.py` (aperçus vérifiés) |
+| 8 mondes à l'architecture distincte | É (prototype) | `Ambiances.cs` (palettes du jeu web), `Decor.cs` (modules Blender par monde, tunnels) ; production graphique à poursuivre |
+| 4 vaisseaux et obstacles Blender réutilisés | V (export) / É (jeu) | 43 FBX, orientation vérifiée coin par coin contre les `.prm` |
+| Qualité URP Web (PBR, normal maps, HDR, tonemapping, bloom maîtrisé, AO, AA, effets de vitesse) | É | `Configuration.cs`, `Scene.cs` (post-traitement), `Effets.cs` |
+| Qualité Auto / Élevée / Équilibrée / Économie | É | `Qualite.cs`, trois assets URP |
+| Interface refaite entièrement (fonctions conservées) | É | `Scripts/Interface`, `UI/` (11 écrans, HUD) |
+| Intro cinématique sans écran noir | É | page (fissure, tunnel) + `Intro.cs` (sortie du tunnel), option `retenir/fondre` de `tunnel.ts` |
+| Tutoriel conservé | É | `Interface/Tutoriel.cs` (portage de `tutoriel.ts`) |
+| Intégration au portfolio, pont JS ↔ Unity, focus, langue | V (instance simulée) / É (Unity réel) | recette `rush-unity-pont.mjs` 39/39 (chargement à la demande en deux temps, ouverture, Échap, pause d'onglet, langue, fermeture, repli) ; `.jslib` et `Pont.cs` jamais exécutés dans Unity |
+| Sauvegardes conservées (même format, local) | V (instance simulée) | le JavaScript garde `portal-rush-3` et `ranger` ; recette du pont : mêmes clés que l'ancien jeu, v3 intacte, v2 migrée, « fin » invalide refusée, message sérialisé comme `Messages.cs` accepté |
+| Audio : DREAM RADIO suspendue puis reprise, RUSH RADIO, sons du jeu | V (instance simulée) | Unity muet, sons et musique par le moteur audio du portfolio ; recette du pont (suspension, reprise, RUSH RADIO, moteur) ; non écouté |
+| Performance et mobile sans écran noir | É | profils de qualité, préchargement léger, tunnel prolongé jusqu'à « pret » et repli sur l'ancien jeu vérifiés avec l'instance simulée ; **aucune mesure réelle** |
+| Compilation et build Unity | À | contrôle hors Unity seulement (`outils/unity/verif-compilation`) |
+| Publication | Non (accord requis) | CSP de `netlify.toml` à adapter le moment venu |
+
+## Portal Rush V4 et le son (16–17 octobre 2026, en cours)
+
+| Demande | État | Preuve |
+|---|---|---|
+| Icône casque juste à côté du drapeau (bureau et téléphone), même style, boutons inchangés | V | recette `portal-rush-v4.mjs` (positions, tailles, écarts) + captures |
+| Lecteur DREAM RADIO complet (titre, artiste, liste, lecture, précédente/suivante, volume, progression, sourdine) | V | recette + captures |
+| Musique coupée au lancement, jamais de lecture automatique | V | recette (au chargement, après 3 s, anciens réglages « musique activée ») |
+| Fermer le lecteur n'arrête pas la musique ; elle continue entre destinations | V | recette |
+| Atténuation 10–25 % sur de vrais effets, seulement effets activés, sans pompage | V (mesurée, pas écoutée) | recette (carte : −18 %, remontée ; effets coupés : 0) |
+| Ambiances et musique retirées des réglages ; effets activés par défaut | V | recette (page Son) |
+| Morceaux légaux, crédités, licences vérifiées | V | `public/audio/CREDITS.txt`, `docs/AUDIO.md` (AUTHORS.txt de Pioneer, historique git, README Kenney) |
+| Une seule bande-son (DREAM suspendue dans Rush, reprise seulement si elle jouait) | V | recette (deux cas) |
+| Sauvegarde versionnée, migration sans perte, corruption, secours, fusion, sans stockage | V | recette (5 contrôles) |
+| RUSH RADIO : lecteur compact en bas à droite du menu, caché en course | V | recette (position, liste, Échap, course) + capture |
+| Musique adaptative par couches réelles (vitesse, danger, Overdrive, pause, défaite, victoire), sans changement de tempo | V (couches mesurées, pas écoutées) | recette (menu → course → pause) ; morceaux enregistrés : filtre seulement, dit dans la liste |
+| Son moteur synchronisé à la vitesse | V (code), non écouté | `sons.ts` `moteurRush` |
+| Entrée cinématique : bouton du Hub qui s'illumine, vibre, se fissure depuis le point touché, se brise en éclats 3D ; Hub intact au retour | V (rendu logiciel) | recette `portal-rush-v4c.mjs` (classes, toile de fissures, couche au premier plan, moments charge → bris → tunnel → arrivée, Hub inchangé) + captures |
+| Tunnel temporel 3D (4–7 s), passable, version réduite, son synchronisé | V (rendu logiciel ; son non écouté) | recette (≈ 6 s, Échap au 2ᵉ lancement, fondu de 0,35 s en mouvement réduit) + captures du shader |
+| Premier lancement → directement dans la course (ni menu, ni Commencer, ni 3-2-1) | V | recette (3D et 2D, Hub et bouton « Jouer ») |
+| Tutoriel 5 étapes, vraies actions, assistance, échec = l'étape recommence, finale puis menu | V | recette : tutoriel joué en entier au clavier par un pilote qui lit la piste |
+| « PASSER LE TUTORIEL » en bas à droite : arrêt propre (moteur, sons), menu | V | recette (position, moteur coupé, état « passé ») |
+| Une fois par profil ; « Refaire l'entraînement » ; reprise à la même étape ; aucun record | V | recette (état sauvegardé, refaire ne rétrograde pas, reprise à l'étape 2, 0 partie, 0 record) |
+| Overdrive extrêmement rare (1 fois, pas au départ, exigeant, non rechargeable, on finit sans) | V | recette (3 contrôles) + simulation |
+| Nouvelle difficulté au-dessus de Nightmare (Paradoxe), extrêmement dure mais jouable | V (simulation) | recette ; simulation : secteurs 1–3, 6, 7 réussis par le pilote automatique |
+| Difficulté qui monte dans chaque niveau | V | `moteur.ts` (complexité + avancée), vitesse et écarts existants |
+| Survie : une vie, vitesse continue, Overdrive rare | V | recette |
+| Obstacles mobiles variés, lisibles, jamais impossibles | V (simulation, rendu logiciel) | recette (5 types posés) ; simulation ; captures 3D |
+| Vaisseaux aux vraies statistiques, sauvegardés | V | recette ; garage (captures) |
+| Séquence de fin raccourcissable | V | réglage Complète / Courte |
+| Piste qui monte, descend, tourne, s'incline (par monde) | V (existant, conservé) | `scene/parcours.ts` (virages, reliefs, dévers par monde, bornés pour l'équité) ; pas de nouvelle déformation ajoutée |
+| Interface AAA (V4-F) | À faire (après V4-H) | — |
+| Refonte graphique 3D du jeu (V4-H) : inspection précise (existant, manques, changements) | V | `docs/RUSH_3D.md` §1–3 |
+| V4-H : textures réelles, ombres, lumières, HDR + post-traitement, reflets | V (rendu logiciel) | captures avant/après dans 6 mondes ; A/B par effet (`rush-3d-ab.mjs`) ; banc des modèles |
+| V4-H : dégâts, débris, collectes lumineuses, mécanismes animés, roches | V (rendu logiciel) | banc (dégâts), choc réel déclenché par le moteur et capturé, captures en course |
+| V4-H : fluidité préservée (qualité adaptative, variantes de shader) | Partiel | coût relatif mesuré dans l'émulateur (`rush-3d-perf.mjs`) ; **pas de mesure sur vraie carte graphique** |
+| V4-H : vaisseaux encore plus détaillés, collectables retravaillés | À faire | — |
+
+## Retours du 16 octobre 2026 (4ᵉ lot) — remplacent la ligne « Animation du portail = celle de l'accueil » du 2ᵉ lot
+
+| Demande | État | Preuve |
+|---|---|---|
+| Le passage du bas se fissure et ouvre la carte sur place (sauf l'accueil, grand portail) | V (rendu logiciel) | recette `retours-lot4.mjs` (classes, toile de fissures, moments charge/rupture, destination inchangée) + captures ralenties ; son non écouté |
+| Pas d'écran noir derrière la carte | V | recette (contenu effacé, voile léger, fond du désert) + capture |
+| Réalisations dans une lame de verre, fond réglable | V | recette (bordure, coins, fond suit l'opacité) + captures bureau/téléphone/compact |
+| Texte des fins de page plus grand | V | recette (≥ 40 px à 1440) + capture |
+| Le nom ouvre le menu déroulant, comme le chevron | V | recette bureau et téléphone |
+| Fil des Compétences sans saut (01 → 06) | V | recette (molette et clics) |
+| Flèches ↑ ↓ font défiler chaque destination | V | recette (5 destinations, réduit) |
+| Aide clavier à jour | V | recette |
+| CV renommé `CV_Matheo_Maleyran.pdf` | V | recette (réponse 200, liens) |
+
+## Huit améliorations du 16 octobre 2026 (3ᵉ lot)
+
+| Demande | État | Preuve |
+|---|---|---|
+| Densités Compact / Équilibré / Cinématique ; l'actuel = Équilibré, par défaut, inchangé | V | relevé des boîtes avant/après identique ; recette (titres, hero, portail, débordement) ; captures 1440/390/320 |
+| Densité instantanée et mémorisée | V | recette (changement sans rechargement, rechargement) |
+| Restaurer l'affichage d'origine, sans toucher au reste | V | recette (5 réglages rétablis, stockage et sons intacts, confirmation) |
+| Mémoire des destinations visitées sur la carte | V | recette (marques, stockage, passage par l'accueil exclu) + capture |
+| Mini-guidage de première visite, fermable, mémorisé, revoir | V | recette bureau, téléphone, réduit + captures |
+| Reflets de verre au curseur (quelques surfaces) | V (souris émulée) | recette (suivi, extinction, aucune surface en réduit) ; rendu examiné sur capture |
+| Fin de chapitre sur le fil, sans répétition | V | recette (molette, saut exclu, aller-retour sans nouvelle animation) + capture |
+| Recherche : synonymes, variantes, accents, FR/EN, état vide | V | recette (18 requêtes FR) + 11 requêtes EN |
+| Aide clavier : raccourcis réels, Échap, clavier | V | recette + captures FR/EN |
+| Non-régression (portail, carte, galerie, Hub, Rush, navigation) | V | recettes navigation 24/24, corrections 21/21, portail, finitions, icone-orbit, saut-ambiances |
+
+## Retours du 16 octobre 2026 (2ᵉ lot) — remplacent les lignes « Barre », « cassure du bouton Portail » et « raccourci P » du lot ci-dessous
+
+| Demande | État | Preuve |
+|---|---|---|
+| Pas d'écran noir en revenant au grand portail | V | recette « arrivée sur #contact puis portail » (toile WebGL à la taille du cadre) + capture |
+| Animation du portail = celle de l'accueil (cube qui se brise, mêmes sons) | V (rendu logiciel) | recette (détour par l'accueil, classe `carte-en-transition`, carte sans fond noir) + captures ; son non écouté |
+| Texte à l'arrivée sans retard ni saut | V (rendu logiciel) | capture à 0,7 s : tout le texte visible, titre découpé en une ligne |
+| Galerie en anneau, qui tourne comme avant | V | recette (écarts des cartes) + captures |
+| CV retiré de la carte ; cinq planètes espacées régulièrement | V | recette (5 destinations) + captures |
+| Passages « Traverser le portail » hors des panneaux ; Contact resserré | V | recette (aucun passage dans `#contact`) + captures |
+| « Revenir en haut » retiré | V | recette |
+| Plus de mouvement de page une fois la carte ouverte | V | recette (molette + PageDown : position inchangée) |
+| Barre : lieu non cliquable (blanc), puis Rechercher, Visite rapide ; portail seulement en bas des pages | V | recette (bureau, anglais, téléphone) |
+
+## Lot du 16 octobre 2026 — navigation par destinations (Claude Code Cloud)
+
+| Demande | État | Preuve |
+|---|---|---|
+| Destinations indépendantes, molette limitée à la destination | V | navigation-destinations.mjs (accueil, Réalisations, Contact) |
+| Barre : Portail, Rechercher, Visite rapide (esthétique conservée) | V | recette + captures bureau/téléphone |
+| Animation de cassure du bouton Portail → carte existante | V (rendu logiciel) | recette (classes, toile, nettoyage, carte unique) + images examinées au ralenti ; fluidité GPU à valider par Mathéo |
+| Fermeture de la carte : retour à la même destination et position | V | recette |
+| « Rejoindre le portail » (fin de l'accueil) sans second clic | V | recette |
+| Fil des chapitres (Accueil 4, Compétences 6, Réalisations 7 synchronisé avec la galerie, Veille, Contact 3) | V | recette + captures |
+| Fins de destination | V | captures |
+| Recherche sur le contenu réel, états vides, clavier, Échap | V | recette (python, supabase, electron, cv, xyzabc, tweaks, secure boot) |
+| Visite rapide (remplace l'ancien mode recruteur) | V | recette |
+| Raccourcis P, Ctrl/Cmd+K, ← → chapitres, Échap ; pas de conflit avec Portal Rush | V | recette |
+| Menu d'identité sans navigation parallèle, actions réelles | V | recette ; copie presse-papiers non testée hors navigateur de test |
+| FR/EN sans rechargement, destination conservée | V | recette |
+| Grand portail, carte, Orbital Hub, saut, dunes inchangés | V | `git diff` vide sur ces fichiers |
+| Mouvement réduit, téléphone 390 px | V (émulation) | recette ; vrai téléphone non testé |
+
 > **16 octobre — derniers réglages de vitesse demandés.** Intro −0,2 s par rapport au lot précédent : réduction cumulée 1,7 s ; 3 957 ms mesurées avec Playwright GPU. Saut Accueil ↔ Contact en Chill : multiplicateur local 1,1, soit environ 10 % plus rapide ; intro et autres ambiances indépendantes. Durée transmise au son et au fil ajustée au même multiplicateur. Fichiers : intro.ts, saut.ts, voyage.ts. Tests : duree-intro.mjs réussi ; saut-ambiances.mjs (12 trajets, origine/Focus/Chill, normal/réduit, aller/retour + animations coupées) réussi sans exception JS ; build 18 pages réussi. Ces valeurs remplacent les précédentes ci-dessous.
 
 > **16 octobre — durée intro rétablie à la demande de Mathéo : +0,5 s.** Réduction cumulée de la partition revenue à 1,5 s (remplace la valeur 2 s ci-dessous). Mesure Playwright avec GPU : 4 120 ms (`outils/recettes/duree-intro.mjs`). Première mesure sans les arguments GPU non exploitable : assertion échouée ; relance GPU réussie. Seule la vitesse de l’intro a changé, aucun effet retiré. La cinématique Accueil ↔ Contact reste inchangée : 0,6 s + 0,55 s nominales, rythme global préexistant dépendant de l’ambiance (Chill 0,85 ; Focus 1,5). Pas de modification de ce rythme dans ce lot. Seuil de recette trois-corrections adapté à la nouvelle durée.
